@@ -1,8 +1,21 @@
-import uuid, shutil, os
+import uuid, shutil, os, httpx
 from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException, Depends, Header
 from database import get_conn
+
+ADMIN_SECRET        = os.getenv("ADMIN_SECRET", "***REMOVED-SECRET***")
+CUSTOMER_BACKEND    = os.getenv("CUSTOMER_BACKEND_URL", "https://smart-workers-backend-production.up.railway.app/api/v1")
+SELF_BASE_URL       = os.getenv("SELF_BASE_URL", "https://worker-portal-backend-production.up.railway.app")
+
+def _abs(path: Optional[str]) -> Optional[str]:
+    if not path:
+        return None
+    return f"{SELF_BASE_URL}{path}" if path.startswith("/") else path
+
+def _require_admin(x_admin_secret: Optional[str] = Header(None)):
+    if x_admin_secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden.")
 
 router = APIRouter()
 UPLOADS = Path("uploads")
@@ -142,3 +155,121 @@ def get_worker(worker_id: str):
     if not row:
         raise HTTPException(status_code=404, detail="Worker not found.")
     return {"worker": dict(row)}
+
+
+# ── Admin endpoints ────────────────────────────────────────────────────────────
+
+@router.get("/admin/all", dependencies=[Depends(_require_admin)])
+def admin_list_all_workers():
+    conn = get_conn()
+    rows = conn.execute("""
+        SELECT id, name, age, gender, mobile, address, district, town, job_type,
+               current_location, interested_locations, facilities_requested,
+               daily_rate, experience_years, profile_photo, passbook_photo, aadhar_photo,
+               status, is_blocked, is_verified, created_at
+        FROM workers ORDER BY created_at DESC
+    """).fetchall()
+    conn.close()
+    result = []
+    for r in rows:
+        w = dict(r)
+        w["profile_photo"]  = _abs(w.get("profile_photo"))
+        w["passbook_photo"] = _abs(w.get("passbook_photo"))
+        w["aadhar_photo"]   = _abs(w.get("aadhar_photo"))
+        result.append(w)
+    return {"workers": result}
+
+
+@router.get("/admin/{worker_id}", dependencies=[Depends(_require_admin)])
+def admin_get_worker(worker_id: str):
+    conn = get_conn()
+    row = conn.execute("SELECT * FROM workers WHERE id = ?", (worker_id,)).fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="Worker not found.")
+    w = dict(row)
+    w["profile_photo"]  = _abs(w.get("profile_photo"))
+    w["passbook_photo"] = _abs(w.get("passbook_photo"))
+    w["aadhar_photo"]   = _abs(w.get("aadhar_photo"))
+    return {"worker": w}
+
+
+@router.post("/admin/{worker_id}/approve", dependencies=[Depends(_require_admin)])
+async def admin_approve_worker(worker_id: str):
+    conn = get_conn()
+    row = conn.execute("SELECT * FROM workers WHERE id = ?", (worker_id,)).fetchone()
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Worker not found.")
+    conn.execute("UPDATE workers SET status='approved', is_verified=1 WHERE id=?", (worker_id,))
+    conn.commit()
+    w = dict(conn.execute("SELECT * FROM workers WHERE id=?", (worker_id,)).fetchone())
+    conn.close()
+
+    # Sync approved worker to the Node.js customer backend
+    try:
+        async with httpx.AsyncClient(timeout=10) as c:
+            await c.post(
+                f"{CUSTOMER_BACKEND}/admin/workers",
+                json={
+                    "id": w["id"], "name": w["name"], "jobType": w["job_type"],
+                    "dailyRate": w["daily_rate"], "district": w["district"],
+                    "town": w["town"], "experienceYears": w["experience_years"],
+                    "phone": w["mobile"],
+                    "photoUrl": w.get("profile_photo"),
+                },
+                headers={"x-admin-secret": ADMIN_SECRET},
+            )
+    except Exception:
+        pass  # Don't fail the approval if sync fails
+
+    return {"message": "Worker approved and synced.", "worker_id": worker_id}
+
+
+@router.post("/admin/{worker_id}/reject", dependencies=[Depends(_require_admin)])
+def admin_reject_worker(worker_id: str):
+    conn = get_conn()
+    if not conn.execute("SELECT id FROM workers WHERE id=?", (worker_id,)).fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Worker not found.")
+    conn.execute("UPDATE workers SET status='rejected' WHERE id=?", (worker_id,))
+    conn.commit()
+    conn.close()
+    return {"message": "Worker rejected.", "worker_id": worker_id}
+
+
+@router.post("/admin/{worker_id}/block", dependencies=[Depends(_require_admin)])
+def admin_block_portal_worker(worker_id: str):
+    conn = get_conn()
+    if not conn.execute("SELECT id FROM workers WHERE id=?", (worker_id,)).fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Worker not found.")
+    conn.execute("UPDATE workers SET is_blocked=1 WHERE id=?", (worker_id,))
+    conn.commit()
+    conn.close()
+    return {"message": "Worker blocked.", "worker_id": worker_id}
+
+
+@router.post("/admin/{worker_id}/unblock", dependencies=[Depends(_require_admin)])
+def admin_unblock_portal_worker(worker_id: str):
+    conn = get_conn()
+    if not conn.execute("SELECT id FROM workers WHERE id=?", (worker_id,)).fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Worker not found.")
+    conn.execute("UPDATE workers SET is_blocked=0 WHERE id=?", (worker_id,))
+    conn.commit()
+    conn.close()
+    return {"message": "Worker unblocked.", "worker_id": worker_id}
+
+
+@router.delete("/admin/{worker_id}", dependencies=[Depends(_require_admin)])
+def admin_delete_portal_worker(worker_id: str):
+    conn = get_conn()
+    if not conn.execute("SELECT id FROM workers WHERE id=?", (worker_id,)).fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Worker not found.")
+    conn.execute("DELETE FROM worker_sessions WHERE worker_id=?", (worker_id,))
+    conn.execute("DELETE FROM workers WHERE id=?", (worker_id,))
+    conn.commit()
+    conn.close()
+    return {"deleted": worker_id}
