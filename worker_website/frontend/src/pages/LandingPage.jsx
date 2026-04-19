@@ -1,0 +1,249 @@
+import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import { Wrench, ShieldCheck, TrendingUp, MapPin, Star, Users, ArrowRight, Zap } from 'lucide-react';
+
+const STATS = [
+  { label: 'Registered Workers', value: '500+', icon: Users },
+  { label: 'Services Completed', value: '2,000+', icon: Zap },
+  { label: 'Districts Covered', value: '14', icon: MapPin },
+  { label: 'Avg. Rating', value: '4.7★', icon: Star },
+];
+
+const SERVICES = [
+  { name: 'Electrician', emoji: '⚡', color: 'from-yellow-400 to-orange-500' },
+  { name: 'Plumber', emoji: '🔧', color: 'from-blue-400 to-cyan-500' },
+  { name: 'Carpenter', emoji: '🪚', color: 'from-amber-400 to-yellow-500' },
+  { name: 'AC Technician', emoji: '❄️', color: 'from-sky-400 to-blue-500' },
+  { name: 'Painter', emoji: '🎨', color: 'from-pink-400 to-rose-500' },
+  { name: 'Mason', emoji: '🧱', color: 'from-orange-400 to-red-500' },
+  { name: 'Welder', emoji: '🔥', color: 'from-red-400 to-orange-500' },
+  { name: 'More...', emoji: '➕', color: 'from-purple-400 to-indigo-500' },
+];
+
+const HOW = [
+  { step: '01', title: 'Register', desc: 'Fill your details, upload your documents and submit.' },
+  { step: '02', title: 'Get Verified', desc: 'Our team reviews your profile within 24 hours.' },
+  { step: '03', title: 'Get Hired', desc: 'Customers in your area can find and book you instantly.' },
+];
+
+export default function LandingPage() {
+  const navigate = useNavigate();
+
+  return (
+    <div className="min-h-screen bg-white font-sans">
+      {/* ── Navbar ── */}
+      <nav className="fixed top-0 w-full bg-white/90 backdrop-blur-md border-b border-gray-100 z-50">
+        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
+              <Wrench className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-black text-lg text-brand-900">Smart Workers</span>
+          </div>
+          <button
+            onClick={() => navigate('/register')}
+            className="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2 rounded-full text-sm font-semibold transition-colors"
+          >
+            Join Now
+          </button>
+        </div>
+      </nav>
+
+      {/* ── Hero ── */}
+      <section className="pt-24 pb-20 bg-gradient-to-br from-brand-900 via-brand-700 to-indigo-600 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          {[...Array(20)].map((_, i) => (
+            <motion.div
+              key={i}
+              className="absolute rounded-full bg-white"
+              style={{
+                width: Math.random() * 80 + 20,
+                height: Math.random() * 80 + 20,
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+              }}
+              animate={{ y: [0, -30, 0], opacity: [0.3, 0.7, 0.3] }}
+              transition={{ duration: Math.random() * 4 + 3, repeat: Infinity, delay: Math.random() * 2 }}
+            />
+          ))}
+        </div>
+        <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+          >
+            <span className="inline-block bg-white/20 text-white text-sm font-semibold px-4 py-1.5 rounded-full mb-6 backdrop-blur">
+              Kerala's #1 Skilled Worker Platform
+            </span>
+            <h1 className="text-5xl md:text-7xl font-black text-white leading-tight mb-6">
+              Your Skills,<br />
+              <span className="text-yellow-300">Your Income</span>
+            </h1>
+            <p className="text-xl text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed">
+              Join thousands of skilled tradespeople across Kerala earning more by connecting
+              directly with customers who need your expertise.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => navigate('/register')}
+                className="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-bold px-8 py-4 rounded-2xl text-lg flex items-center justify-center gap-2 transition-colors"
+              >
+                Register as Worker <ArrowRight className="w-5 h-5" />
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => navigate('/terms')}
+                className="bg-white/10 hover:bg-white/20 text-white font-semibold px-8 py-4 rounded-2xl text-lg border border-white/30 transition-colors"
+              >
+                Read T&amp;C
+              </motion.button>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── Stats ── */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-6xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6">
+          {STATS.map((s, i) => (
+            <motion.div
+              key={s.label}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: i * 0.1 }}
+              className="bg-white rounded-2xl p-6 text-center shadow-sm border border-gray-100"
+            >
+              <s.icon className="w-8 h-8 text-brand-500 mx-auto mb-3" />
+              <div className="text-3xl font-black text-brand-900">{s.value}</div>
+              <div className="text-sm text-gray-500 mt-1">{s.label}</div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Services ── */}
+      <section className="py-20 bg-white">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-black text-gray-900 mb-4">We cover all trades</h2>
+            <p className="text-gray-500 text-lg">From electrical to painting — if you have a skill, we have customers.</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {SERVICES.map((s, i) => (
+              <motion.div
+                key={s.name}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.07 }}
+                whileHover={{ scale: 1.05, y: -4 }}
+                className={`bg-gradient-to-br ${s.color} p-6 rounded-2xl text-center text-white cursor-pointer`}
+              >
+                <div className="text-4xl mb-2">{s.emoji}</div>
+                <div className="font-bold text-sm">{s.name}</div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── How it works ── */}
+      <section className="py-20 bg-brand-900 text-white">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="text-center mb-14">
+            <h2 className="text-4xl font-black mb-4">How it works</h2>
+            <p className="text-white/60 text-lg">Get hired in 3 simple steps</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {HOW.map((h, i) => (
+              <motion.div
+                key={h.step}
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.2 }}
+                className="relative"
+              >
+                <div className="text-8xl font-black text-white/10 absolute -top-4 -left-2">{h.step}</div>
+                <div className="relative z-10">
+                  <h3 className="text-xl font-bold mb-3">{h.title}</h3>
+                  <p className="text-white/60 leading-relaxed">{h.desc}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Benefits ── */}
+      <section className="py-20 bg-white">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-black text-gray-900 mb-4">Why Smart Workers?</h2>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            {[
+              { icon: TrendingUp, title: 'Earn More', desc: 'Set your own daily rate. No middlemen. Keep 100% of what you earn.', color: 'text-green-500' },
+              { icon: ShieldCheck, title: 'Verified Profile', desc: 'Once verified, customers trust you. A badge that builds your reputation.', color: 'text-blue-500' },
+              { icon: MapPin, title: 'Work Nearby', desc: 'Choose which districts and towns you want to work in. No long commutes.', color: 'text-purple-500' },
+            ].map((b, i) => (
+              <motion.div
+                key={b.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.15 }}
+                className="bg-gray-50 rounded-2xl p-8 border border-gray-100"
+              >
+                <b.icon className={`w-10 h-10 ${b.color} mb-5`} />
+                <h3 className="text-xl font-bold text-gray-900 mb-3">{b.title}</h3>
+                <p className="text-gray-500 leading-relaxed">{b.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
+      <section className="py-20 bg-gradient-to-r from-brand-600 to-indigo-600">
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-4xl font-black text-white mb-4">Ready to start earning?</h2>
+            <p className="text-white/80 text-lg mb-8">Join Smart Workers today. Registration takes less than 5 minutes.</p>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => navigate('/register')}
+              className="bg-white text-brand-700 font-bold px-10 py-4 rounded-2xl text-lg hover:bg-gray-50 transition-colors"
+            >
+              Register Now — It's Free
+            </motion.button>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer className="bg-brand-900 text-white/60 py-8 text-center text-sm">
+        <p>© 2026 Smart Workers. All rights reserved. | Kerala, India</p>
+        <p className="mt-2">
+          <button onClick={() => navigate('/terms')} className="hover:text-white underline transition-colors">
+            Terms & Conditions
+          </button>
+          {' · '}
+          <a href="mailto:support@smartworkers.in" className="hover:text-white transition-colors">
+            support@smartworkers.in
+          </a>
+        </p>
+      </footer>
+    </div>
+  );
+}

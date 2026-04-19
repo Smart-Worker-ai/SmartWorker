@@ -1,0 +1,25 @@
+name: smart_workers_customer
+description: Smart Workers – Customer App
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.6.1
+  flutter_secure_storage: ^9.2.2
+  dio: ^5.7.0
+  intl: ^0.19.0
+  firebase_core: ^3.13.1
+  firebase_auth: ^5.5.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

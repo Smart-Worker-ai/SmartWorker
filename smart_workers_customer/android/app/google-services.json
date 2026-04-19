@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "632714863429",
+    "project_id": "smartworker-c0d21",
+    "storage_bucket": "smartworker-c0d21.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:632714863429:android:0d70d4ac6cc25d958c942c",
+        "android_client_info": {
+          "package_name": "com.smartworkers.customer"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA5_5RcMtifxMNoR58eDTqhOXjO9WIbbXs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
