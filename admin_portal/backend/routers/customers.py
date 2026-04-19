@@ -26,3 +26,10 @@ async def unblock_customer(customer_id: str, _=Depends(require_admin)):
         r = await c.post(f"{CUSTOMER_BACKEND_URL}/admin/customers/{customer_id}/unblock", headers=H)
         r.raise_for_status()
         return r.json()
+
+@router.delete("/{customer_id}")
+async def delete_customer(customer_id: str, _=Depends(require_admin)):
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.delete(f"{CUSTOMER_BACKEND_URL}/admin/customers/{customer_id}", headers=H)
+        r.raise_for_status()
+        return r.json()
