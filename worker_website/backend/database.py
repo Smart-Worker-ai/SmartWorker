@@ -20,6 +20,7 @@ def init_db():
             age             INTEGER NOT NULL,
             gender          TEXT NOT NULL,
             mobile          TEXT NOT NULL UNIQUE,
+            email           TEXT,
             address         TEXT NOT NULL,
             district        TEXT NOT NULL,
             town            TEXT NOT NULL,
@@ -47,6 +48,15 @@ def init_db():
             worker_id   TEXT NOT NULL REFERENCES workers(id),
             created_at  TEXT DEFAULT (datetime('now'))
         );
+
+        CREATE TABLE IF NOT EXISTS worker_otps (
+            id         TEXT PRIMARY KEY,
+            mobile     TEXT NOT NULL,
+            otp        TEXT NOT NULL,
+            expires_at INTEGER NOT NULL,
+            created_at TEXT DEFAULT (datetime('now'))
+        );
+        CREATE INDEX IF NOT EXISTS idx_worker_otps_mobile ON worker_otps(mobile);
     """)
     conn.commit()
     conn.close()

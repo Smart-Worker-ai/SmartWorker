@@ -3,6 +3,10 @@ from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, File, Form, UploadFile, HTTPException, Depends, Header
 from database import get_conn
+from email_service import (
+    send_registration_email, send_registration_sms,
+    send_approval_email, send_approval_sms,
+)
 
 ADMIN_SECRET        = os.getenv("ADMIN_SECRET", "***REMOVED-SECRET***")
 CUSTOMER_BACKEND    = os.getenv("CUSTOMER_BACKEND_URL", "https://smart-workers-backend-production.up.railway.app/api/v1")
@@ -54,6 +58,7 @@ async def register_worker(
     age: int = Form(...),
     gender: str = Form(...),
     mobile: str = Form(...),
+    email: str = Form(...),
     address: str = Form(...),
     district: str = Form(...),
     town: str = Form(...),
@@ -74,12 +79,17 @@ async def register_worker(
         raise HTTPException(status_code=400, detail="Age must be between 18 and 70.")
     if not mobile.replace("+", "").isdigit() or len(mobile.replace("+", "")) < 10:
         raise HTTPException(status_code=400, detail="Invalid mobile number.")
+    email = email.strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="A valid email address is required.")
 
     conn = get_conn()
-    existing = conn.execute("SELECT id FROM workers WHERE mobile = ?", (mobile,)).fetchone()
-    if existing:
+    if conn.execute("SELECT id FROM workers WHERE mobile = ?", (mobile,)).fetchone():
         conn.close()
         raise HTTPException(status_code=409, detail="A worker with this mobile number already exists.")
+    if conn.execute("SELECT id FROM workers WHERE email = ?", (email,)).fetchone():
+        conn.close()
+        raise HTTPException(status_code=409, detail="A worker with this email address already exists.")
 
     worker_id = str(uuid.uuid4())
     passbook_url = _save_file(passbook_photo, "passbook")
@@ -87,14 +97,14 @@ async def register_worker(
     photo_url = _save_file(profile_photo, "photos")
 
     conn.execute("""
-        INSERT INTO workers (id, name, age, gender, mobile, address, district, town,
+        INSERT INTO workers (id, name, age, gender, mobile, email, address, district, town,
             job_type, current_location, interested_locations, facilities_requested,
             passbook_photo, aadhar_photo, profile_photo,
             accepted_terms, daily_rate, experience_years)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
     """, (
-        worker_id, name.strip(), age, gender, mobile.strip(), address.strip(),
-        district.strip(), town.strip(), job_type.strip(),
+        worker_id, name.strip(), age, gender, mobile.strip(), email,
+        address.strip(), district.strip(), town.strip(), job_type.strip(),
         current_location.strip(), interested_locations.strip(),
         facilities_requested.strip(),
         passbook_url, aadhar_url, photo_url,
@@ -105,9 +115,18 @@ async def register_worker(
     worker = dict(conn.execute("SELECT * FROM workers WHERE id = ?", (worker_id,)).fetchone())
     conn.close()
 
-    # Remove sensitive file paths from public response
     worker.pop("passbook_photo", None)
     worker.pop("aadhar_photo", None)
+
+    # Send registration confirmation via email + SMS
+    try:
+        send_registration_email(email, name.strip())
+    except Exception:
+        pass
+    try:
+        send_registration_sms(mobile.strip(), name.strip())
+    except Exception:
+        pass
 
     return {"message": "Registration submitted. Our team will verify your profile within 24 hours.", "worker": worker}
 
@@ -206,6 +225,17 @@ async def admin_approve_worker(worker_id: str):
     w = dict(conn.execute("SELECT * FROM workers WHERE id=?", (worker_id,)).fetchone())
     conn.close()
 
+    # Send approval notifications via email + SMS
+    if w.get("email"):
+        try:
+            send_approval_email(w["email"], w["name"])
+        except Exception:
+            pass
+    try:
+        send_approval_sms(w["mobile"], w["name"])
+    except Exception:
+        pass
+
     # Sync approved worker to the Node.js customer backend
     try:
         async with httpx.AsyncClient(timeout=10) as c:
@@ -216,6 +246,7 @@ async def admin_approve_worker(worker_id: str):
                     "dailyRate": w["daily_rate"], "district": w["district"],
                     "town": w["town"], "experienceYears": w["experience_years"],
                     "phone": w["mobile"],
+                    "email": w.get("email"),
                     "photoUrl": w.get("profile_photo"),
                 },
                 headers={"x-admin-secret": ADMIN_SECRET},

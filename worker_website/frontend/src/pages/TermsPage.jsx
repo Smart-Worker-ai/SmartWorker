@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
@@ -19,13 +19,6 @@ const SECTIONS = [
 export default function TermsPage() {
   const navigate = useNavigate();
   const [agreed, setAgreed] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
-  const bottomRef = useRef(null);
-
-  const onScroll = (e) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.target;
-    if (scrollTop + clientHeight >= scrollHeight - 60) setScrolled(true);
-  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -36,7 +29,7 @@ export default function TermsPage() {
         <span className="font-bold text-gray-900">Terms & Conditions</span>
       </nav>
 
-      <div className="flex-1 overflow-y-auto" onScroll={onScroll}>
+      <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-6 py-10">
           <h1 className="text-3xl font-black text-gray-900 mb-2">Smart Workers Worker Terms</h1>
           <p className="text-gray-400 text-sm mb-10">Last updated: April 2026</p>
@@ -57,20 +50,17 @@ export default function TermsPage() {
             ))}
           </div>
 
-          <div ref={bottomRef} className="h-8" />
+          <div className="h-8" />
         </div>
       </div>
 
-      <div className="bg-white border-t px-6 py-4 sticky bottom-0">
-        {!scrolled && (
-          <p className="text-center text-xs text-gray-400 mb-3">Scroll to the bottom to accept</p>
-        )}
-        <label className={`flex items-center gap-3 mb-4 cursor-pointer ${!scrolled ? 'opacity-40 pointer-events-none' : ''}`}>
+      <div className="bg-white border-t px-6 py-4 sticky bottom-0 shadow-lg">
+        <label className="flex items-center gap-3 mb-4 cursor-pointer select-none">
           <input
             type="checkbox"
             checked={agreed}
             onChange={(e) => setAgreed(e.target.checked)}
-            className="w-5 h-5 accent-indigo-600"
+            className="w-5 h-5 accent-indigo-600 shrink-0"
           />
           <span className="text-sm text-gray-700 font-medium">
             I have read and agree to the Terms & Conditions
@@ -79,7 +69,7 @@ export default function TermsPage() {
         <button
           disabled={!agreed}
           onClick={() => navigate('/register', { state: { termsAccepted: true } })}
-          className="w-full bg-brand-600 disabled:bg-gray-200 disabled:text-gray-400 text-white font-bold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2"
+          className="w-full bg-brand-600 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2"
         >
           <CheckCircle className="w-5 h-5" /> Accept & Register
         </button>

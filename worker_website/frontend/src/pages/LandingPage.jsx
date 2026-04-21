@@ -41,7 +41,7 @@ export default function LandingPage() {
             <span className="font-black text-lg text-brand-900">Smart Workers</span>
           </div>
           <button
-            onClick={() => navigate('/register')}
+            onClick={() => navigate('/terms')}
             className="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2 rounded-full text-sm font-semibold transition-colors"
           >
             Join Now
@@ -50,55 +50,45 @@ export default function LandingPage() {
       </nav>
 
       {/* ── Hero ── */}
-      <section className="pt-24 pb-20 bg-gradient-to-br from-brand-900 via-brand-700 to-indigo-600 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          {[...Array(20)].map((_, i) => (
+      <section className="pt-24 pb-16 sm:pb-20 bg-gradient-to-br from-brand-900 via-brand-700 to-indigo-600 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10 pointer-events-none">
+          {[...Array(12)].map((_, i) => (
             <motion.div
               key={i}
               className="absolute rounded-full bg-white"
               style={{
-                width: Math.random() * 80 + 20,
-                height: Math.random() * 80 + 20,
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
+                width: (i % 4) * 20 + 20,
+                height: (i % 4) * 20 + 20,
+                left: `${(i * 8.3) % 100}%`,
+                top: `${(i * 13) % 100}%`,
               }}
-              animate={{ y: [0, -30, 0], opacity: [0.3, 0.7, 0.3] }}
-              transition={{ duration: Math.random() * 4 + 3, repeat: Infinity, delay: Math.random() * 2 }}
+              animate={{ y: [0, -20, 0], opacity: [0.3, 0.6, 0.3] }}
+              transition={{ duration: (i % 3) + 4, repeat: Infinity, delay: i * 0.3 }}
             />
           ))}
         </div>
-        <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-          >
-            <span className="inline-block bg-white/20 text-white text-sm font-semibold px-4 py-1.5 rounded-full mb-6 backdrop-blur">
-              Kerala's #1 Skilled Worker Platform
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center relative z-10">
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
+            <span className="inline-block bg-white/20 text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 rounded-full mb-5 sm:mb-6 backdrop-blur">
+              Kerala&apos;s #1 Skilled Worker Platform
             </span>
-            <h1 className="text-5xl md:text-7xl font-black text-white leading-tight mb-6">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-white leading-tight mb-5 sm:mb-6">
               Your Skills,<br />
               <span className="text-yellow-300">Your Income</span>
             </h1>
-            <p className="text-xl text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-base sm:text-xl text-white/80 mb-8 sm:mb-10 max-w-2xl mx-auto leading-relaxed px-2">
               Join thousands of skilled tradespeople across Kerala earning more by connecting
               directly with customers who need your expertise.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => navigate('/register')}
-                className="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-bold px-8 py-4 rounded-2xl text-lg flex items-center justify-center gap-2 transition-colors"
-              >
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center px-4 sm:px-0">
+              <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+                onClick={() => navigate('/terms')}
+                className="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-bold px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl text-base sm:text-lg flex items-center justify-center gap-2 transition-colors">
                 Register as Worker <ArrowRight className="w-5 h-5" />
               </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.97 }}
+              <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
                 onClick={() => navigate('/terms')}
-                className="bg-white/10 hover:bg-white/20 text-white font-semibold px-8 py-4 rounded-2xl text-lg border border-white/30 transition-colors"
-              >
+                className="bg-white/10 hover:bg-white/20 text-white font-semibold px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl text-base sm:text-lg border border-white/30 transition-colors">
                 Read T&amp;C
               </motion.button>
             </div>
@@ -107,8 +97,8 @@ export default function LandingPage() {
       </section>
 
       {/* ── Stats ── */}
-      <section className="py-16 bg-gray-50">
-        <div className="max-w-6xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-6">
+      <section className="py-12 sm:py-16 bg-gray-50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
           {STATS.map((s, i) => (
             <motion.div
               key={s.label}
@@ -127,13 +117,13 @@ export default function LandingPage() {
       </section>
 
       {/* ── Services ── */}
-      <section className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-black text-gray-900 mb-4">We cover all trades</h2>
-            <p className="text-gray-500 text-lg">From electrical to painting — if you have a skill, we have customers.</p>
+      <section className="py-14 sm:py-20 bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-10 sm:mb-12">
+            <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-3 sm:mb-4">We cover all trades</h2>
+            <p className="text-gray-500 text-base sm:text-lg px-4">From electrical to painting — if you have a skill, we have customers.</p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             {SERVICES.map((s, i) => (
               <motion.div
                 key={s.name}
@@ -153,13 +143,13 @@ export default function LandingPage() {
       </section>
 
       {/* ── How it works ── */}
-      <section className="py-20 bg-brand-900 text-white">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="text-center mb-14">
-            <h2 className="text-4xl font-black mb-4">How it works</h2>
-            <p className="text-white/60 text-lg">Get hired in 3 simple steps</p>
+      <section className="py-14 sm:py-20 bg-brand-900 text-white">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-10 sm:mb-14">
+            <h2 className="text-3xl sm:text-4xl font-black mb-3 sm:mb-4">How it works</h2>
+            <p className="text-white/60 text-base sm:text-lg">Get hired in 3 simple steps</p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-3 gap-8 sm:gap-8">
             {HOW.map((h, i) => (
               <motion.div
                 key={h.step}
@@ -181,12 +171,12 @@ export default function LandingPage() {
       </section>
 
       {/* ── Benefits ── */}
-      <section className="py-20 bg-white">
-        <div className="max-w-5xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-black text-gray-900 mb-4">Why Smart Workers?</h2>
+      <section className="py-14 sm:py-20 bg-white">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-10 sm:mb-12">
+            <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-4">Why Smart Workers?</h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-3 gap-5 sm:gap-8">
             {[
               { icon: TrendingUp, title: 'Earn More', desc: 'Set your own daily rate. No middlemen. Keep 100% of what you earn.', color: 'text-green-500' },
               { icon: ShieldCheck, title: 'Verified Profile', desc: 'Once verified, customers trust you. A badge that builds your reputation.', color: 'text-blue-500' },
@@ -210,20 +200,20 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA ── */}
-      <section className="py-20 bg-gradient-to-r from-brand-600 to-indigo-600">
-        <div className="max-w-3xl mx-auto px-6 text-center">
+      <section className="py-14 sm:py-20 bg-gradient-to-r from-brand-600 to-indigo-600">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-4xl font-black text-white mb-4">Ready to start earning?</h2>
-            <p className="text-white/80 text-lg mb-8">Join Smart Workers today. Registration takes less than 5 minutes.</p>
+            <h2 className="text-3xl sm:text-4xl font-black text-white mb-4">Ready to start earning?</h2>
+            <p className="text-white/80 text-base sm:text-lg mb-8">Join Smart Workers today. Registration takes less than 5 minutes.</p>
             <motion.button
-              whileHover={{ scale: 1.05 }}
+              whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.97 }}
-              onClick={() => navigate('/register')}
-              className="bg-white text-brand-700 font-bold px-10 py-4 rounded-2xl text-lg hover:bg-gray-50 transition-colors"
+              onClick={() => navigate('/terms')}
+              className="bg-white text-brand-700 font-bold px-8 sm:px-10 py-3.5 sm:py-4 rounded-2xl text-base sm:text-lg hover:bg-gray-50 transition-colors"
             >
               Register Now — It's Free
             </motion.button>

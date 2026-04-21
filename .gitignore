@@ -1,0 +1,17 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.DS_Store
+build/
+coverage/
+.dart_tool/
+.packages
+pubspec.lock
+**/build/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.metadata
+**/.symlinks/
+**/Pods/
+**/DerivedData/

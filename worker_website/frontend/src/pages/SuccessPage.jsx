@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, Clock, Phone } from 'lucide-react';
+import { CheckCircle, Clock, Mail } from 'lucide-react';
 
 export default function SuccessPage() {
   const navigate = useNavigate();
@@ -27,7 +27,7 @@ export default function SuccessPage() {
         <div className="space-y-4 mb-8">
           {[
             { icon: Clock, text: 'Verification takes 24–48 hours', color: 'text-blue-500' },
-            { icon: Phone, text: 'We'll contact you on your registered mobile', color: 'text-purple-500' },
+            { icon: Mail, text: "You'll receive an email when your profile is approved", color: 'text-purple-500' },
             { icon: CheckCircle, text: 'Once verified, customers can find and book you', color: 'text-green-500' },
           ].map(({ icon: Icon, text, color }) => (
             <div key={text} className="flex items-center gap-3 text-left bg-gray-50 rounded-xl p-4">
@@ -37,10 +37,10 @@ export default function SuccessPage() {
           ))}
         </div>
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate(-1)}
           className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3.5 rounded-xl transition-colors"
         >
-          Back to Home
+          ← Back
         </button>
       </motion.div>
     </div>

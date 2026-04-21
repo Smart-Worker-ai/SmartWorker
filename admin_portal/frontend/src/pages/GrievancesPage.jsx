@@ -33,11 +33,11 @@ export default function GrievancesPage() {
   );
 
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-black text-white mb-2">Grievances</h1>
+    <div className="p-4 md:p-8">
+      <h1 className="text-xl md:text-2xl font-black text-white mb-2">Grievances</h1>
       <p className="text-gray-400 text-sm mb-6">{grievances.length} total grievances</p>
 
-      <div className="flex gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-500" />
           <input value={search} onChange={e => setSearch(e.target.value)}

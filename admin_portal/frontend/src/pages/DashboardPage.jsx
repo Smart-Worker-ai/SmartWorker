@@ -49,19 +49,19 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8">
       <div>
-        <h1 className="text-2xl font-black text-white">Dashboard</h1>
+        <h1 className="text-xl md:text-2xl font-black text-white">Dashboard</h1>
         <p className="text-gray-400 text-sm mt-1">Smart Workers analytics overview</p>
       </div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 md:gap-4">
         {cards.map((c) => <StatCard key={c.label} {...c} />)}
       </div>
 
       {/* Charts row */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid sm:grid-cols-2 gap-4 md:gap-6">
         {/* Top Services bar chart */}
         <motion.div
           initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }}
@@ -98,7 +98,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Leaderboards */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid sm:grid-cols-2 gap-4 md:gap-6">
         {/* Top Customers */}
         <motion.div
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}

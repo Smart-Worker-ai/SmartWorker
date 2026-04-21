@@ -27,11 +27,11 @@ export default function BookingsPage() {
   );
 
   return (
-    <div className="p-8">
-      <h1 className="text-2xl font-black text-white mb-2">Bookings</h1>
+    <div className="p-4 md:p-8">
+      <h1 className="text-xl md:text-2xl font-black text-white mb-2">Bookings</h1>
       <p className="text-gray-400 text-sm mb-6">{bookings.length} bookings</p>
 
-      <div className="flex gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-500" />
           <input value={search} onChange={e => setSearch(e.target.value)}
@@ -52,7 +52,8 @@ export default function BookingsPage() {
         <div className="flex justify-center py-20"><div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full" /></div>
       ) : (
         <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[640px]">
             <thead className="bg-gray-800 text-gray-400">
               <tr>
                 {['Worker', 'Location', 'Date', 'Days / Price', 'Status', 'Created'].map(h => (
@@ -85,6 +86,7 @@ export default function BookingsPage() {
             </tbody>
           </table>
           {filtered.length === 0 && <p className="text-center text-gray-500 py-12">No bookings found.</p>}
+          </div>
         </div>
       )}
     </div>
