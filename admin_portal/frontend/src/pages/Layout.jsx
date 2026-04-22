@@ -14,9 +14,46 @@ const NAV = [
   { to: '/grievances', icon: MessageSquareWarning, label: 'Grievances',  color: 'from-rose-500 to-pink-600' },
 ];
 
+function NavItem({ to, icon: Icon, label, color, onClick }) {
+  return (
+    <NavLink
+      to={to}
+      end={to === '/'}
+      onClick={onClick}
+    >
+      {({ isActive }) => (
+        <motion.div
+          whileTap={{ scale: 0.97 }}
+          className={`relative flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold transition-colors duration-150 cursor-pointer select-none
+            ${isActive
+              ? 'text-white bg-white/5'
+              : 'text-gray-400 hover:text-white hover:bg-gray-800/70'
+            }`}
+        >
+          {isActive && (
+            <motion.div
+              layoutId="navIndicator"
+              className={`absolute inset-0 bg-gradient-to-r ${color} rounded-xl opacity-15`}
+              transition={{ type: 'spring', bounce: 0.15, duration: 0.45 }}
+            />
+          )}
+          {isActive && (
+            <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-gradient-to-b ${color} rounded-r-full`} />
+          )}
+          <div className={`relative w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors
+            ${isActive ? `bg-gradient-to-br ${color} shadow-md` : 'bg-gray-800 group-hover:bg-gray-700'}`}>
+            <Icon className="w-4 h-4 text-white" />
+          </div>
+          <span className="relative flex-1">{label}</span>
+          {isActive && <ChevronRight className="relative w-3.5 h-3.5 opacity-40" />}
+        </motion.div>
+      )}
+    </NavLink>
+  );
+}
+
 function Sidebar({ onClose }) {
   const navigate = useNavigate();
-  const location = useLocation();
   const logout = () => {
     localStorage.removeItem('admin_token');
     navigate('/login');
@@ -24,11 +61,11 @@ function Sidebar({ onClose }) {
   };
 
   return (
-    <aside className="w-64 shrink-0 bg-gray-950 border-r border-gray-800/60 flex flex-col h-full">
+    <aside className="w-64 shrink-0 bg-gray-950 border-r border-gray-800/50 flex flex-col h-full">
       {/* Logo */}
-      <div className="h-16 flex items-center gap-3 px-5 border-b border-gray-800/60 shrink-0">
-        <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
-          <Wrench className="w-4.5 h-4.5 text-white" />
+      <div className="h-16 flex items-center gap-3 px-5 border-b border-gray-800/50 shrink-0">
+        <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
+          <Wrench className="w-4 h-4 text-white" />
         </div>
         <div className="flex-1">
           <div className="font-black text-sm text-white">Smart Workers</div>
@@ -42,55 +79,20 @@ function Sidebar({ onClose }) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 py-5 px-3 space-y-1 overflow-y-auto">
-        {NAV.map(({ to, icon: Icon, label, color }) => {
-          const isActive = to === '/'
-            ? location.pathname === '/'
-            : location.pathname.startsWith(to);
-          return (
-            <NavLink key={to} to={to} end={to === '/'} onClick={onClose}>
-              <motion.div
-                whileHover={{ x: 3 }}
-                whileTap={{ scale: 0.97 }}
-                className={`relative flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer
-                  ${isActive
-                    ? 'text-white'
-                    : 'text-gray-500 hover:text-gray-200 hover:bg-gray-800/50'
-                  }`}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="activeNav"
-                    className={`absolute inset-0 bg-gradient-to-r ${color} rounded-xl opacity-20`}
-                    transition={{ type: 'spring', bounce: 0.2, duration: 0.5 }}
-                  />
-                )}
-                {isActive && (
-                  <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b ${color} rounded-r-full`} />
-                )}
-                <div className={`relative w-8 h-8 rounded-lg flex items-center justify-center shrink-0
-                  ${isActive ? `bg-gradient-to-br ${color} shadow-lg` : 'bg-gray-800'}`}>
-                  <Icon className="w-4 h-4 text-white" />
-                </div>
-                <span className="relative flex-1">{label}</span>
-                {isActive && (
-                  <ChevronRight className="relative w-3.5 h-3.5 text-white/50" />
-                )}
-              </motion.div>
-            </NavLink>
-          );
-        })}
+      <nav className="flex-1 py-5 px-3 space-y-0.5 overflow-y-auto">
+        {NAV.map((item) => (
+          <NavItem key={item.to} {...item} onClick={onClose} />
+        ))}
       </nav>
 
       {/* Logout */}
-      <div className="p-3 border-t border-gray-800/60 shrink-0">
+      <div className="p-3 border-t border-gray-800/50 shrink-0">
         <motion.button
           onClick={logout}
-          whileHover={{ x: 3 }}
           whileTap={{ scale: 0.97 }}
-          className="flex items-center gap-3 w-full px-3.5 py-3 rounded-xl text-sm font-semibold text-gray-500 hover:bg-red-950/60 hover:text-red-400 transition-all duration-200"
+          className="flex items-center gap-3 w-full px-3.5 py-3 rounded-xl text-sm font-semibold text-gray-400 hover:text-red-400 hover:bg-red-950/50 transition-colors duration-150"
         >
-          <div className="w-8 h-8 bg-gray-800 hover:bg-red-900/40 rounded-lg flex items-center justify-center transition-colors">
+          <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center">
             <LogOut className="w-4 h-4" />
           </div>
           Logout
@@ -140,13 +142,13 @@ export default function Layout() {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile top bar */}
-        <header className="md:hidden h-14 bg-gray-900/80 backdrop-blur-sm border-b border-gray-800/60 flex items-center px-4 gap-3 shrink-0">
+        <header className="md:hidden h-14 bg-gray-900/80 backdrop-blur-sm border-b border-gray-800/50 flex items-center px-4 gap-3 shrink-0">
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setOpen(true)}
             className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors text-gray-400 hover:text-white"
           >
-            <Menu className="w-4.5 h-4.5" />
+            <Menu className="w-4 h-4" />
           </motion.button>
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
@@ -160,10 +162,10 @@ export default function Layout() {
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
               className="h-full"
             >
               <Outlet />

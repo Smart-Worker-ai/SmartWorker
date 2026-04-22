@@ -62,20 +62,36 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<String?> sendOtp(String email, {String? phone}) async {
     state = state.copyWith(isLoading: true, clearError: true);
-    try {
-      final body = <String, dynamic>{'email': email};
-      if (phone != null && phone.isNotEmpty) body['phone'] = phone;
-      final res = await _api.client.post('/auth/send-otp', data: body);
-      state = state.copyWith(
-        isLoading: false,
-        devOtp: res.data['devOtp'] as String?,
-      );
-      return null;
-    } on DioException catch (e) {
-      final msg = e.response?.data?['error'] as String? ?? 'Could not connect. Check your internet.';
-      state = state.copyWith(isLoading: false, error: msg);
-      return msg;
+    final body = <String, dynamic>{'email': email};
+    if (phone != null && phone.isNotEmpty) body['phone'] = phone;
+
+    // Retry once — backend may be waking from cold start
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        final res = await _api.client.post('/auth/send-otp', data: body);
+        state = state.copyWith(
+          isLoading: false,
+          devOtp: res.data['devOtp'] as String?,
+        );
+        return null;
+      } on DioException catch (e) {
+        if (e.response != null) {
+          // Got a real error response from server
+          final msg = e.response!.data?['error'] as String? ?? 'Request failed.';
+          state = state.copyWith(isLoading: false, error: msg);
+          return msg;
+        }
+        if (attempt == 0) {
+          // First attempt timed out — wait 3s and retry (server cold start)
+          await Future.delayed(const Duration(seconds: 3));
+          continue;
+        }
+        const msg = 'Server unreachable. Please try again in a moment.';
+        state = state.copyWith(isLoading: false, error: msg);
+        return msg;
+      }
     }
+    return null;
   }
 
   Future<({bool isNewUser, String? error})> verifyOtp(String email, String otp) async {

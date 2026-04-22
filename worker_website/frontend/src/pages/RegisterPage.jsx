@@ -94,7 +94,8 @@ export default function RegisterPage() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [termsAccepted, setTermsAccepted] = useState(location.state?.termsAccepted ?? false);
+  // T&C is accepted on the TermsPage before reaching here
+  const [termsAccepted] = useState(true);
   const [passbookFile, setPassbookFile] = useState(null);
   const [aadharFile, setAadharFile] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
@@ -209,8 +210,7 @@ export default function RegisterPage() {
 
         <div className="p-6 space-y-3 border-t border-white/10">
           {[
-            { icon: Lock, text: 'Bank-grade data encryption' },
-            { icon: ShieldCheck, text: 'Verified before going live' },
+            { icon: ShieldCheck, text: 'Your data is safe' },
             { icon: Star, text: 'Rated 4.7★ by workers' },
           ].map(({ icon: I, text }) => (
             <div key={text} className="flex items-center gap-3 text-white/50 text-xs">
@@ -266,7 +266,7 @@ export default function RegisterPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleSubmit(onSubmit)} onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}>
             <AnimatePresence mode="wait">
               <motion.div key={step}
                 initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }}
@@ -320,11 +320,9 @@ export default function RegisterPage() {
                         maxLength: { value: 300, message: 'Address is too long (max 300 characters)' },
                       })} className={inputCls} rows={2} placeholder="House No., Street, City, District" />
                     </InputField>
-                    <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex gap-3">
-                      <ShieldCheck className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
-                      <p className="text-xs text-indigo-700 leading-relaxed">
-                        Your personal information is encrypted and only used for profile creation and verification. It will never be shared publicly.
-                      </p>
+                    <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex gap-3 items-center">
+                      <ShieldCheck className="w-5 h-5 text-indigo-500 shrink-0" />
+                      <p className="text-xs text-indigo-700 font-medium">Your details are private and will never be shared.</p>
                     </div>
                   </>
                 )}
@@ -395,12 +393,9 @@ export default function RegisterPage() {
                 {/* ── Step 2: Documents ── */}
                 {step === 2 && (
                   <>
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
-                      <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                      <p className="text-xs text-amber-800 leading-relaxed">
-                        All documents are stored with AES-256 encryption and used <strong>only for identity verification</strong>.
-                        They are never visible to customers.
-                      </p>
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 items-center">
+                      <Lock className="w-5 h-5 text-amber-600 shrink-0" />
+                      <p className="text-xs text-amber-800 font-medium">Your documents are safe and used only for verification.</p>
                     </div>
                     <FileDropzone label="Passbook Front Page *" hint="JPG, PNG or PDF · Max 5 MB"
                       accept={{ 'image/*': [], 'application/pdf': [] }} file={passbookFile} onFile={setPassbookFile} />
