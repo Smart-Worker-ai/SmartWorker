@@ -77,7 +77,8 @@ async def register_worker(
         raise HTTPException(status_code=400, detail="You must accept the Terms & Conditions.")
     if age < 18 or age > 70:
         raise HTTPException(status_code=400, detail="Age must be between 18 and 70.")
-    if not mobile.replace("+", "").isdigit() or len(mobile.replace("+", "")) < 10:
+    mobile_digits = ''.join(c for c in mobile if c.isdigit())
+    if len(mobile_digits) < 10:
         raise HTTPException(status_code=400, detail="Invalid mobile number.")
     email = email.strip().lower()
     if not email or "@" not in email:

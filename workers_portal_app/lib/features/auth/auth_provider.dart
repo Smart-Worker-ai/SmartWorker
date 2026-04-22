@@ -60,17 +60,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<String?> sendOtp(String email) async {
+  Future<String?> sendOtp(String email, {String? phone}) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final res = await _api.client.post('/auth/send-otp', data: {'email': email});
+      final body = <String, dynamic>{'email': email};
+      if (phone != null && phone.isNotEmpty) body['phone'] = phone;
+      final res = await _api.client.post('/auth/send-otp', data: body);
       state = state.copyWith(
         isLoading: false,
         devOtp: res.data['devOtp'] as String?,
       );
       return null;
     } on DioException catch (e) {
-      final msg = e.response?.data?['error'] as String? ?? 'Network error. Is the backend running?';
+      final msg = e.response?.data?['error'] as String? ?? 'Could not connect. Check your internet.';
       state = state.copyWith(isLoading: false, error: msg);
       return msg;
     }

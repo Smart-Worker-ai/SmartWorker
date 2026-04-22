@@ -450,18 +450,12 @@ export default function RegisterPage() {
                       </div>
                     </div>
 
-                    <label className="flex items-start gap-3 cursor-pointer bg-white border border-slate-200 rounded-2xl p-4 hover:border-indigo-300 transition-colors">
-                      <input type="checkbox" checked={termsAccepted} onChange={e => setTermsAccepted(e.target.checked)}
-                        className="w-5 h-5 accent-indigo-600 mt-0.5 shrink-0" />
-                      <span className="text-sm text-slate-700 leading-relaxed">
-                        I have read and agree to the{' '}
-                        <button type="button" onClick={() => navigate('/terms')}
-                          className="text-indigo-600 font-semibold underline decoration-indigo-300 hover:text-indigo-800 transition-colors">
-                          Terms & Conditions
-                        </button>
-                        {' '}of Smart Workers platform.
+                    <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl p-4">
+                      <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
+                      <span className="text-sm text-emerald-800 font-medium">
+                        Terms &amp; Conditions accepted
                       </span>
-                    </label>
+                    </div>
                   </>
                 )}
               </motion.div>
