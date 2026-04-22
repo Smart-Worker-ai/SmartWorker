@@ -13,6 +13,16 @@ def get_conn():
 
 def init_db():
     conn = get_conn()
+    # Migrate: add columns that may not exist in older DB instances
+    for col, definition in [
+        ("email", "TEXT"),
+    ]:
+        try:
+            conn.execute(f"ALTER TABLE workers ADD COLUMN {col} {definition}")
+            conn.commit()
+        except Exception:
+            pass  # column already exists
+
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS workers (
             id              TEXT PRIMARY KEY,
