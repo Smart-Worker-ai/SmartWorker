@@ -14,6 +14,8 @@ SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
 SMTP_FROM = os.getenv("SMTP_FROM", "Smart Workers <noreply@smartworkers.in>")
 FAST2SMS_API_KEY = os.getenv("FAST2SMS_API_KEY", "")
+CUSTOM_SMS_GATEWAY_URL = os.getenv("CUSTOM_SMS_GATEWAY_URL", "")
+CUSTOM_SMS_GATEWAY_SECRET = os.getenv("CUSTOM_SMS_GATEWAY_SECRET", "")
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +48,26 @@ def _send_email(to: str, subject: str, html: str) -> bool:
 def _normalize_phone(phone: str) -> str:
     digits = re.sub(r"\D", "", phone)
     return digits[-10:] if len(digits) >= 10 else ""
+
+
+def _send_via_custom_gateway(phone: str, message: str) -> bool:
+    """Self-hosted Android SMS Gateway — install 'SMS Gateway for Android' on any spare phone."""
+    if not CUSTOM_SMS_GATEWAY_URL:
+        return False
+    digits = _normalize_phone(phone)
+    if len(digits) != 10:
+        return False
+    try:
+        headers = {"Content-Type": "application/json"}
+        if CUSTOM_SMS_GATEWAY_SECRET:
+            headers["Authorization"] = f"Bearer {CUSTOM_SMS_GATEWAY_SECRET}"
+        payload = json.dumps({"phone_number": f"+91{digits}", "message": message}).encode("utf-8")
+        req = urllib.request.Request(CUSTOM_SMS_GATEWAY_URL, data=payload, headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            return resp.status < 300
+    except Exception as e:
+        logger.error(f"[sms] Custom gateway failed to {phone}: {e}")
+        return False
 
 
 def _send_sms(phone: str, message: str) -> bool:
@@ -87,9 +109,13 @@ def _send_otp_sms(phone: str, otp: str) -> bool:
     if len(digits) != 10:
         return False
     try:
+        msg = f"Your Smart Workers OTP is {otp}. Valid for 10 minutes. Do not share with anyone."
+        # 1. Try custom self-hosted gateway first
+        if _send_via_custom_gateway(phone, msg):
+            return True
         payload = json.dumps({
             "route": "q",
-            "message": f"Your Smart Workers OTP is {otp}. Valid for 10 minutes. Do not share with anyone.",
+            "message": msg,
             "language": "english",
             "flash": 0,
             "numbers": digits,

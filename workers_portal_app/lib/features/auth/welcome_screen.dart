@@ -246,6 +246,30 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               ),
             ),
           ),
+
+          // Build version badge
+          Positioned(
+            bottom: 12,
+            right: 16,
+            child: SafeArea(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+                ),
+                child: Text(
+                  'v0.1.1 build 2',
+                  style: GoogleFonts.inter(
+                    fontSize: 10,
+                    color: Colors.white.withValues(alpha: 0.4),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
