@@ -1,0 +1,6 @@
+.dart_tool/
+.packages
+.pub/
+build/
+flutter_*.png
+coverage/

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Ban, CheckCircle, ShieldCheck, Star, Clock, XCircle, ChevronDown, ChevronUp, FileText, ExternalLink, Trash2, AlertTriangle } from 'lucide-react';
 import api from '../api';
+import { useTheme } from '../context/ThemeContext';
 
 function ConfirmDialog({ name, type, onConfirm, onCancel }) {
   return (
@@ -117,6 +118,7 @@ function WorkerDetail({ workerId, onClose }) {
 }
 
 export default function WorkersPage() {
+  const { isDark, t, lang } = useTheme();
   const [workers, setWorkers] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -162,7 +164,7 @@ export default function WorkersPage() {
   };
 
   return (
-    <div className="p-4 md:p-8">
+    <div className={`p-4 md:p-8 min-h-screen ${isDark ? 'text-white' : 'text-gray-900'}`}>
       {deleteTarget && (
         <ConfirmDialog
           name={deleteTarget.name || 'this worker'}
@@ -171,7 +173,9 @@ export default function WorkersPage() {
           onCancel={() => setDeleteTarget(null)}
         />
       )}
-      <h1 className="text-xl md:text-2xl font-black text-white mb-1">Workers</h1>
+      <h1 className={`text-xl md:text-2xl font-black mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+        {lang === 'ml' ? 'തൊഴിലാളികൾ' : 'Workers'}
+      </h1>
       <p className="text-gray-400 text-sm mb-5">
         {portalWorkers.length} registered · {mainWorkers.length} seeded
       </p>
@@ -193,7 +197,7 @@ export default function WorkersPage() {
         <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-500" />
         <input value={search} onChange={e => setSearch(e.target.value)}
           placeholder="Search by name, job type, mobile…"
-          className="w-full bg-gray-900 border border-gray-700 text-white rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+          className={`w-full border rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm ${isDark ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'}`} />
       </div>
 
       {loading ? (
@@ -201,10 +205,10 @@ export default function WorkersPage() {
           <div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full" />
         </div>
       ) : (
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+        <div className={`border rounded-2xl overflow-hidden ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[680px]">
-              <thead className="bg-gray-800 text-gray-400">
+              <thead className={isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-50 text-gray-500'}>
                 <tr>
                   {['Worker', 'Location', tab === 'portal' ? 'Mobile / Age' : 'Rate / Rating', 'Status', 'Actions', ''].map(h => (
                     <th key={h} className="text-left px-4 py-3 font-semibold">{h}</th>

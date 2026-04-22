@@ -4,6 +4,7 @@ import '../features/worker_profile/worker_profile_screen.dart';
 import '../features/digital_vault/vault_screen.dart';
 import '../features/booking/booking_screen.dart';
 import '../core/theme/app_theme.dart';
+import 'settings_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -59,6 +60,21 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          'Smart Workers',
+          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_rounded),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+            ),
+          ),
+        ],
+      ),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         transitionBuilder: (child, anim) => FadeTransition(opacity: anim, child: child),

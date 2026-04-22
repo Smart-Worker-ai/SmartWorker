@@ -55,6 +55,13 @@ async def approve_portal_worker(worker_id: str, _=Depends(require_admin)):
         r.raise_for_status()
         return r.json()
 
+@router.post("/{worker_id}/reject")
+async def reject_portal_worker(worker_id: str, _=Depends(require_admin)):
+    async with httpx.AsyncClient(timeout=10) as c:
+        r = await c.post(f"{WORKER_BACKEND_URL}/workers/admin/{worker_id}/reject", headers=HW)
+        r.raise_for_status()
+        return r.json()
+
 @router.post("/{worker_id}/block")
 async def block_worker(worker_id: str, source: str = "main", _=Depends(require_admin)):
     async with httpx.AsyncClient(timeout=10) as c:

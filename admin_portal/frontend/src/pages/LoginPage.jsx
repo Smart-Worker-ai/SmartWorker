@@ -237,7 +237,8 @@ export default function LoginPage() {
                 <input
                   value={username}
                   onChange={e => setUsername(e.target.value)}
-                  className="w-full bg-white/8 border border-white/12 text-white rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500/60 placeholder:text-white/25 transition-all text-sm font-medium backdrop-blur-sm"
+                  className="w-full bg-gray-900/70 border border-white/15 text-white rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500/60 placeholder:text-white/30 transition-all text-sm font-medium autofill:bg-gray-900/70"
+                  style={{ colorScheme: 'dark', caretColor: 'white' }}
                   placeholder="admin"
                   autoComplete="username"
                 />
@@ -250,7 +251,8 @@ export default function LoginPage() {
                     type={show ? 'text' : 'password'}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
-                    className="w-full bg-white/8 border border-white/12 text-white rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500/60 placeholder:text-white/25 transition-all text-sm font-medium pr-12 backdrop-blur-sm"
+                    className="w-full bg-gray-900/70 border border-white/15 text-white rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500/60 placeholder:text-white/30 transition-all text-sm font-medium pr-12 autofill:bg-gray-900/70"
+                    style={{ colorScheme: 'dark', caretColor: 'white' }}
                     placeholder="••••••••"
                     autoComplete="current-password"
                   />

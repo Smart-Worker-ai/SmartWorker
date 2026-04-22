@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Excludes flutter_secure_storage SharedPreferences from cloud backup.
+    Without this, restoring from backup on Android 11 and below causes a
+    BadPaddingException because the Keystore encryption key is not restored.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="FlutterSecureStorage"/>
+</full-backup-content>

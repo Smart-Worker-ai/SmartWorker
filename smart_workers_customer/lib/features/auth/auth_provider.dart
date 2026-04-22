@@ -135,8 +135,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false, token: token, user: user);
       return (isNewUser: true, error: null);
     } on DioException catch (e) {
-      final msg = e.response?.data?['message'] as String? ?? 'Registration failed.';
-      state = state.copyWith(isLoading: false, error: msg);
+      final msg = e.response?.data?['error'] as String? ?? e.response?.data?['message'] as String? ?? 'Registration failed.';
+T      state = state.copyWith(isLoading: false, error: msg);
       return (isNewUser: false, error: msg);
     }
   }
@@ -153,7 +153,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false, token: token, user: user);
       return null;
     } on DioException catch (e) {
-      final msg = e.response?.data?['message'] as String? ?? 'Login failed. Check your credentials.';
+      final msg = e.response?.data?['error'] as String? ?? e.response?.data?['message'] as String? ?? 'Login failed. Check your credentials.';
       state = state.copyWith(isLoading: false, error: msg);
       return msg;
     }
@@ -194,7 +194,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false, error: msg);
       return (isNewUser: false, error: msg);
     } on DioException catch (e) {
-      final msg = e.response?.data?['message'] as String? ?? 'Server error. Try again.';
+      final msg = e.response?.data?['error'] as String? ?? e.response?.data?['message'] as String? ?? 'Server error. Try again.';
       state = state.copyWith(isLoading: false, error: msg);
       return (isNewUser: false, error: msg);
     }

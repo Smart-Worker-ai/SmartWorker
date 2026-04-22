@@ -8,6 +8,7 @@ import {
   Upload, CheckCircle, ArrowLeft, ArrowRight, AlertCircle,
   User, Briefcase, FileText, ClipboardCheck, ShieldCheck, Lock, Star,
 } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 const DISTRICTS = [
   'Ernakulam','Thiruvananthapuram','Thrissur','Kozhikode','Kottayam',
@@ -84,13 +85,16 @@ function InputField({ label, error, children }) {
   );
 }
 
-const inputCls = `w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm text-slate-900
+const inputCls = (isDark) => `w-full border rounded-xl px-4 py-3.5 text-sm
   placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
-  focus:bg-white transition-all duration-150`;
+  transition-all duration-150 ${isDark
+    ? 'bg-gray-800 border-gray-700 text-white focus:bg-gray-800'
+    : 'bg-slate-50 border-slate-200 text-slate-900 focus:bg-white'}`;
 
 export default function RegisterPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isDark } = useTheme();
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -167,7 +171,7 @@ export default function RegisterPage() {
   const StepIcon = STEPS[step].icon;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+    <div className={`min-h-screen flex flex-col md:flex-row ${isDark ? 'bg-gray-950' : 'bg-slate-50'}`}>
 
       {/* ── Sidebar (desktop) ── */}
       <aside className="hidden md:flex md:w-72 lg:w-80 bg-gradient-to-b from-slate-900 to-indigo-950 text-white flex-col shrink-0 sticky top-0 h-screen">
@@ -221,7 +225,7 @@ export default function RegisterPage() {
       </aside>
 
       {/* ── Main Form Area ── */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className={`flex-1 flex flex-col min-h-screen ${isDark ? 'bg-gray-950' : 'bg-slate-50'}`}>
 
         {/* Mobile header */}
         <header className="md:hidden bg-white border-b border-slate-100 sticky top-0 z-10 px-4 h-14 flex items-center gap-3">
@@ -255,13 +259,13 @@ export default function RegisterPage() {
               <StepIcon className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-black text-slate-900">{STEPS[step].label}</h1>
-              <p className="text-sm text-slate-500">{STEPS[step].desc}</p>
+              <h1 className={`text-xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{STEPS[step].label}</h1>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{STEPS[step].desc}</p>
             </div>
           </div>
 
           {error && (
-            <div className="mb-6 bg-rose-50 border border-rose-200 rounded-xl p-4 flex gap-3 text-rose-700 text-sm">
+            <div className={`mb-6 border rounded-xl p-4 flex gap-3 text-sm ${isDark ? 'bg-rose-950/40 border-rose-800 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-700'}`}>
               <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />{error}
             </div>
           )}
@@ -282,7 +286,7 @@ export default function RegisterPage() {
                         minLength: { value: 2, message: 'Name must be at least 2 characters' },
                         maxLength: { value: 80, message: 'Name must be under 80 characters' },
                         pattern: { value: /^[a-zA-Z\s.'-]+$/, message: 'Name can only contain letters and spaces' },
-                      })} className={inputCls} placeholder="e.g. Suresh Kumar" />
+                      })} className={inputCls(isDark)} placeholder="e.g. Suresh Kumar" />
                     </InputField>
                     <div className="grid grid-cols-2 gap-4">
                       <InputField label="Age *" error={errors.age?.message}>
@@ -291,10 +295,10 @@ export default function RegisterPage() {
                           min: { value: 18, message: 'Must be at least 18 years old' },
                           max: { value: 70, message: 'Must be under 70 years old' },
                           valueAsNumber: true,
-                        })} className={inputCls} placeholder="e.g. 28" />
+                        })} className={inputCls(isDark)} placeholder="e.g. 28" />
                       </InputField>
                       <InputField label="Gender *" error={errors.gender?.message}>
-                        <select {...register('gender', { required: 'Gender is required' })} className={inputCls}>
+                        <select {...register('gender', { required: 'Gender is required' })} className={inputCls(isDark)}>
                           <option value="">Select...</option>
                           <option>Male</option><option>Female</option><option>Other</option>
                         </select>
@@ -304,21 +308,21 @@ export default function RegisterPage() {
                       <input {...register('mobile', {
                         required: 'Mobile number is required',
                         pattern: { value: /^\+?[6-9][0-9]{9,14}$/, message: 'Enter a valid Indian mobile number (10 digits, starts with 6-9)' },
-                      })} className={inputCls} placeholder="+91 98765 43210" />
+                      })} className={inputCls(isDark)} placeholder="+91 98765 43210" />
                     </InputField>
                     <InputField label="Email Address *" error={errors.email?.message}>
                       <input type="email" {...register('email', {
                         required: 'Email address is required',
                         pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Enter a valid email address' },
                         maxLength: { value: 100, message: 'Email is too long' },
-                      })} className={inputCls} placeholder="you@example.com" />
+                      })} className={inputCls(isDark)} placeholder="you@example.com" />
                     </InputField>
                     <InputField label="Address *" error={errors.address?.message}>
                       <textarea {...register('address', {
                         required: 'Address is required',
                         minLength: { value: 10, message: 'Please enter your full address (min 10 characters)' },
                         maxLength: { value: 300, message: 'Address is too long (max 300 characters)' },
-                      })} className={inputCls} rows={2} placeholder="House No., Street, City, District" />
+                      })} className={inputCls(isDark)} rows={2} placeholder="House No., Street, City, District" />
                     </InputField>
                     <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4 flex gap-3 items-center">
                       <ShieldCheck className="w-5 h-5 text-indigo-500 shrink-0" />
@@ -331,7 +335,7 @@ export default function RegisterPage() {
                 {step === 1 && (
                   <>
                     <InputField label="Job Type *" error={errors.jobType?.message}>
-                      <select {...register('jobType', { required: 'Please select your job type' })} className={inputCls}>
+                      <select {...register('jobType', { required: 'Please select your job type' })} className={inputCls(isDark)}>
                         <option value="">Select your trade...</option>
                         {JOB_TYPES.map(j => <option key={j}>{j}</option>)}
                       </select>
@@ -343,7 +347,7 @@ export default function RegisterPage() {
                           min: { value: 100, message: 'Minimum rate is ₹100' },
                           max: { value: 50000, message: 'Maximum rate is ₹50,000' },
                           valueAsNumber: true,
-                        })} className={inputCls} />
+                        })} className={inputCls(isDark)} />
                       </InputField>
                       <InputField label="Experience (years) *" error={errors.experienceYears?.message}>
                         <input type="number" {...register('experienceYears', {
@@ -351,18 +355,18 @@ export default function RegisterPage() {
                           min: { value: 0, message: 'Cannot be negative' },
                           max: { value: 50, message: 'Maximum 50 years' },
                           valueAsNumber: true,
-                        })} className={inputCls} />
+                        })} className={inputCls(isDark)} />
                       </InputField>
                     </div>
                     <InputField label="Current Location *" error={errors.currentLocation?.message}>
-                      <select {...register('currentLocation', { required: 'Please select your current district' })} className={inputCls}>
+                      <select {...register('currentLocation', { required: 'Please select your current district' })} className={inputCls(isDark)}>
                         <option value="">Select your district...</option>
                         {DISTRICTS.map(d => <option key={d}>{d}</option>)}
                       </select>
                     </InputField>
                     <div className="grid grid-cols-2 gap-4">
                       <InputField label="Preferred District *" error={errors.district?.message}>
-                        <select {...register('district', { required: 'Please select a preferred district' })} className={inputCls}>
+                        <select {...register('district', { required: 'Please select a preferred district' })} className={inputCls(isDark)}>
                           <option value="">Select...</option>
                           {DISTRICTS.map(d => <option key={d}>{d}</option>)}
                         </select>
@@ -372,7 +376,7 @@ export default function RegisterPage() {
                           required: 'Town is required',
                           minLength: { value: 2, message: 'Enter a valid town name' },
                           maxLength: { value: 60, message: 'Town name is too long' },
-                        })} className={inputCls} placeholder="e.g. Kochi" />
+                        })} className={inputCls(isDark)} placeholder="e.g. Kochi" />
                       </InputField>
                     </div>
                     <InputField label="Interested Locations *" error={errors.interestedLocations?.message}>
@@ -380,12 +384,12 @@ export default function RegisterPage() {
                         required: 'Please list where you are willing to work',
                         minLength: { value: 3, message: 'Enter at least one location' },
                         maxLength: { value: 200, message: 'Too many characters (max 200)' },
-                      })} className={inputCls} placeholder="e.g. Kochi, Ernakulam, Kakkanad" />
+                      })} className={inputCls(isDark)} placeholder="e.g. Kochi, Ernakulam, Kakkanad" />
                     </InputField>
                     <InputField label="Additional Facilities (optional)">
                       <textarea {...register('facilitiesRequested', {
                         maxLength: { value: 200, message: 'Too many characters (max 200)' },
-                      })} className={inputCls} rows={2} placeholder="e.g. Food, Accommodation, Travel allowance" />
+                      })} className={inputCls(isDark)} rows={2} placeholder="e.g. Food, Accommodation, Travel allowance" />
                     </InputField>
                   </>
                 )}
@@ -409,12 +413,12 @@ export default function RegisterPage() {
                 {/* ── Step 3: Review ── */}
                 {step === 3 && (
                   <>
-                    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                      <div className="bg-slate-50 px-6 py-4 border-b border-slate-100">
-                        <h3 className="font-bold text-slate-900">Application Summary</h3>
-                        <p className="text-xs text-slate-500 mt-0.5">Please review before submitting</p>
+                    <div className={`border rounded-2xl overflow-hidden shadow-sm ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-slate-200'}`}>
+                      <div className={`px-6 py-4 border-b ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-slate-50 border-slate-100'}`}>
+                        <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Application Summary</h3>
+                        <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Please review before submitting</p>
                       </div>
-                      <div className="divide-y divide-slate-50">
+                      <div className={`divide-y ${isDark ? 'divide-gray-800' : 'divide-slate-50'}`}>
                         {[
                           ['Full Name', values.name],
                           ['Age', values.age],
@@ -432,12 +436,12 @@ export default function RegisterPage() {
                           ['Facilities', values.facilitiesRequested || 'None specified'],
                         ].map(([k, v]) => (
                           <div key={k} className="flex justify-between items-center px-6 py-3 text-sm">
-                            <span className="text-slate-500 text-xs font-semibold uppercase tracking-wide">{k}</span>
-                            <span className="font-semibold text-slate-900 text-right max-w-[55%]">{v}</span>
+                            <span className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{k}</span>
+                            <span className={`font-semibold text-right max-w-[55%] ${isDark ? 'text-white' : 'text-slate-900'}`}>{v}</span>
                           </div>
                         ))}
                         <div className="flex justify-between items-center px-6 py-3 text-sm">
-                          <span className="text-slate-500 text-xs font-semibold uppercase tracking-wide">Documents</span>
+                          <span className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>Documents</span>
                           <span className="text-emerald-600 font-bold flex items-center gap-1.5">
                             <CheckCircle className="w-4 h-4" /> 3 Uploaded
                           </span>
@@ -460,7 +464,7 @@ export default function RegisterPage() {
             <div className="mt-8 flex gap-3">
               {step > 0 && (
                 <button type="button" onClick={() => setStep(s => s - 1)}
-                  className="flex items-center gap-2 px-6 py-3.5 border border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors text-sm">
+                  className={`flex items-center gap-2 px-6 py-3.5 border font-semibold rounded-xl transition-colors text-sm ${isDark ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
                   <ArrowLeft className="w-4 h-4" /> Back
                 </button>
               )}

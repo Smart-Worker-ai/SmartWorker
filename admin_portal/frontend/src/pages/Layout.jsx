@@ -3,31 +3,30 @@ import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, HardHat, BookOpen, MessageSquareWarning,
-  LogOut, Wrench, Menu, X, ChevronRight,
+  LogOut, Wrench, Menu, X, ChevronRight, Moon, Sun, Languages,
 } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 const NAV = [
-  { to: '/',           icon: LayoutDashboard,      label: 'Dashboard',   color: 'from-blue-500 to-indigo-600' },
-  { to: '/customers',  icon: Users,                label: 'Customers',   color: 'from-emerald-500 to-teal-600' },
-  { to: '/workers',    icon: HardHat,              label: 'Workers',     color: 'from-violet-500 to-purple-600' },
-  { to: '/bookings',   icon: BookOpen,             label: 'Bookings',    color: 'from-amber-500 to-orange-600' },
-  { to: '/grievances', icon: MessageSquareWarning, label: 'Grievances',  color: 'from-rose-500 to-pink-600' },
+  { to: '/',           icon: LayoutDashboard,      label: 'Dashboard',  mlLabel: 'ഡാഷ്‌ബോർഡ്',  color: 'from-blue-500 to-indigo-600' },
+  { to: '/customers',  icon: Users,                label: 'Customers',  mlLabel: 'ഉപഭോക്താക്കൾ', color: 'from-emerald-500 to-teal-600' },
+  { to: '/workers',    icon: HardHat,              label: 'Workers',    mlLabel: 'തൊഴിലാളികൾ',  color: 'from-violet-500 to-purple-600' },
+  { to: '/bookings',   icon: BookOpen,             label: 'Bookings',   mlLabel: 'ബുക്കിംഗ്',    color: 'from-amber-500 to-orange-600' },
+  { to: '/grievances', icon: MessageSquareWarning, label: 'Grievances', mlLabel: 'പരാതികൾ',     color: 'from-rose-500 to-pink-600' },
 ];
 
-function NavItem({ to, icon: Icon, label, color, onClick }) {
+function NavItem({ to, icon: Icon, label, mlLabel, color, onClick }) {
+  const { lang } = useTheme();
+  const displayLabel = lang === 'ml' ? mlLabel : label;
   return (
-    <NavLink
-      to={to}
-      end={to === '/'}
-      onClick={onClick}
-    >
+    <NavLink to={to} end={to === '/'} onClick={onClick}>
       {({ isActive }) => (
         <motion.div
           whileTap={{ scale: 0.97 }}
           className={`relative flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm font-semibold transition-colors duration-150 cursor-pointer select-none
             ${isActive
               ? 'text-white bg-white/5'
-              : 'text-gray-400 hover:text-white hover:bg-gray-800/70'
+              : 'text-gray-400 dark:text-gray-400 hover:text-white hover:bg-gray-800/70'
             }`}
         >
           {isActive && (
@@ -44,7 +43,7 @@ function NavItem({ to, icon: Icon, label, color, onClick }) {
             ${isActive ? `bg-gradient-to-br ${color} shadow-md` : 'bg-gray-800 group-hover:bg-gray-700'}`}>
             <Icon className="w-4 h-4 text-white" />
           </div>
-          <span className="relative flex-1">{label}</span>
+          <span className="relative flex-1">{displayLabel}</span>
           {isActive && <ChevronRight className="relative w-3.5 h-3.5 opacity-40" />}
         </motion.div>
       )}
@@ -54,6 +53,8 @@ function NavItem({ to, icon: Icon, label, color, onClick }) {
 
 function Sidebar({ onClose }) {
   const navigate = useNavigate();
+  const { isDark, setIsDark, lang, setLang } = useTheme();
+
   const logout = () => {
     localStorage.removeItem('admin_token');
     navigate('/login');
@@ -85,6 +86,27 @@ function Sidebar({ onClose }) {
         ))}
       </nav>
 
+      {/* Theme + Language controls */}
+      <div className="px-3 pb-2 border-t border-gray-800/50 pt-3 space-y-1">
+        <button
+          onClick={() => setIsDark(!isDark)}
+          className="flex items-center gap-3 w-full px-3.5 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:text-white hover:bg-gray-800/70 transition-colors"
+        >
+          {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}
+          <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
+          <div className={`ml-auto w-9 h-5 rounded-full transition-colors ${isDark ? 'bg-indigo-600' : 'bg-gray-700'} relative`}>
+            <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isDark ? 'translate-x-4' : 'translate-x-0.5'}`} />
+          </div>
+        </button>
+        <button
+          onClick={() => setLang(lang === 'en' ? 'ml' : 'en')}
+          className="flex items-center gap-3 w-full px-3.5 py-2.5 rounded-xl text-sm font-semibold text-gray-400 hover:text-white hover:bg-gray-800/70 transition-colors"
+        >
+          <Languages className="w-4 h-4 text-emerald-400" />
+          <span>{lang === 'ml' ? 'Switch to English' : 'മലയാളം'}</span>
+        </button>
+      </div>
+
       {/* Logout */}
       <div className="p-3 border-t border-gray-800/50 shrink-0">
         <motion.button
@@ -95,7 +117,7 @@ function Sidebar({ onClose }) {
           <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center">
             <LogOut className="w-4 h-4" />
           </div>
-          Logout
+          {lang === 'ml' ? 'ലോഗൗട്ട്' : 'Logout'}
         </motion.button>
       </div>
     </aside>
@@ -105,10 +127,11 @@ function Sidebar({ onClose }) {
 export default function Layout() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const { isDark } = useTheme();
 
   return (
-    <div className="flex h-screen bg-gray-950 text-white overflow-hidden">
-      {/* Desktop sidebar */}
+    <div className={`flex h-screen text-white overflow-hidden ${isDark ? 'bg-gray-950' : 'bg-gray-100'}`}>
+      {/* Desktop sidebar — always dark */}
       <div className="hidden md:flex h-full">
         <Sidebar />
       </div>
@@ -122,10 +145,7 @@ export default function Layout() {
             exit={{ opacity: 0 }}
             className="md:hidden fixed inset-0 z-50 flex"
           >
-            <div
-              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-              onClick={() => setOpen(false)}
-            />
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setOpen(false)} />
             <motion.div
               initial={{ x: -280 }}
               animate={{ x: 0 }}
@@ -140,13 +160,13 @@ export default function Layout() {
       </AnimatePresence>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className={`flex-1 flex flex-col overflow-hidden ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
         {/* Mobile top bar */}
-        <header className="md:hidden h-14 bg-gray-900/80 backdrop-blur-sm border-b border-gray-800/50 flex items-center px-4 gap-3 shrink-0">
+        <header className={`md:hidden h-14 backdrop-blur-sm border-b flex items-center px-4 gap-3 shrink-0 ${isDark ? 'bg-gray-900/80 border-gray-800/50' : 'bg-white/90 border-gray-200'}`}>
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setOpen(true)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors text-gray-400 hover:text-white"
+            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors ${isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}`}
           >
             <Menu className="w-4 h-4" />
           </motion.button>
@@ -154,7 +174,7 @@ export default function Layout() {
             <div className="w-7 h-7 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
               <Wrench className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="font-bold text-sm text-white">Smart Workers Admin</span>
+            <span className={`font-bold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>Smart Workers Admin</span>
           </div>
         </header>
 

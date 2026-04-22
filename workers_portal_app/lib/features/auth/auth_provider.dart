@@ -11,13 +11,15 @@ class AuthState {
     this.user,
     this.error,
     this.devOtp,
+    this.statusMessage,
   });
 
   final bool isLoading;
   final String? token;
   final Map<String, dynamic>? user;
   final String? error;
-  final String? devOtp; // shown on OTP screen in dev mode
+  final String? devOtp;
+  final String? statusMessage;
 
   bool get isAuthenticated => token != null;
 
@@ -27,8 +29,10 @@ class AuthState {
     Map<String, dynamic>? user,
     String? error,
     String? devOtp,
+    String? statusMessage,
     bool clearError = false,
     bool clearDevOtp = false,
+    bool clearStatus = false,
   }) {
     return AuthState(
       isLoading: isLoading ?? this.isLoading,
@@ -36,6 +40,7 @@ class AuthState {
       user: user ?? this.user,
       error: clearError ? null : (error ?? this.error),
       devOtp: clearDevOtp ? null : (devOtp ?? this.devOtp),
+      statusMessage: clearStatus ? null : (statusMessage ?? this.statusMessage),
     );
   }
 }
@@ -61,33 +66,35 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<String?> sendOtp(String email, {String? phone}) async {
-    state = state.copyWith(isLoading: true, clearError: true);
+    state = state.copyWith(isLoading: true, clearError: true, clearStatus: true);
     final body = <String, dynamic>{'email': email};
     if (phone != null && phone.isNotEmpty) body['phone'] = phone;
 
-    // Retry once — backend may be waking from cold start
-    for (var attempt = 0; attempt < 2; attempt++) {
+    // 3 attempts — handles Railway free-tier cold start (can take 30-60s)
+    for (var attempt = 0; attempt < 3; attempt++) {
       try {
         final res = await _api.client.post('/auth/send-otp', data: body);
         state = state.copyWith(
           isLoading: false,
+          clearStatus: true,
           devOtp: res.data['devOtp'] as String?,
         );
         return null;
       } on DioException catch (e) {
         if (e.response != null) {
-          // Got a real error response from server
+          // Real server error — don't retry
           final msg = e.response!.data?['error'] as String? ?? 'Request failed.';
-          state = state.copyWith(isLoading: false, error: msg);
+          state = state.copyWith(isLoading: false, error: msg, clearStatus: true);
           return msg;
         }
-        if (attempt == 0) {
-          // First attempt timed out — wait 3s and retry (server cold start)
-          await Future.delayed(const Duration(seconds: 3));
+        if (attempt < 2) {
+          final msg = attempt == 0 ? 'Server is warming up, please wait...' : 'Almost there, retrying...';
+          state = state.copyWith(statusMessage: msg);
+          await Future.delayed(Duration(seconds: attempt == 0 ? 6 : 9));
           continue;
         }
         const msg = 'Server unreachable. Please try again in a moment.';
-        state = state.copyWith(isLoading: false, error: msg);
+        state = state.copyWith(isLoading: false, error: msg, clearStatus: true);
         return msg;
       }
     }
@@ -140,7 +147,6 @@ final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
   return AuthNotifier();
 });
 
-/// Exposes the Dio client (with JWT token injected) to other providers/screens.
 final dioProvider = Provider<Dio>((ref) {
   return ref.watch(authProvider.notifier).dio;
 });

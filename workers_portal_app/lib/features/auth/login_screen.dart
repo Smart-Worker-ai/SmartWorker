@@ -262,6 +262,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       onTap: isLoading ? null : _sendOtp,
                       loading: isLoading,
                       label: 'Send OTP',
+                      statusMessage: ref.watch(authProvider.select((s) => s.statusMessage)),
                     ),
 
                     const SizedBox(height: 24),
@@ -308,10 +309,11 @@ class _FieldLabel extends StatelessWidget {
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.label, this.onTap, this.loading = false});
+  const _ActionButton({required this.label, this.onTap, this.loading = false, this.statusMessage});
   final String label;
   final VoidCallback? onTap;
   final bool loading;
+  final String? statusMessage;
 
   @override
   Widget build(BuildContext context) {
@@ -339,13 +341,22 @@ class _ActionButton extends StatelessWidget {
         ),
         child: Center(
           child: loading
-              ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.5,
-                    color: Colors.white,
-                  ),
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                    ),
+                    if (statusMessage != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        statusMessage!,
+                        style: GoogleFonts.inter(fontSize: 11, color: Colors.white70),
+                      ),
+                    ],
+                  ],
                 )
               : Text(
                   label,

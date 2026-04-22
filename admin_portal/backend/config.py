@@ -11,4 +11,4 @@ CUSTOMER_BACKEND_URL = os.getenv("CUSTOMER_BACKEND_URL", "https://smart-workers-
 CUSTOMER_BACKEND_ADMIN_SECRET = os.getenv("CUSTOMER_BACKEND_ADMIN_SECRET", "***REMOVED-SECRET***")
 
 # Worker website backend
-WORKER_BACKEND_URL = os.getenv("WORKER_BACKEND_URL", "http://localhost:8001/api")
+WORKER_BACKEND_URL = os.getenv("WORKER_BACKEND_URL", "https://worker-portal-backend-production.up.railway.app/api")

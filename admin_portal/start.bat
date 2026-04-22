@@ -1,6 +1,6 @@
 @echo off
 echo Starting Admin Portal...
-start "Admin Backend" cmd /k "cd backend && pip install -r requirements.txt && uvicorn main:app --reload --port 8002"
+start "Admin Backend" cmd /k "cd backend && python -m pip install -r requirements.txt && python -m uvicorn main:app --reload --port 8002"
 timeout /t 3
 start "Admin Frontend" cmd /k "cd frontend && npm install && npm run dev"
 echo Admin Portal running:
