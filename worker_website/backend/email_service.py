@@ -88,8 +88,9 @@ def _send_otp_sms(phone: str, otp: str) -> bool:
         return False
     try:
         payload = json.dumps({
-            "route": "otp",
-            "variables_values": otp,
+            "route": "q",
+            "message": f"Your Smart Workers OTP is {otp}. Valid for 10 minutes. Do not share with anyone.",
+            "language": "english",
             "flash": 0,
             "numbers": digits,
         }).encode("utf-8")
