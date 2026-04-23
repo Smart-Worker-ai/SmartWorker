@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'auth_provider.dart';
 import 'otp_screen.dart';
 import '../../core/theme/app_theme.dart';
+import '../../main.dart' show localeModeProvider;
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -85,18 +86,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   @override
   Widget build(BuildContext context) {
     final isLoading = ref.watch(authProvider.select((s) => s.isLoading));
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = ref.watch(localeModeProvider).languageCode;
+    String t(String key) => AppStrings.t(key, locale);
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         leading: IconButton(
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? AppColors.darkCard : Colors.white,
               borderRadius: BorderRadius.circular(12),
-
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.06),
@@ -104,7 +106,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 ),
               ],
             ),
-            child: const Icon(Icons.arrow_back_rounded, size: 20, color: AppColors.textPrimary),
+            child: Icon(Icons.arrow_back_rounded, size: 20, color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary),
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -144,38 +146,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'Sign In',
+                      t('signInTitle'),
                       style: GoogleFonts.inter(
                         fontSize: 36,
                         fontWeight: FontWeight.w900,
-                        color: AppColors.textPrimary,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
                         letterSpacing: -1,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'We\'ll send a 6-digit OTP to your email\nand mobile number.',
+                      t('signInSubtitle'),
                       style: GoogleFonts.inter(
                         fontSize: 15,
-                        color: AppColors.textSecondary,
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
                         height: 1.5,
                       ),
                     ),
                     const SizedBox(height: 36),
 
                     // Email field
-                    _FieldLabel(label: 'Email Address'),
+                    _FieldLabel(label: t('email')),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _emailCtrl,
                       keyboardType: TextInputType.emailAddress,
                       autocorrect: false,
                       textInputAction: TextInputAction.next,
-                      style: GoogleFonts.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textPrimary,
-                      ),
+                      style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500),
                       decoration: InputDecoration(
                         hintText: 'you@example.com',
                         prefixIcon: const Icon(Icons.alternate_email_rounded, size: 20),
@@ -193,7 +191,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     const SizedBox(height: 20),
 
                     // Phone field
-                    _FieldLabel(label: 'Mobile Number'),
+                    _FieldLabel(label: t('mobile')),
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _phoneCtrl,
@@ -201,11 +199,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+\-\s]'))],
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _sendOtp(),
-                      style: GoogleFonts.inter(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textPrimary,
-                      ),
+                      style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w500),
                       decoration: InputDecoration(
                         hintText: '+91 98765 43210',
                         prefixIcon: const Icon(Icons.phone_android_rounded, size: 20),
@@ -225,9 +219,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
+                        color: isDark ? AppColors.darkCard : const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFBFDBFE)),
+                        border: Border.all(color: isDark ? AppColors.darkBorder : const Color(0xFFBFDBFE)),
                       ),
                       child: Row(
                         children: [
@@ -261,7 +255,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     _ActionButton(
                       onTap: isLoading ? null : _sendOtp,
                       loading: isLoading,
-                      label: 'Send OTP',
+                      label: t('sendOtp'),
                       statusMessage: ref.watch(authProvider.select((s) => s.statusMessage)),
                     ),
 
@@ -296,12 +290,13 @@ class _FieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Text(
       label,
       style: GoogleFonts.inter(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
+        color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
         letterSpacing: 0.2,
       ),
     );

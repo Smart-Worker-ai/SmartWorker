@@ -7,6 +7,7 @@ import 'auth_provider.dart';
 import 'registration_screen.dart';
 import '../../shared/app_shell.dart';
 import '../../core/theme/app_theme.dart';
+import '../../main.dart' show localeModeProvider;
 
 class OtpScreen extends ConsumerStatefulWidget {
   const OtpScreen({super.key, required this.email, this.phone});
@@ -149,15 +150,18 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
   Widget build(BuildContext context) {
     final auth = ref.watch(authProvider);
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final locale = ref.watch(localeModeProvider).languageCode;
+    String t(String key) => AppStrings.t(key, locale);
+
     return Scaffold(
-      backgroundColor: AppColors.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         leading: IconButton(
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? AppColors.darkCard : Colors.white,
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
@@ -166,7 +170,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
                 ),
               ],
             ),
-            child: const Icon(Icons.arrow_back_rounded, size: 20, color: AppColors.textPrimary),
+            child: Icon(Icons.arrow_back_rounded, size: 20, color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary),
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -197,11 +201,11 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
                   const SizedBox(height: 20),
 
                   Text(
-                    'Enter OTP',
+                    t('enterOtp'),
                     style: GoogleFonts.inter(
                       fontSize: 36,
                       fontWeight: FontWeight.w900,
-                      color: AppColors.textPrimary,
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
                       letterSpacing: -1,
                     ),
                   ),
@@ -211,7 +215,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
                     text: TextSpan(
                       style: GoogleFonts.inter(
                         fontSize: 14,
-                        color: AppColors.textSecondary,
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
                         height: 1.5,
                       ),
                       children: [
@@ -294,7 +298,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
 
                   // Verify button
                   _ActionButton(
-                    label: 'Verify & Continue',
+                    label: t('verifyAndContinue'),
                     loading: auth.isLoading,
                     onTap: auth.isLoading ? null : _verify,
                   ),
@@ -311,7 +315,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
                                 color: AppColors.textSecondary,
                               ),
                               children: [
-                                const TextSpan(text: 'Resend OTP in '),
+                                TextSpan(text: '${t('resendIn')} '),
                                 TextSpan(
                                   text: '${_secondsLeft}s',
                                   style: GoogleFonts.inter(
@@ -325,7 +329,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
                         : GestureDetector(
                             onTap: _resend,
                             child: Text(
-                              'Resend OTP',
+                              t('resendOtp'),
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
@@ -375,15 +379,18 @@ class _OtpBoxState extends State<_OtpBox> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 150),
       width: 48,
       height: 60,
       decoration: BoxDecoration(
-        color: _focused ? Colors.white : const Color(0xFFF8FAFF),
+        color: _focused
+            ? (isDark ? AppColors.darkCard : Colors.white)
+            : (isDark ? AppColors.darkSurface : const Color(0xFFF8FAFF)),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: _focused ? AppColors.primary : AppColors.border,
+          color: _focused ? AppColors.primary : (isDark ? AppColors.darkBorder : AppColors.border),
           width: _focused ? 2 : 1.5,
         ),
         boxShadow: _focused
@@ -415,7 +422,7 @@ class _OtpBoxState extends State<_OtpBox> {
           style: GoogleFonts.inter(
             fontSize: 22,
             fontWeight: FontWeight.w800,
-            color: AppColors.textPrimary,
+            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
           ),
           decoration: const InputDecoration(
             border: InputBorder.none,

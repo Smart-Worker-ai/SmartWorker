@@ -83,10 +83,12 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
           child: _screens[_index],
         ),
       ),
-      bottomNavigationBar: Container(
+      bottomNavigationBar: Builder(builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: const Border(top: BorderSide(color: AppColors.border, width: 1)),
+          color: isDark ? AppColors.darkCard : Colors.white,
+          border: Border(top: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border, width: 1)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.06),
@@ -150,7 +152,8 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
             ),
           ),
         ),
-      ),
+      );
+    }),
     );
   }
 }

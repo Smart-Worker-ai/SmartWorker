@@ -1,16 +1,19 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'login_screen.dart';
+import '../../core/theme/app_theme.dart';
+import '../../main.dart' show localeModeProvider;
 
-class WelcomeScreen extends StatefulWidget {
+class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
 
   @override
-  State<WelcomeScreen> createState() => _WelcomeScreenState();
+  ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends State<WelcomeScreen>
+class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     with TickerProviderStateMixin {
   late final AnimationController _particleCtrl;
   late final AnimationController _fadeCtrl;
@@ -73,6 +76,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
+    final locale = ref.watch(localeModeProvider).languageCode;
+    String t(String key) => AppStrings.t(key, locale);
 
     return Scaffold(
       body: Stack(
@@ -164,7 +169,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
                       // Headline
                       Text(
-                        'Smart\nWorkers',
+                        t('welcome'),
                         style: GoogleFonts.inter(
                           fontSize: 52,
                           fontWeight: FontWeight.w900,
@@ -175,7 +180,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Kerala\'s #1 platform for skilled workers.\nBook trusted professionals instantly.',
+                        t('tagline'),
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           color: Colors.white.withValues(alpha: 0.65),
@@ -190,10 +195,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       Wrap(
                         spacing: 10,
                         runSpacing: 10,
-                        children: const [
-                          _Chip(icon: Icons.verified_rounded, label: 'Verified Workers'),
-                          _Chip(icon: Icons.flash_on_rounded, label: 'Instant Booking'),
-                          _Chip(icon: Icons.lock_outline_rounded, label: 'Secure Payments'),
+                        children: [
+                          _Chip(icon: Icons.verified_rounded, label: t('verifiedWorkers')),
+                          _Chip(icon: Icons.flash_on_rounded, label: t('instantBooking')),
+                          _Chip(icon: Icons.lock_outline_rounded, label: t('securePayments')),
                         ],
                       ),
 
@@ -205,7 +210,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           context,
                           _FadePageRoute(child: const LoginScreen()),
                         ),
-                        label: 'Get Started',
+                        label: t('getStarted'),
                         icon: Icons.arrow_forward_rounded,
                       ),
                       const SizedBox(height: 14),
@@ -230,7 +235,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             ),
                           ),
                           child: Text(
-                            'Sign in to existing account',
+                            t('signIn'),
                             style: GoogleFonts.inter(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
