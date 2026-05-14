@@ -83,6 +83,26 @@ ThemeData buildAppTheme() {
             fontWeight: FontWeight.w700, fontSize: 16, letterSpacing: 0.3),
       ),
     ),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: kBrandNavy,
+      indicatorColor: kBrandBlue.withValues(alpha: 0.15),
+      height: 64,
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(
+          color: states.contains(WidgetState.selected) ? kBrandBlue : kBrandMuted,
+          size: 24,
+        ),
+      ),
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => GoogleFonts.inter(
+          color: states.contains(WidgetState.selected) ? kBrandBlue : kBrandMuted,
+          fontSize: 11,
+          fontWeight: states.contains(WidgetState.selected)
+              ? FontWeight.w600
+              : FontWeight.w400,
+        ),
+      ),
+    ),
   );
 }
 

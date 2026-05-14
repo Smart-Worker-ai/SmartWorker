@@ -136,7 +136,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return (isNewUser: true, error: null);
     } on DioException catch (e) {
       final msg = e.response?.data?['error'] as String? ?? e.response?.data?['message'] as String? ?? 'Registration failed.';
-T      state = state.copyWith(isLoading: false, error: msg);
+      state = state.copyWith(isLoading: false, error: msg);
       return (isNewUser: false, error: msg);
     }
   }

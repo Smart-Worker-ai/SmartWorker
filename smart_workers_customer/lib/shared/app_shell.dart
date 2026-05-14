@@ -27,28 +27,26 @@ class AppShell extends ConsumerWidget {
         selectedIndex: index,
         onDestinationSelected: (i) =>
             ref.read(shellTabProvider.notifier).state = i,
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFF1565C0).withValues(alpha: 0.12),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard, color: Color(0xFF1565C0)),
+            selectedIcon: Icon(Icons.dashboard),
             label: 'Home',
           ),
           NavigationDestination(
             icon: Icon(Icons.search_outlined),
-            selectedIcon: Icon(Icons.search, color: Color(0xFF1565C0)),
+            selectedIcon: Icon(Icons.search),
             label: 'Search',
           ),
           NavigationDestination(
             icon: Icon(Icons.book_outlined),
-            selectedIcon: Icon(Icons.book, color: Color(0xFF1565C0)),
+            selectedIcon: Icon(Icons.book),
             label: 'Bookings',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person, color: Color(0xFF1565C0)),
+            selectedIcon: Icon(Icons.person),
             label: 'Profile',
           ),
         ],

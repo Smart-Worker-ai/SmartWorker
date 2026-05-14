@@ -269,7 +269,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     const _Tile(
                       icon: Icons.info_outline,
                       title: 'About',
-                      subtitle: 'Smart Workers v1.2.0',
+                      subtitle: 'Smart Workers v1.2.1',
                     ),
                     const Divider(height: 1, indent: 16, endIndent: 16),
                     const _Tile(

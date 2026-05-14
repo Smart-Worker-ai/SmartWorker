@@ -16,4 +16,8 @@ class SecureStorageService {
   static Future<void> clearToken() {
     return _storage.delete(key: 'jwt_token');
   }
+
+  static Future<String?> read(String key) => _storage.read(key: key);
+  static Future<void> write(String key, String value) =>
+      _storage.write(key: key, value: value);
 }

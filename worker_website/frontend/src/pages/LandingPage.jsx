@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Wrench, ShieldCheck, TrendingUp, MapPin, Star, Users, ArrowRight, Zap } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 const STATS = [
   { label: 'Registered Workers', value: '500+', icon: Users },
@@ -28,23 +29,25 @@ const HOW = [
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { isDark, t } = useTheme();
 
   return (
-    <div className="min-h-screen bg-white font-sans">
+    <div className={`min-h-screen font-sans ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
       {/* ── Navbar ── */}
-      <nav className="fixed top-0 w-full bg-white/90 backdrop-blur-md border-b border-gray-100 z-50">
+      <nav className={`fixed top-0 w-full backdrop-blur-md border-b z-50
+        ${isDark ? 'bg-gray-950/90 border-gray-800' : 'bg-white/90 border-gray-100'}`}>
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
               <Wrench className="w-4 h-4 text-white" />
             </div>
-            <span className="font-black text-lg text-brand-900">Smart Workers</span>
+            <span className={`font-black text-lg ${isDark ? 'text-white' : 'text-brand-900'}`}>Smart Workers</span>
           </div>
           <button
             onClick={() => navigate('/terms')}
             className="bg-brand-600 hover:bg-brand-700 text-white px-5 py-2 rounded-full text-sm font-semibold transition-colors"
           >
-            Join Now
+            {t('Join Now')}
           </button>
         </div>
       </nav>
@@ -84,12 +87,12 @@ export default function LandingPage() {
               <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
                 onClick={() => navigate('/terms')}
                 className="bg-yellow-400 hover:bg-yellow-300 text-gray-900 font-bold px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl text-base sm:text-lg flex items-center justify-center gap-2 transition-colors">
-                Register as Worker <ArrowRight className="w-5 h-5" />
+                {t('Register as Worker')} <ArrowRight className="w-5 h-5" />
               </motion.button>
               <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
                 onClick={() => navigate('/terms')}
                 className="bg-white/10 hover:bg-white/20 text-white font-semibold px-6 sm:px-8 py-3.5 sm:py-4 rounded-2xl text-base sm:text-lg border border-white/30 transition-colors">
-                Read T&amp;C
+                {t('Read T&C')}
               </motion.button>
             </div>
           </motion.div>
@@ -97,7 +100,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── Stats ── */}
-      <section className="py-12 sm:py-16 bg-gray-50">
+      <section className={`py-12 sm:py-16 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
           {STATS.map((s, i) => (
             <motion.div
@@ -106,22 +109,27 @@ export default function LandingPage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1 }}
-              className="bg-white rounded-2xl p-6 text-center shadow-sm border border-gray-100"
+              className={`rounded-2xl p-6 text-center shadow-sm border
+                ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100'}`}
             >
               <s.icon className="w-8 h-8 text-brand-500 mx-auto mb-3" />
-              <div className="text-3xl font-black text-brand-900">{s.value}</div>
-              <div className="text-sm text-gray-500 mt-1">{s.label}</div>
+              <div className={`text-3xl font-black ${isDark ? 'text-white' : 'text-brand-900'}`}>{s.value}</div>
+              <div className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{s.label}</div>
             </motion.div>
           ))}
         </div>
       </section>
 
       {/* ── Services ── */}
-      <section className="py-14 sm:py-20 bg-white">
+      <section className={`py-14 sm:py-20 ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10 sm:mb-12">
-            <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-3 sm:mb-4">We cover all trades</h2>
-            <p className="text-gray-500 text-base sm:text-lg px-4">From electrical to painting — if you have a skill, we have customers.</p>
+            <h2 className={`text-3xl sm:text-4xl font-black mb-3 sm:mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              {t('We cover all trades')}
+            </h2>
+            <p className={`text-base sm:text-lg px-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+              From electrical to painting — if you have a skill, we have customers.
+            </p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             {SERVICES.map((s, i) => (
@@ -146,7 +154,7 @@ export default function LandingPage() {
       <section className="py-14 sm:py-20 bg-brand-900 text-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10 sm:mb-14">
-            <h2 className="text-3xl sm:text-4xl font-black mb-3 sm:mb-4">How it works</h2>
+            <h2 className="text-3xl sm:text-4xl font-black mb-3 sm:mb-4">{t('How it works')}</h2>
             <p className="text-white/60 text-base sm:text-lg">Get hired in 3 simple steps</p>
           </div>
           <div className="grid sm:grid-cols-3 gap-8 sm:gap-8">
@@ -171,10 +179,12 @@ export default function LandingPage() {
       </section>
 
       {/* ── Benefits ── */}
-      <section className="py-14 sm:py-20 bg-white">
+      <section className={`py-14 sm:py-20 ${isDark ? 'bg-gray-950' : 'bg-white'}`}>
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10 sm:mb-12">
-            <h2 className="text-3xl sm:text-4xl font-black text-gray-900 mb-4">Why Smart Workers?</h2>
+            <h2 className={`text-3xl sm:text-4xl font-black mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              {t('Why Smart Workers?')}
+            </h2>
           </div>
           <div className="grid sm:grid-cols-3 gap-5 sm:gap-8">
             {[
@@ -188,11 +198,11 @@ export default function LandingPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.15 }}
-                className="bg-gray-50 rounded-2xl p-8 border border-gray-100"
+                className={`rounded-2xl p-8 border ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}
               >
                 <b.icon className={`w-10 h-10 ${b.color} mb-5`} />
-                <h3 className="text-xl font-bold text-gray-900 mb-3">{b.title}</h3>
-                <p className="text-gray-500 leading-relaxed">{b.desc}</p>
+                <h3 className={`text-xl font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>{b.title}</h3>
+                <p className={isDark ? 'text-gray-400 leading-relaxed' : 'text-gray-500 leading-relaxed'}>{b.desc}</p>
               </motion.div>
             ))}
           </div>
@@ -215,7 +225,7 @@ export default function LandingPage() {
               onClick={() => navigate('/terms')}
               className="bg-white text-brand-700 font-bold px-8 sm:px-10 py-3.5 sm:py-4 rounded-2xl text-base sm:text-lg hover:bg-gray-50 transition-colors"
             >
-              Register Now — It's Free
+              {t("Register Now — It's Free")}
             </motion.button>
           </motion.div>
         </div>

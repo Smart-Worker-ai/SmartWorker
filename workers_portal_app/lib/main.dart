@@ -38,7 +38,23 @@ final _sessionProvider = FutureProvider<bool>((ref) async {
   return token != null;
 });
 
-final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
+final themeModeProvider = StateNotifierProvider<_ThemeModeNotifier, ThemeMode>(
+  (_) => _ThemeModeNotifier(),
+);
+
+class _ThemeModeNotifier extends StateNotifier<ThemeMode> {
+  _ThemeModeNotifier() : super(ThemeMode.light) {
+    _load();
+  }
+  Future<void> _load() async {
+    final stored = await SecureStorageService.read('themeMode');
+    if (stored == 'dark') state = ThemeMode.dark;
+  }
+  Future<void> toggle() async {
+    state = state == ThemeMode.dark ? ThemeMode.light : ThemeMode.dark;
+    await SecureStorageService.write('themeMode', state == ThemeMode.dark ? 'dark' : 'light');
+  }
+}
 
 class WorkersPortalApp extends ConsumerWidget {
   const WorkersPortalApp({super.key});
@@ -69,4 +85,20 @@ class WorkersPortalApp extends ConsumerWidget {
   }
 }
 
-final localeModeProvider = StateProvider<Locale>((ref) => const Locale('en'));
+final localeModeProvider = StateNotifierProvider<_LocaleNotifier, Locale>(
+  (_) => _LocaleNotifier(),
+);
+
+class _LocaleNotifier extends StateNotifier<Locale> {
+  _LocaleNotifier() : super(const Locale('en')) {
+    _load();
+  }
+  Future<void> _load() async {
+    final stored = await SecureStorageService.read('locale');
+    if (stored == 'ml') state = const Locale('ml');
+  }
+  Future<void> setLocale(Locale locale) async {
+    state = locale;
+    await SecureStorageService.write('locale', locale.languageCode);
+  }
+}

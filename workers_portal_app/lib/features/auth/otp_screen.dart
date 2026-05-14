@@ -283,7 +283,6 @@ class _OtpScreenState extends ConsumerState<OtpScreen>
                         } else if (v.isEmpty && i > 0) {
                           _nodes[i - 1].requestFocus();
                         }
-                        if (_otp.length == 6) _verify();
                       },
                       onBackspace: () {
                         if (i > 0) {

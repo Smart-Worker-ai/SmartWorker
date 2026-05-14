@@ -98,8 +98,11 @@ export default function RegisterPage() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  // T&C is accepted on the TermsPage before reaching here
-  const [termsAccepted] = useState(true);
+  const termsAccepted = location.state?.termsAccepted === true;
+
+  useEffect(() => {
+    if (!termsAccepted) navigate('/terms', { replace: true });
+  }, []);
   const [passbookFile, setPassbookFile] = useState(null);
   const [aadharFile, setAadharFile] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);

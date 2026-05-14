@@ -34,9 +34,8 @@ class SettingsScreen extends ConsumerWidget {
               value: isDark,
               activeThumbColor: AppColors.primary,
               activeTrackColor: AppColors.primary.withValues(alpha: 0.5),
-              onChanged: (v) {
-                ref.read(themeModeProvider.notifier).state =
-                    v ? ThemeMode.dark : ThemeMode.light;
+              onChanged: (_) {
+                ref.read(themeModeProvider.notifier).toggle();
               },
             ),
           ),
@@ -51,11 +50,11 @@ class SettingsScreen extends ConsumerWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _LangButton(label: 'EN', selected: !isML, onTap: () {
-                  ref.read(localeModeProvider.notifier).state = const Locale('en');
+                  ref.read(localeModeProvider.notifier).setLocale(const Locale('en'));
                 }),
                 const SizedBox(width: 8),
                 _LangButton(label: 'മല', selected: isML, onTap: () {
-                  ref.read(localeModeProvider.notifier).state = const Locale('ml');
+                  ref.read(localeModeProvider.notifier).setLocale(const Locale('ml'));
                 }),
               ],
             ),

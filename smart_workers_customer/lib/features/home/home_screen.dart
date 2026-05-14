@@ -69,7 +69,7 @@ class HomeScreen extends ConsumerWidget {
                   final completed = bookings.where((b) => b['status'] == 'completed').length;
                   final spent = bookings
                       .where((b) => b['status'] == 'completed')
-                      .fold<num>(0, (s, b) => s + (b['totalPrice'] as num))
+                      .fold<num>(0, (s, b) => s + ((b['totalPrice'] as num?) ?? 0))
                       .toInt();
                   return _HeroBlock(
                     greeting: _greeting(),
@@ -630,7 +630,7 @@ class _RecentBookingTile extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('₹${booking['totalPrice']}',
+              Text('₹${booking['totalPrice'] ?? '—'}',
                   style: const TextStyle(
                       fontWeight: FontWeight.w800,
                       fontSize: 14,

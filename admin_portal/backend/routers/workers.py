@@ -51,9 +51,34 @@ async def delete_worker(worker_id: str, source: str = "main", _=Depends(require_
 @router.post("/{worker_id}/approve")
 async def approve_portal_worker(worker_id: str, _=Depends(require_admin)):
     async with httpx.AsyncClient(timeout=15) as c:
+        # 1. Approve in portal (worker website) backend
         r = await c.post(f"{WORKER_BACKEND_URL}/workers/admin/{worker_id}/approve", headers=HW)
         r.raise_for_status()
-        return r.json()
+        result = r.json()
+
+        # 2. Fetch full worker details to sync to main Node.js backend
+        try:
+            detail_r = await c.get(f"{WORKER_BACKEND_URL}/workers/admin/{worker_id}", headers=HW)
+            if detail_r.status_code == 200:
+                worker = detail_r.json().get("worker") or detail_r.json()
+                # Map portal fields to Node.js admin/workers schema
+                sync_payload = {
+                    "name": worker.get("name") or worker.get("full_name", ""),
+                    "phone": worker.get("mobile") or worker.get("phone", ""),
+                    "job_type": worker.get("trade_type") or worker.get("job_type", ""),
+                    "district": worker.get("district", ""),
+                    "town": worker.get("town") or worker.get("city", ""),
+                    "experience_years": worker.get("experience_years", 0),
+                    "is_verified": True,
+                    "status": "approved",
+                    "portal_id": worker_id,
+                }
+                await c.post(f"{CUSTOMER_BACKEND_URL}/admin/workers", headers=H, json=sync_payload)
+        except Exception as sync_err:
+            # Sync failure is non-fatal — approval already succeeded
+            print(f"[admin] Worker sync to Node.js failed: {sync_err}")
+
+        return result
 
 @router.post("/{worker_id}/reject")
 async def reject_portal_worker(worker_id: str, _=Depends(require_admin)):

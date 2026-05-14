@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 const SECTIONS = [
   ['1. Acceptance', 'By registering on Smart Workers, you agree to these Terms & Conditions. If you do not agree, do not register.'],
@@ -18,21 +19,26 @@ const SECTIONS = [
 
 export default function TermsPage() {
   const navigate = useNavigate();
+  const { isDark } = useTheme();
   const [agreed, setAgreed] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <nav className="bg-white border-b px-6 h-14 flex items-center gap-3 sticky top-0 z-10">
-        <button onClick={() => navigate(-1)} className="text-gray-500 hover:text-gray-900 transition-colors">
+    <div className={`min-h-screen flex flex-col ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
+      <nav className={`border-b px-6 h-14 flex items-center gap-3 sticky top-0 z-10
+        ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+        <button onClick={() => navigate(-1)} className={`transition-colors
+          ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}>
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <span className="font-bold text-gray-900">Terms & Conditions</span>
+        <span className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Terms & Conditions</span>
       </nav>
 
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-6 py-10">
-          <h1 className="text-3xl font-black text-gray-900 mb-2">Smart Workers Worker Terms</h1>
-          <p className="text-gray-400 text-sm mb-10">Last updated: April 2026</p>
+          <h1 className={`text-3xl font-black mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Smart Workers Worker Terms
+          </h1>
+          <p className={`text-sm mb-10 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>Last updated: April 2026</p>
 
           <div className="space-y-8">
             {SECTIONS.map(([title, body], i) => (
@@ -42,10 +48,11 @@ export default function TermsPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.04 }}
-                className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm"
+                className={`rounded-2xl p-6 border shadow-sm
+                  ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'}`}
               >
-                <h3 className="font-bold text-gray-900 mb-2">{title}</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">{body}</p>
+                <h3 className={`font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{title}</h3>
+                <p className={`text-sm leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{body}</p>
               </motion.div>
             ))}
           </div>
@@ -54,7 +61,8 @@ export default function TermsPage() {
         </div>
       </div>
 
-      <div className="bg-white border-t px-6 py-4 sticky bottom-0 shadow-lg">
+      <div className={`border-t px-6 py-4 sticky bottom-0 shadow-lg
+        ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
         <label className="flex items-center gap-3 mb-4 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -62,7 +70,7 @@ export default function TermsPage() {
             onChange={(e) => setAgreed(e.target.checked)}
             className="w-5 h-5 accent-indigo-600 shrink-0"
           />
-          <span className="text-sm text-gray-700 font-medium">
+          <span className={`text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
             I have read and agree to the Terms & Conditions
           </span>
         </label>

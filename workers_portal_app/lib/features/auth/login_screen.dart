@@ -259,19 +259,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       statusMessage: ref.watch(authProvider.select((s) => s.statusMessage)),
                     ),
 
-                    const SizedBox(height: 24),
-
-                    // Privacy note
-                    Center(
-                      child: Text(
-                        'By continuing, you agree to our Terms & Privacy Policy.',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                    ),
                     const SizedBox(height: 40),
                   ],
                 ),

@@ -255,10 +255,10 @@ class _BookingCard extends StatelessWidget {
                 const SizedBox(width: 16),
                 const Icon(Icons.timelapse, size: 14, color: Colors.grey),
                 const SizedBox(width: 6),
-                Text('${booking['numberOfDays']} day(s)',
+                Text('${booking['numberOfDays'] ?? '—'} day(s)',
                     style: theme.textTheme.bodySmall),
                 const Spacer(),
-                Text('₹${booking['totalPrice']}',
+                Text('₹${booking['totalPrice'] ?? '—'}',
                     style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                         color: theme.colorScheme.primary)),
