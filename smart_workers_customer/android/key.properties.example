@@ -1,0 +1,17 @@
+# Copy this file to `key.properties` (same directory) and fill in your values.
+# `key.properties` is gitignored — never commit it.
+#
+# To create the keystore (one-time):
+#   keytool -genkey -v -keystore ~/upload-keystore.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias smartworkers
+#
+# After creating, find SHA-1 and SHA-256 with:
+#   keytool -list -v -keystore ~/upload-keystore.jks -alias smartworkers
+#
+# Then register BOTH fingerprints in Firebase Console:
+#   Project Settings -> Your apps -> Android app -> Add fingerprint
+
+storeFile=/absolute/path/to/upload-keystore.jks
+storePassword=your-store-password
+keyAlias=smartworkers
+keyPassword=your-key-password

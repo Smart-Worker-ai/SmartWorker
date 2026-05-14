@@ -66,6 +66,7 @@ function WorkerDetail({ workerId, onClose }) {
     ['Age', detail.age],
     ['Gender', detail.gender],
     ['Mobile', detail.mobile],
+    ['Email', detail.email || '—'],
     ['Address', detail.address || '—'],
     ['Job Type', detail.job_type],
     ['Daily Rate', `₹${detail.daily_rate}`],

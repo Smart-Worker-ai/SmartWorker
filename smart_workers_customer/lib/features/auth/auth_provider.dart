@@ -13,23 +13,19 @@ class AuthState {
     this.token,
     this.user,
     this.error,
-    this.devOtp,
   });
 
   final bool isLoading;
   final String? token;
   final Map<String, dynamic>? user;
   final String? error;
-  final String? devOtp;
 
   AuthState copyWith({
     bool? isLoading,
     String? token,
     Map<String, dynamic>? user,
     String? error,
-    String? devOtp,
     bool clearError = false,
-    bool clearDevOtp = false,
     bool clearToken = false,
   }) {
     return AuthState(
@@ -37,7 +33,6 @@ class AuthState {
       token: clearToken ? null : (token ?? this.token),
       user: user ?? this.user,
       error: clearError ? null : (error ?? this.error),
-      devOtp: clearDevOtp ? null : (devOtp ?? this.devOtp),
     );
   }
 }
@@ -64,20 +59,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
       } catch (_) {}
     }
     state = state.copyWith(token: token, user: user);
-  }
-
-  Future<String?> sendOtp(String phone) async {
-    state = state.copyWith(isLoading: true, clearError: true, clearDevOtp: true);
-    try {
-      final resp = await _apiClient.dio.post('/auth/send-otp', data: {'phone': phone});
-      final devOtp = resp.data['devOtp'] as String?;
-      state = state.copyWith(isLoading: false, devOtp: devOtp);
-      return null;
-    } on DioException catch (e) {
-      final msg = e.response?.data?['error'] as String? ?? 'Could not send OTP. Check your connection.';
-      state = state.copyWith(isLoading: false, error: msg);
-      return msg;
-    }
   }
 
   Future<({bool isNewUser, String? error})> verifyOtp(String phone, String otp) async {
@@ -135,7 +116,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false, token: token, user: user);
       return (isNewUser: true, error: null);
     } on DioException catch (e) {
-      final msg = e.response?.data?['error'] as String? ?? e.response?.data?['message'] as String? ?? 'Registration failed.';
+      final msg = e.response?.data?['error'] as String? ??
+          e.response?.data?['message'] as String? ??
+          'Registration failed.';
       state = state.copyWith(isLoading: false, error: msg);
       return (isNewUser: false, error: msg);
     }
@@ -153,7 +136,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isLoading: false, token: token, user: user);
       return null;
     } on DioException catch (e) {
-      final msg = e.response?.data?['error'] as String? ?? e.response?.data?['message'] as String? ?? 'Login failed. Check your credentials.';
+      final msg = e.response?.data?['error'] as String? ??
+          e.response?.data?['message'] as String? ??
+          'Login failed. Check your credentials.';
       state = state.copyWith(isLoading: false, error: msg);
       return msg;
     }
@@ -165,16 +150,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
       PhoneAuthCredential credential) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      // 1. Sign in with Firebase
       final userCredential =
           await FirebaseAuth.instance.signInWithCredential(credential);
       final idToken = await userCredential.user?.getIdToken();
       if (idToken == null) {
-        state = state.copyWith(isLoading: false);
+        state = state.copyWith(isLoading: false, error: 'Could not get Firebase token.');
         return (isNewUser: false, error: 'Could not get Firebase token.');
       }
 
-      // 2. Exchange Firebase token for app JWT
       final resp = await _apiClient.dio
           .post('/auth/verify-firebase-phone', data: {'idToken': idToken});
       final token = resp.data['token'] as String;
@@ -189,19 +172,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final msg = switch (e.code) {
         'invalid-verification-code' => 'Incorrect OTP. Please try again.',
         'session-expired'           => 'OTP expired. Please request a new one.',
+        'too-many-requests'         => 'Too many attempts. Wait a few minutes.',
         _                           => e.message ?? 'Verification failed.',
       };
       state = state.copyWith(isLoading: false, error: msg);
       return (isNewUser: false, error: msg);
     } on DioException catch (e) {
-      final msg = e.response?.data?['error'] as String? ?? e.response?.data?['message'] as String? ?? 'Server error. Try again.';
+      final msg = e.response?.data is Map
+          ? (e.response?.data['error'] as String? ??
+              e.response?.data['message'] as String? ??
+              'Server error. Try again.')
+          : 'Server error. Try again.';
       state = state.copyWith(isLoading: false, error: msg);
       return (isNewUser: false, error: msg);
     }
   }
 
   Future<void> logout() async {
-    await FirebaseAuth.instance.signOut();
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (_) {/* fine if not signed in */}
     await SecureStorageService.clear();
     state = const AuthState();
   }

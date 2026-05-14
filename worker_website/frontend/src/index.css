@@ -2,5 +2,85 @@
 @tailwind components;
 @tailwind utilities;
 
-* { box-sizing: border-box; }
-body { font-family: 'Inter', system-ui, sans-serif; }
+@layer base {
+  * { box-sizing: border-box; }
+
+  :root {
+    color-scheme: light;
+  }
+  .dark {
+    color-scheme: dark;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Malayalam font: improve glyph clarity if the language is set to ml */
+  html[lang='ml'] body {
+    font-family: 'Noto Sans Malayalam', 'Inter', system-ui, sans-serif;
+  }
+  html:not([lang='ml']) body {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  /* Force smooth color transitions across theme switch, but skip transform/opacity
+     so animations stay snappy. */
+  body, header, nav, aside, footer, section, main, .theme-fade {
+    transition: background-color 320ms ease, border-color 320ms ease, color 320ms ease;
+  }
+
+  /* Custom scrollbar — subtle, theme-aware */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.25);
+    border-radius: 8px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.45);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+  }
+
+  /* Better focus rings — visible but not garish */
+  :focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Selection color matches brand */
+::selection {
+  background: rgba(99, 102, 241, 0.3);
+  color: inherit;
+}
+
+/* Make autofill in light mode less jarring (Chrome default = pale yellow) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill {
+  -webkit-text-fill-color: inherit;
+  transition: background-color 9999s ease-out 0s;
+}

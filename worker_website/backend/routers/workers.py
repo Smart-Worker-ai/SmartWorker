@@ -183,7 +183,7 @@ def get_worker(worker_id: str):
 def admin_list_all_workers():
     conn = get_conn()
     rows = conn.execute("""
-        SELECT id, name, age, gender, mobile, address, district, town, job_type,
+        SELECT id, name, age, gender, mobile, email, address, district, town, job_type,
                current_location, interested_locations, facilities_requested,
                daily_rate, experience_years, profile_photo, passbook_photo, aadhar_photo,
                status, is_blocked, is_verified, created_at

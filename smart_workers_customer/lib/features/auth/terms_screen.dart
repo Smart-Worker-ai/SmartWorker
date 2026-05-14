@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_colors.dart';
 
 class TermsScreen extends StatefulWidget {
   const TermsScreen({super.key, required this.onAccept});
@@ -35,6 +36,7 @@ class _TermsScreenState extends State<TermsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final c = context.c;
     return Scaffold(
       appBar: AppBar(title: const Text('Terms & Conditions')),
       body: Column(
@@ -74,7 +76,7 @@ class _TermsScreenState extends State<TermsScreen> {
           Container(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: c.bgNavy,
               boxShadow: [
                 BoxShadow(
                     color: Colors.black.withValues(alpha: 0.06),
@@ -131,11 +133,11 @@ class _Section extends StatelessWidget {
               style: const TextStyle(
                   fontWeight: FontWeight.w700, fontSize: 15)),
           const SizedBox(height: 6),
-          Text(body,
+          Builder(builder: (context) => Text(body,
               style: TextStyle(
-                  color: Colors.grey.shade700,
+                  color: context.c.subtext,
                   fontSize: 13,
-                  height: 1.55)),
+                  height: 1.55))),
         ],
       ),
     );

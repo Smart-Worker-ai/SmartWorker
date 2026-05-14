@@ -6,13 +6,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../shared/widgets/common_widgets.dart';
+import '../../../shared/app_shell.dart';
 import 'auth_provider.dart';
 import 'registration_screen.dart';
-import '../../../shared/app_shell.dart';
 
 class OtpScreen extends ConsumerStatefulWidget {
-  const OtpScreen({super.key, required this.phone,
-      required this.verificationId, this.resendToken});
+  const OtpScreen({
+    super.key,
+    required this.phone,
+    required this.verificationId,
+    this.resendToken,
+  });
   final String phone;
   final String verificationId;
   final int? resendToken;
@@ -21,7 +27,6 @@ class OtpScreen extends ConsumerStatefulWidget {
 }
 
 class _OtpScreenState extends ConsumerState<OtpScreen> {
-  // 6 separate controllers for OTP boxes
   final _ctrls = List.generate(6, (_) => TextEditingController());
   final _nodes = List.generate(6, (_) => FocusNode());
   bool _resending = false;
@@ -58,18 +63,26 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   String get _otp => _ctrls.map((c) => c.text).join();
 
   Future<void> _verify() async {
-    if (_otp.length != 6) { _snack('Enter the complete 6-digit OTP'); return; }
+    if (_otp.length != 6) {
+      showAppSnack(context, 'Enter the complete 6-digit OTP');
+      return;
+    }
     final credential = PhoneAuthProvider.credential(
         verificationId: _currentVerificationId, smsCode: _otp);
     final result = await ref.read(authProvider.notifier)
         .signInWithFirebaseCredential(credential);
     if (!mounted) return;
-    if (result.error != null) { _snack(result.error!); return; }
+    if (result.error != null) {
+      showAppSnack(context, result.error!);
+      // clear boxes so user can retry
+      for (final c in _ctrls) c.clear();
+      FocusScope.of(context).requestFocus(_nodes.first);
+      return;
+    }
     if (result.isNewUser) {
-      Navigator.pushReplacement(context, _slide(const RegistrationScreen()));
+      Navigator.pushReplacement(context, slideRoute(const RegistrationScreen()));
     } else {
-      Navigator.pushAndRemoveUntil(context,
-          _slide(const AppShell()), (_) => false);
+      Navigator.pushAndRemoveUntil(context, fadeRoute(const AppShell()), (_) => false);
     }
   }
 
@@ -84,137 +97,134 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       verificationFailed: (e) {
         if (!mounted) return;
         setState(() => _resending = false);
-        _snack(e.message ?? 'Could not resend OTP.');
+        showAppSnack(context, e.message ?? 'Could not resend OTP.');
       },
       codeSent: (verificationId, resendToken) {
         if (!mounted) return;
-        setState(() { _resending = false;
+        setState(() {
+          _resending = false;
           _currentVerificationId = verificationId;
           _resendToken = resendToken;
         });
         _startTimer();
-        _snack('OTP resent successfully!', isSuccess: true);
+        showAppSnack(context, 'OTP resent successfully!', kind: SnackKind.success);
       },
       codeAutoRetrievalTimeout: (_) {},
     );
   }
 
-  void _snack(String msg, {bool isSuccess = false}) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(msg, style: GoogleFonts.inter(color: Colors.white)),
-        backgroundColor: isSuccess ? kSuccess : kError,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ));
-
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     final isLoading = ref.watch(authProvider.select((s) => s.isLoading));
     return Scaffold(
-      backgroundColor: kBrandDeep,
       body: Container(
-        decoration: const BoxDecoration(gradient: kBgGradient),
-        child: SafeArea(child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const SizedBox(height: 16),
-            Align(alignment: Alignment.centerLeft,
-              child: _BackBtn(onTap: () => Navigator.pop(context))),
-            const SizedBox(height: 40),
-
-            Center(child: Container(
-              width: 80, height: 80,
-              decoration: BoxDecoration(
-                gradient: kBrandGradient,
-                borderRadius: BorderRadius.circular(22),
-                boxShadow: [BoxShadow(color: kBrandIndigo.withOpacity(0.4),
-                    blurRadius: 24, offset: const Offset(0, 8))],
-              ),
-              child: const Icon(Icons.message_rounded, color: Colors.white, size: 36),
-            )).animate().scale(begin: const Offset(0.6,0.6),
-                duration: 500.ms, curve: Curves.elasticOut),
-
-            const SizedBox(height: 28),
-            Text('Verify your number', textAlign: TextAlign.center,
-              style: GoogleFonts.inter(color: kBrandText,
-                  fontWeight: FontWeight.w800, fontSize: 24),
-            ).animate().fadeIn(delay: 150.ms),
-            const SizedBox(height: 8),
-            RichText(textAlign: TextAlign.center, text: TextSpan(
-              style: GoogleFonts.inter(color: kBrandSubtext, fontSize: 14, height: 1.5),
+        decoration: BoxDecoration(gradient: c.bgGradient),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const TextSpan(text: 'Code sent to '),
-                TextSpan(text: widget.phone,
-                  style: GoogleFonts.inter(color: kBrandText, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 16),
+                const Align(alignment: Alignment.centerLeft, child: BackBtn()),
+                const SizedBox(height: 40),
+
+                Center(child: Container(
+                  width: 80, height: 80,
+                  decoration: BoxDecoration(
+                    gradient: c.brandGradient,
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: [BoxShadow(
+                        color: c.accentSecondary.withValues(alpha: 0.4),
+                        blurRadius: 24, offset: const Offset(0, 8))],
+                  ),
+                  child: const Icon(Icons.message_rounded, color: Colors.white, size: 36),
+                )).animate().scale(begin: const Offset(0.6, 0.6),
+                    duration: 500.ms, curve: Curves.elasticOut),
+
+                const SizedBox(height: 28),
+                Text('Verify your number',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(color: c.text,
+                      fontWeight: FontWeight.w800, fontSize: 24),
+                ).animate().fadeIn(delay: 150.ms),
+
+                const SizedBox(height: 8),
+                RichText(textAlign: TextAlign.center, text: TextSpan(
+                  style: GoogleFonts.inter(color: c.subtext, fontSize: 14, height: 1.5),
+                  children: [
+                    const TextSpan(text: 'Code sent to '),
+                    TextSpan(text: widget.phone,
+                      style: GoogleFonts.inter(color: c.text, fontWeight: FontWeight.w700)),
+                  ],
+                )).animate().fadeIn(delay: 250.ms),
+
+                const SizedBox(height: 40),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: List.generate(6, (i) => _OtpBox(
+                    controller: _ctrls[i],
+                    focusNode: _nodes[i],
+                    onChanged: (v) {
+                      if (v.isNotEmpty && i < 5) {
+                        FocusScope.of(context).requestFocus(_nodes[i + 1]);
+                      }
+                      if (v.isEmpty && i > 0) {
+                        FocusScope.of(context).requestFocus(_nodes[i - 1]);
+                      }
+                      if (_otp.length == 6) _verify();
+                    },
+                  )),
+                ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2, end: 0, delay: 300.ms),
+
+                const SizedBox(height: 36),
+
+                GradientButton(
+                  label: isLoading ? 'Verifying…' : 'Verify OTP',
+                  isLoading: isLoading,
+                  onPressed: isLoading ? null : _verify,
+                ).animate().fadeIn(delay: 400.ms),
+
+                const SizedBox(height: 24),
+
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Text("Didn't receive the code?",
+                    style: GoogleFonts.inter(color: c.subtext, fontSize: 13)),
+                  const SizedBox(width: 4),
+                  if (_countdown > 0)
+                    Text('Resend in ${_countdown}s',
+                      style: GoogleFonts.inter(color: c.muted,
+                          fontSize: 13, fontWeight: FontWeight.w600))
+                  else
+                    GestureDetector(
+                      onTap: _resending ? null : _resend,
+                      child: Text(_resending ? 'Sending…' : 'Resend OTP',
+                        style: GoogleFonts.inter(color: c.accent,
+                            fontSize: 13, fontWeight: FontWeight.w700)),
+                    ),
+                ]).animate().fadeIn(delay: 500.ms),
               ],
-            )).animate().fadeIn(delay: 250.ms),
-
-            const SizedBox(height: 40),
-
-            // ── 6 OTP boxes ──────────────────────────────────────────────────
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: List.generate(6, (i) => _OtpBox(
-                controller: _ctrls[i],
-                focusNode: _nodes[i],
-                onChanged: (v) {
-                  if (v.isNotEmpty && i < 5) {
-                    FocusScope.of(context).requestFocus(_nodes[i + 1]);
-                  }
-                  if (v.isEmpty && i > 0) {
-                    FocusScope.of(context).requestFocus(_nodes[i - 1]);
-                  }
-                  if (_otp.length == 6) _verify();
-                },
-              )),
-            ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.2, end: 0, delay: 300.ms),
-
-            const SizedBox(height: 36),
-
-            GradientButton(
-              label: isLoading ? 'Verifying…' : 'Verify OTP',
-              isLoading: isLoading,
-              onPressed: isLoading ? null : _verify,
-            ).animate().fadeIn(delay: 400.ms),
-
-            const SizedBox(height: 24),
-
-            // ── Resend row ────────────────────────────────────────────────────
-            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Text("Didn't receive the code?",
-                style: GoogleFonts.inter(color: kBrandSubtext, fontSize: 13)),
-              const SizedBox(width: 4),
-              if (_countdown > 0)
-                Text('Resend in ${_countdown}s',
-                  style: GoogleFonts.inter(color: kBrandMuted,
-                      fontSize: 13, fontWeight: FontWeight.w600))
-              else
-                GestureDetector(
-                  onTap: _resending ? null : _resend,
-                  child: Text(_resending ? 'Sending…' : 'Resend OTP',
-                    style: GoogleFonts.inter(color: kBrandBlue,
-                        fontSize: 13, fontWeight: FontWeight.w700)),
-                ),
-            ]).animate().fadeIn(delay: 500.ms),
-          ]),
-        )),
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
 class _OtpBox extends StatelessWidget {
-  const _OtpBox({required this.controller, required this.focusNode,
-      required this.onChanged});
+  const _OtpBox({required this.controller, required this.focusNode, required this.onChanged});
   final TextEditingController controller;
   final FocusNode focusNode;
   final void Function(String) onChanged;
 
   @override
   Widget build(BuildContext context) {
+    final c = context.c;
     return SizedBox(
-      width: 46,
-      height: 56,
+      width: 46, height: 56,
       child: TextFormField(
         controller: controller,
         focusNode: focusNode,
@@ -223,50 +233,23 @@ class _OtpBox extends StatelessWidget {
         maxLength: 1,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         onChanged: onChanged,
-        style: GoogleFonts.inter(color: kBrandText,
-            fontWeight: FontWeight.w800, fontSize: 22),
+        style: GoogleFonts.inter(color: c.text, fontWeight: FontWeight.w800, fontSize: 22),
         decoration: InputDecoration(
           counterText: '',
           filled: true,
-          fillColor: kBrandSurface,
+          fillColor: c.surface,
           contentPadding: EdgeInsets.zero,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: kBrandBorder)),
+            borderSide: BorderSide(color: c.border)),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: kBrandBorder)),
+            borderSide: BorderSide(color: c.border)),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: kBrandBlue, width: 2)),
+            borderSide: BorderSide(color: c.accent, width: 2)),
         ),
       ),
     );
   }
-}
-
-PageRoute _slide(Widget page) => PageRouteBuilder(
-  pageBuilder: (_, __, ___) => page,
-  transitionsBuilder: (_, anim, __, child) => SlideTransition(
-    position: Tween(begin: const Offset(1, 0), end: Offset.zero)
-        .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
-    child: child,
-  ),
-  transitionDuration: const Duration(milliseconds: 320),
-);
-
-class _BackBtn extends StatelessWidget {
-  const _BackBtn({required this.onTap});
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: kBrandSurface, borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: kBrandBorder)),
-      child: const Icon(Icons.arrow_back_ios_new_rounded, color: kBrandText, size: 18),
-    ),
-  );
 }
