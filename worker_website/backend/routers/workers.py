@@ -14,6 +14,7 @@ import httpx
 import structlog
 from fastapi import (
     APIRouter,
+    Cookie,
     Depends,
     File,
     Form,
@@ -48,12 +49,17 @@ def _require_admin(x_admin_secret: Optional[str] = Header(None)):
 
 
 async def _get_worker(
-    authorization: Optional[str] = Header(None),
+    authorization:  Optional[str] = Header(None),
+    worker_session: Optional[str] = Cookie(None, alias="worker_session"),
     session: AsyncSession = Depends(get_session),
 ) -> Worker:
-    if not authorization or not authorization.startswith("Bearer "):
+    # Cookie preferred (httpOnly, XSS-safe). Bearer header is the transition
+    # fallback so old clients keep working until they refresh.
+    token = worker_session
+    if not token and authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ", 1)[1]
+    if not token:
         raise HTTPException(status_code=401, detail="Unauthorized.")
-    token = authorization.split(" ", 1)[1]
 
     import time
     now_ms = int(time.time() * 1000)

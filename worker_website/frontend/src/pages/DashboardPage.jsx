@@ -10,17 +10,31 @@ export default function DashboardPage() {
   const { isDark, t, tStatus } = useTheme();
   const [worker, setWorker] = useState(null);
   const [loading, setLoading] = useState(true);
-  const token = localStorage.getItem('worker_token');
 
   useEffect(() => {
-    if (!token) { navigate('/'); return; }
-    axios.get('/api/workers/me', { headers: { Authorization: `Bearer ${token}` } })
+    // Auth is via httpOnly `worker_session` cookie. We can't see it from JS,
+    // so we just call /me — server replies 200 if cookie is valid,
+    // 401 otherwise. Legacy localStorage token (if any) goes along too as
+    // Authorization header for the transition.
+    const legacy = localStorage.getItem('worker_token');
+    const headers = legacy ? { Authorization: `Bearer ${legacy}` } : undefined;
+
+    axios.get('/api/workers/me', { withCredentials: true, headers })
       .then(r => setWorker(r.data.worker))
-      .catch(() => { localStorage.removeItem('worker_token'); navigate('/'); })
+      .catch(() => {
+        localStorage.removeItem('worker_token');
+        navigate('/');
+      })
       .finally(() => setLoading(false));
   }, []);
 
-  const logout = () => { localStorage.removeItem('worker_token'); navigate('/'); };
+  const logout = async () => {
+    try {
+      await axios.post('/api/auth/logout', null, { withCredentials: true });
+    } catch { /* noop — server-side state is best-effort */ }
+    localStorage.removeItem('worker_token');
+    navigate('/');
+  };
 
   if (loading) return (
     <div className={`min-h-screen flex items-center justify-center transition-colors duration-300 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>

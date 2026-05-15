@@ -9,7 +9,7 @@ import time
 import uuid
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from pydantic import BaseModel
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,7 +24,8 @@ from rate_limit import limiter
 log = structlog.get_logger("auth")
 router = APIRouter()
 
-OTP_TTL_SECONDS = 600  # 10 minutes
+OTP_TTL_SECONDS = 600                  # 10 minutes
+SESSION_COOKIE  = "worker_session"
 
 
 class OtpRequest(BaseModel):
@@ -92,6 +93,7 @@ async def request_otp(
 @limiter.limit(config.RATELIMIT_OTP_VERIFY)
 async def verify_otp(
     request: Request,
+    response: Response,
     body: OtpVerify,
     session: AsyncSession = Depends(get_session),
 ):
@@ -124,6 +126,18 @@ async def verify_otp(
     session.add(WorkerSession(token=token, worker_id=worker.id, expires_at=expires_ms))
     await session.flush()
 
+    # Set httpOnly cookie so the SPA never has to handle the token.
+    # Bearer-in-body is kept for the transition period and old clients.
+    response.set_cookie(
+        SESSION_COOKIE,
+        token,
+        max_age=config.SESSION_TTL_HOURS * 3600,
+        httponly=True,
+        secure=config.IS_PROD,
+        samesite="lax",
+        path="/",
+    )
+
     log.info("worker_login", worker_id=worker.id)
     return {
         "token": token,
@@ -136,3 +150,18 @@ async def verify_otp(
         },
         "expires_at": expires_ms,
     }
+
+
+@router.post("/logout")
+async def logout(
+    response: Response,
+    worker_session: str | None = Cookie(None, alias=SESSION_COOKIE),
+    session: AsyncSession = Depends(get_session),
+):
+    """Revoke server-side session record + clear cookie. Idempotent."""
+    if worker_session:
+        await session.execute(
+            delete(WorkerSession).where(WorkerSession.token == worker_session)
+        )
+    response.delete_cookie(SESSION_COOKIE, path="/", samesite="lax", secure=config.IS_PROD)
+    return {"message": "Logged out."}

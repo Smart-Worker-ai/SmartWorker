@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import api from '../api';
 import {
   LayoutDashboard, Users, HardHat, BookOpen, MessageSquareWarning,
   LogOut, Wrench, Menu, X, ChevronRight, Moon, Sun, Languages,
@@ -55,9 +56,10 @@ function Sidebar({ onClose }) {
   const navigate = useNavigate();
   const { isDark, setIsDark, lang, setLang } = useTheme();
 
-  const logout = () => {
+  const logout = async () => {
+    try { await api.post('/auth/logout'); } catch { /* noop */ }
     localStorage.removeItem('admin_token');
-    navigate('/login');
+    navigate('/login', { replace: true });
     onClose?.();
   };
 

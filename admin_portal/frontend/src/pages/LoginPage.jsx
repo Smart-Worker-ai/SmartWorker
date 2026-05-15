@@ -148,9 +148,12 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true); setError('');
     try {
-      const { data } = await api.post('/auth/login', { username, password });
-      localStorage.setItem('admin_token', data.token);
-      navigate('/');
+      // Server sets `admin_session` (httpOnly) + `csrf_token` cookies.
+      // We deliberately ignore data.token now — cookie-only is the new path.
+      await api.post('/auth/login', { username, password });
+      // Clear any stale legacy localStorage token from older builds.
+      localStorage.removeItem('admin_token');
+      navigate('/', { replace: true });
     } catch {
       setError('Invalid credentials. Check username and password.');
     } finally {
