@@ -1,0 +1,119 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Smart Workers — production composition
+#
+# Brings up:
+#   • postgres        — DB for all backends that need persistence
+#   • node_backend    — Smart Workers main API (Customer app target)
+#   • worker_backend  — Worker Registration FastAPI
+#   • admin_backend   — Admin Portal FastAPI (stateless proxy)
+#   • caddy           — reverse proxy with auto-HTTPS
+#
+# Frontends (worker_website/frontend, admin_portal/frontend) are NOT in this
+# compose — they're deployed to Vercel free tier and CNAME'd to your domain.
+#
+# Required: a `.env` at repo root (see .env.example). docker-compose will
+# load it automatically and `${VAR}` references below resolve from it.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: smartworkers
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:-smartworkers}
+      POSTGRES_USER:     ${POSTGRES_USER:-smartworkers}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./ops/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-smartworkers}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      # Bind only to localhost on the host — never expose Postgres to the
+      # public internet. Comment out entirely once everything works.
+      - "127.0.0.1:5432:5432"
+
+  node_backend:
+    build:
+      context: ./workers-portal-backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env.node
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  worker_backend:
+    build:
+      context: ./worker_website/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env.worker
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  admin_backend:
+    build:
+      context: ./admin_portal/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env.admin
+    depends_on:
+      worker_backend:
+        condition: service_started
+    expose:
+      - "8001"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - node_backend
+      - worker_backend
+      - admin_backend
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:

@@ -2,6 +2,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+!.env.*.example
 .DS_Store
 build/
 coverage/
@@ -15,3 +16,26 @@ pubspec.lock
 **/.symlinks/
 **/Pods/
 **/DerivedData/
+
+# Secrets — never commit
+.env
+.env.local
+.env.*.local
+.env.worker
+.env.admin
+.env.node
+worker_website/backend/.env
+admin_portal/backend/.env
+
+# Backend artefacts
+**/__pycache__/
+**/*.pyc
+**/.venv/
+**/venv/
+worker_website/backend/data/*.db*
+worker_website/backend/uploads/
+
+# Docker / Caddy local data
+caddy_data/
+caddy_config/
+postgres_data/

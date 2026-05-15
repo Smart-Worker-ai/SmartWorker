@@ -1,0 +1,89 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Smart Workers — Customer App (Flutter)  ·  Linux setup
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# This file lists everything needed to build the Customer App on Linux.
+# It is NOT a `pip install -r` file — Flutter deps install via `flutter pub get`.
+# Treat the lines below as a checklist: install in order.
+#
+# Tested on: Ubuntu 22.04 / 24.04 LTS, Debian 12, Fedora 39+, Arch.
+# Target output: Android APK (release) for Firebase App Distribution.
+
+# ── 1. System packages (apt — Debian/Ubuntu) ─────────────────────────────────
+#   sudo apt update && sudo apt install -y \
+#     curl git unzip xz-utils zip libglu1-mesa \
+#     openjdk-17-jdk-headless \
+#     clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+#
+#   (Fedora: sudo dnf install -y curl git unzip xz zip mesa-libGLU \
+#            java-17-openjdk-devel clang cmake ninja-build gtk3-devel)
+#
+#   (Arch:   sudo pacman -S --needed curl git unzip xz zip glu \
+#            jdk17-openjdk clang cmake ninja gtk3)
+
+openjdk==17                       # JDK 17 — required by Android Gradle Plugin
+git==latest                       # required by Flutter for plugin fetches
+curl==latest
+unzip==latest
+
+# ── 2. Flutter SDK ───────────────────────────────────────────────────────────
+#   git clone -b stable https://github.com/flutter/flutter.git ~/flutter
+#   echo 'export PATH="$PATH:$HOME/flutter/bin"' >> ~/.bashrc
+#   source ~/.bashrc
+#   flutter --version    # should report 3.24.x or later
+#   flutter doctor       # follow prompts; accept Android licenses
+
+flutter-sdk>=3.24.0,<4.0.0        # Dart SDK 3.5+ is bundled with this range
+
+# ── 3. Android toolchain ─────────────────────────────────────────────────────
+#   Install Android Studio (snap install android-studio --classic) OR install
+#   cmdline-tools directly. Then from inside Android Studio: SDK Manager →
+#   install Platform 34/35, Build-Tools 34.0.0+, NDK 26.x, command-line tools.
+#   Finally:  flutter doctor --android-licenses    (accept all)
+
+android-sdk>=34                   # compileSdk pulled from Flutter
+android-build-tools>=34.0.0
+android-ndk~=26.0                 # matches `ndkVersion` in app/build.gradle.kts
+
+# ── 4. Firebase tooling (for distribution) ──────────────────────────────────
+#   curl -sL https://firebase.tools | bash         # installs `firebase` CLI
+#   firebase login                                  # opens browser
+
+firebase-tools>=13.0.0
+jq>=1.6                           # release.sh parses google-services.json
+
+# ── 5. Pub packages (pinned in pubspec.yaml — auto-installed) ────────────────
+#   Run from this directory:  flutter pub get
+#
+# Direct dependencies (versions resolved by pub):
+flutter-sdk-deps:
+  flutter_riverpod ^2.6.1         # state management
+  flutter_secure_storage ^9.2.2   # JWT storage (encrypted on Android)
+  dio ^5.7.0                      # HTTP client
+  intl ^0.19.0                    # date formatting
+  firebase_core ^3.13.1           # Firebase init
+  firebase_auth ^5.5.2            # phone-OTP auth
+  google_fonts ^8.0.2             # Inter font loader
+  animate_do ^5.1.0               # entrance animations
+  flutter_animate ^4.5.2          # declarative animations
+  lottie ^3.3.3                   # Lottie JSON animations
+
+# ── 6. Release keystore (one-time) ──────────────────────────────────────────
+#   keytool -genkey -v \
+#     -keystore ~/upload-keystore.jks \
+#     -alias smartworkers \
+#     -keyalg RSA -keysize 2048 -validity 10000
+#
+#   cp android/key.properties.example android/key.properties
+#   # then edit `storeFile`, `storePassword`, `keyAlias`, `keyPassword`
+#
+#   keytool -list -v -keystore ~/upload-keystore.jks -alias smartworkers
+#   # copy SHA-1 + SHA-256 → register both in Firebase Console
+#   # (see FIREBASE_OTP_FIX.md for the full walkthrough)
+
+# ── 7. Build & ship ──────────────────────────────────────────────────────────
+#   flutter pub get
+#   flutter analyze              # static checks (optional)
+#   ./release.sh                 # builds release APK and uploads to Firebase
+#                                # App Distribution with tester
+#                                # davidbec968@gmail.com

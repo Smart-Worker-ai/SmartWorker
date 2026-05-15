@@ -1,0 +1,86 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Caddy reverse proxy with auto-HTTPS (Let's Encrypt).
+#
+# Replace `smartworkers.in` with your real domain. DNS A records for the four
+# subdomains below must point at this server's public IP. Cloudflare proxy
+# (orange cloud) is fine — Caddy uses the HTTP-01 challenge by default which
+# works through Cloudflare proxy as long as port 80 is reachable.
+# ─────────────────────────────────────────────────────────────────────────────
+
+{
+    # Global options
+    email ops@smartworkers.in
+    # Uncomment for staging certs while testing:
+    # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+    servers {
+        protocols h1 h2 h3
+    }
+}
+
+# ── Customer-facing API (Node.js) ───────────────────────────────────────────
+api.smartworkers.in {
+    encode gzip zstd
+    reverse_proxy node_backend:3000 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+    log {
+        output stdout
+        format json
+    }
+}
+
+# ── Worker Registration API (FastAPI) ───────────────────────────────────────
+workers-api.smartworkers.in {
+    encode gzip zstd
+    reverse_proxy worker_backend:8000 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+    log {
+        output stdout
+        format json
+    }
+}
+
+# ── Admin Portal API (FastAPI) ──────────────────────────────────────────────
+admin-api.smartworkers.in {
+    encode gzip zstd
+    reverse_proxy admin_backend:8001 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+    log {
+        output stdout
+        format json
+    }
+}
+
+# ── Root domain redirect (optional) ─────────────────────────────────────────
+smartworkers.in, www.smartworkers.in {
+    redir https://workers.smartworkers.in{uri} permanent
+}

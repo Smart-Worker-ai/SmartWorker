@@ -1,0 +1,101 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Smart Workers — Worker Registration Website  ·  Linux setup
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Two-tier app:
+#   • backend/   — Python 3.11 + FastAPI (SQLite, file uploads, OTP)
+#   • frontend/  — React 18 + Vite 6 (deployed to Vercel)
+#
+# Tested on: Ubuntu 22.04 / 24.04 LTS, Debian 12, Fedora 39+.
+
+# ── 1. System packages ───────────────────────────────────────────────────────
+#   sudo apt update && sudo apt install -y \
+#     python3 python3-pip python3-venv python3-dev \
+#     build-essential libssl-dev libffi-dev \
+#     libjpeg-dev zlib1g-dev libtiff-dev libwebp-dev \
+#     curl git
+#
+#   (libjpeg/zlib/etc. are needed for Pillow wheels to build from source on
+#    older Pythons. On Python 3.11 wheels are usually pre-built — but install
+#    these anyway for safety.)
+
+python>=3.11,<3.13
+pip>=24.0
+git>=2.30
+curl>=7.80
+
+# ── 2. Node.js (for the frontend) ────────────────────────────────────────────
+# Recommended: install via nvm so frontend versions stay isolated.
+#   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+#   source ~/.bashrc
+#   nvm install 20 && nvm use 20
+#
+#   (Vite 6 needs Node 18+; LTS 20 recommended.)
+
+node>=20.0.0
+npm>=10.0.0
+
+# ── 3. Backend Python packages ───────────────────────────────────────────────
+# Pinned in backend/requirements.txt — install with:
+#
+#   cd backend
+#   python3 -m venv .venv
+#   source .venv/bin/activate
+#   pip install --upgrade pip
+#   pip install -r requirements.txt
+#
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20          # form-data file uploads
+aiofiles==24.1.0                   # async file IO
+python-jose[cryptography]==3.3.0   # JWT (for worker session tokens)
+passlib[bcrypt]==1.7.4             # password hashing (not used today, kept)
+sqlite-utils==3.38                 # sqlite migrations helper
+Pillow==11.1.0                     # image validation for uploads
+httpx==0.28.1                      # admin-sync HTTP client
+
+# Transitive but worth pinning explicitly:
+pydantic>=2.5,<3.0
+starlette>=0.40
+
+# ── 4. Frontend npm packages (pinned in frontend/package.json) ──────────────
+# Install with:
+#   cd frontend
+#   npm ci             # (clean install from package-lock.json)
+#   npm run dev        # local dev server on :5174
+#   npm run build      # production bundle to dist/
+#
+frontend-deps:
+  axios ^1.7.7                    # API calls
+  framer-motion ^11.13.5          # animations
+  lucide-react ^0.468.0           # icon set
+  react ^18.3.1
+  react-dom ^18.3.1
+  react-dropzone ^14.3.5          # file picker for documents
+  react-hook-form ^7.54.2         # form state + validation
+  react-router-dom ^7.1.1
+
+frontend-dev-deps:
+  '@vitejs/plugin-react' ^4.3.4
+  '@types/react' ^18.3.17
+  '@types/react-dom' ^18.3.5
+  autoprefixer ^10.4.20
+  postcss ^8.4.49
+  tailwindcss ^3.4.17
+  vite ^6.0.5
+
+# ── 5. Run locally ───────────────────────────────────────────────────────────
+# Two terminals:
+#
+#   # T1 — backend
+#   cd backend && source .venv/bin/activate
+#   uvicorn main:app --reload --port 8000
+#
+#   # T2 — frontend (Vite proxies /api → :8000)
+#   cd frontend && npm run dev
+#
+# Open http://localhost:5174
+
+# ── 6. Production deploy ─────────────────────────────────────────────────────
+# Backend → Railway (Procfile, railway.toml already present).
+# Frontend → Vercel (vercel.json already present; auto-builds on `git push`).

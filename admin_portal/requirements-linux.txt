@@ -1,0 +1,105 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Smart Workers — Admin Portal  ·  Linux setup
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Two-tier app:
+#   • backend/   — Python 3.11 + FastAPI. Stateless: proxies to the Node.js
+#                  customer backend and the Worker Registration backend.
+#                  No DB of its own.
+#   • frontend/  — React 18 + Vite 6 + Recharts (dashboard charts)
+#
+# Tested on: Ubuntu 22.04 / 24.04 LTS, Debian 12, Fedora 39+.
+
+# ── 1. System packages ───────────────────────────────────────────────────────
+#   sudo apt update && sudo apt install -y \
+#     python3 python3-pip python3-venv python3-dev \
+#     build-essential libssl-dev libffi-dev \
+#     curl git
+
+python>=3.11,<3.13
+pip>=24.0
+git>=2.30
+curl>=7.80
+
+# ── 2. Node.js (for the frontend) ────────────────────────────────────────────
+#   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+#   source ~/.bashrc
+#   nvm install 20 && nvm use 20
+
+node>=20.0.0
+npm>=10.0.0
+
+# ── 3. Backend Python packages ───────────────────────────────────────────────
+# Pinned in backend/requirements.txt:
+#
+#   cd backend
+#   python3 -m venv .venv
+#   source .venv/bin/activate
+#   pip install --upgrade pip
+#   pip install -r requirements.txt
+#
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-jose[cryptography]==3.3.0   # admin JWT
+passlib[bcrypt]==1.7.4
+sqlite-utils==3.38                 # not strictly used but kept for parity
+httpx==0.28.1                      # the workhorse — proxies to other backends
+
+# Transitive — worth pinning:
+pydantic>=2.5,<3.0
+starlette>=0.40
+
+# NOTE: admin_portal/backend does NOT use python-multipart or Pillow because
+# it never accepts file uploads or images directly — both go to the worker
+# registration backend, which the admin proxies via httpx.
+
+# ── 4. Frontend npm packages (pinned in frontend/package.json) ──────────────
+# Install:
+#   cd frontend
+#   npm ci
+#   npm run dev        # local dev server on :5173
+#   npm run build      # production bundle to dist/
+#
+frontend-deps:
+  axios ^1.7.7                    # API calls (with x-admin-secret auth)
+  framer-motion ^11.13.5          # animations
+  lucide-react ^0.468.0           # icons
+  react ^18.3.1
+  react-dom ^18.3.1
+  react-router-dom ^7.1.1
+  recharts ^2.14.1                # dashboard charts (admin-only)
+
+frontend-dev-deps:
+  '@vitejs/plugin-react' ^4.3.4
+  '@types/react' ^18.3.17
+  '@types/react-dom' ^18.3.5
+  autoprefixer ^10.4.20
+  postcss ^8.4.49
+  tailwindcss ^3.4.17
+  vite ^6.0.5
+
+# ── 5. Required environment variables (backend) ─────────────────────────────
+#   ADMIN_USERNAME=admin
+#   ADMIN_PASSWORD=<strong-password>            # NEVER use the default
+#   JWT_SECRET=<random 32+ chars>
+#   CUSTOMER_BACKEND_URL=https://smart-workers-backend-production.up.railway.app/api/v1
+#   CUSTOMER_BACKEND_ADMIN_SECRET=<matches Node.js backend>
+#   WORKER_BACKEND_URL=https://worker-portal-backend-production.up.railway.app/api
+#
+# Drop these in backend/.env (use python-dotenv if you wire it) or export
+# them in your shell before `uvicorn main:app`.
+
+# ── 6. Run locally ───────────────────────────────────────────────────────────
+# Two terminals:
+#
+#   # T1 — backend
+#   cd backend && source .venv/bin/activate
+#   uvicorn main:app --reload --port 8001
+#
+#   # T2 — frontend (Vite proxies /api → :8001)
+#   cd frontend && npm run dev
+#
+# Default admin login:  admin / ***REMOVED-SECRET***  (change in production).
+
+# ── 7. Production deploy ─────────────────────────────────────────────────────
+# Backend → Railway. Frontend → Vercel (auto-builds on `git push`).

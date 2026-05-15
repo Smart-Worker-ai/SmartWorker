@@ -1,0 +1,108 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Smart Workers — Customer App (Flutter)  ·  Windows setup
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# This file lists everything needed to build the Customer App on Windows.
+# It is NOT a `pip install -r` file — Flutter deps install via `flutter pub get`.
+#
+# Tested on: Windows 10 22H2, Windows 11.
+# Recommended shell: PowerShell 7+ or Windows Terminal.
+# Target output: Android APK (release) for Firebase App Distribution.
+
+# ── 1. System runtime ────────────────────────────────────────────────────────
+# Easiest path is via winget. Run an elevated PowerShell:
+#
+#   winget install --id Microsoft.OpenJDK.17       --silent
+#   winget install --id Git.Git                    --silent
+#   winget install --id GitHub.cli                 --silent     # optional
+#   winget install --id stedolan.jq                --silent     # for release.sh
+#   winget install --id Google.AndroidStudio       --silent
+#
+# After install, open a new shell so PATH refreshes. Confirm:
+#   java -version    → 17.x
+#   git --version
+
+openjdk==17                       # JDK 17 — required by AGP
+git==latest
+jq>=1.6                           # parsed by release.sh
+
+# ── 2. Flutter SDK ───────────────────────────────────────────────────────────
+# Download stable from https://docs.flutter.dev/get-started/install/windows
+# and extract to C:\src\flutter   (avoid Program Files due to spaces).
+# Add C:\src\flutter\bin to your PATH (System Properties → Environment Variables).
+# Verify in a new PowerShell:
+#   flutter --version
+#   flutter doctor
+
+flutter-sdk>=3.24.0,<4.0.0
+
+# ── 3. Android toolchain ─────────────────────────────────────────────────────
+# In Android Studio: SDK Manager → install Platform 34 / 35,
+# Build-Tools 34.0.0+, NDK 26.x, command-line tools.
+# Then in a shell:
+#   flutter doctor --android-licenses    (accept all)
+#
+# Bash isn't required to BUILD, but `release.sh` is a bash script. To run it
+# on Windows you have two choices:
+#   (a) Use Git Bash (comes with Git for Windows) — easiest.
+#   (b) Use WSL (Ubuntu) — see requirements-linux.txt inside WSL instead.
+
+android-sdk>=34
+android-build-tools>=34.0.0
+android-ndk~=26.0
+
+# ── 4. Firebase tooling ─────────────────────────────────────────────────────
+# In PowerShell:
+#   npm install -g firebase-tools         # requires Node.js (winget install OpenJS.NodeJS.LTS)
+#   firebase login
+
+firebase-tools>=13.0.0
+node>=20.0.0                      # only because firebase-tools is npm-installed
+
+# ── 5. Pub packages (pinned in pubspec.yaml) ────────────────────────────────
+# Run from this directory:
+#   flutter pub get
+flutter-sdk-deps:
+  flutter_riverpod ^2.6.1
+  flutter_secure_storage ^9.2.2
+  dio ^5.7.0
+  intl ^0.19.0
+  firebase_core ^3.13.1
+  firebase_auth ^5.5.2
+  google_fonts ^8.0.2
+  animate_do ^5.1.0
+  flutter_animate ^4.5.2
+  lottie ^3.3.3
+
+# ── 6. Release keystore (one-time, Windows path) ────────────────────────────
+# In PowerShell:
+#   keytool -genkey -v `
+#     -keystore "$env:USERPROFILE\upload-keystore.jks" `
+#     -alias smartworkers `
+#     -keyalg RSA -keysize 2048 -validity 10000
+#
+# Then:
+#   copy android\key.properties.example android\key.properties
+# Edit android\key.properties; storeFile MUST be the full Windows path with
+# DOUBLE backslashes or forward slashes, e.g.:
+#     storeFile=C:/Users/you/upload-keystore.jks
+#
+# Extract SHA-1 / SHA-256:
+#   keytool -list -v `
+#     -keystore "$env:USERPROFILE\upload-keystore.jks" `
+#     -alias smartworkers
+# Register both fingerprints in Firebase Console; re-download
+# google-services.json. (See FIREBASE_OTP_FIX.md.)
+
+# ── 7. Build & ship ──────────────────────────────────────────────────────────
+# In Git Bash from this directory:
+#   flutter pub get
+#   flutter analyze        # optional
+#   ./release.sh
+#
+# OR pure PowerShell (manual):
+#   flutter clean ; flutter pub get ; flutter build apk --release
+#   firebase appdistribution:distribute build\app\outputs\flutter-apk\app-release.apk `
+#     --app 1:632714863429:android:0d70d4ac6cc25d958c942c `
+#     --testers davidbec968@gmail.com `
+#     --release-notes "v1.3.0 build 3"
