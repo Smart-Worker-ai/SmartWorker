@@ -1,7 +1,10 @@
 import httpx
+import structlog
 from fastapi import APIRouter, Depends
 from deps import require_admin
 from config import CUSTOMER_BACKEND_URL, CUSTOMER_BACKEND_ADMIN_SECRET, WORKER_BACKEND_URL
+
+log = structlog.get_logger("admin.workers")
 
 router = APIRouter()
 H  = {"x-admin-secret": CUSTOMER_BACKEND_ADMIN_SECRET}
@@ -75,8 +78,9 @@ async def approve_portal_worker(worker_id: str, _=Depends(require_admin)):
                 }
                 await c.post(f"{CUSTOMER_BACKEND_URL}/admin/workers", headers=H, json=sync_payload)
         except Exception as sync_err:
-            # Sync failure is non-fatal — approval already succeeded
-            print(f"[admin] Worker sync to Node.js failed: {sync_err}")
+            # Sync failure is non-fatal — approval already succeeded.
+            # Structured log; phase 3 will queue a retry via a dead-letter table.
+            log.error("worker_sync_failed", worker_id=worker_id, error=str(sync_err))
 
         return result
 

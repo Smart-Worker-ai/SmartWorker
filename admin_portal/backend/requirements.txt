@@ -4,3 +4,14 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 sqlite-utils==3.38
 httpx==0.28.1
+
+# Phase 2: security
+slowapi==0.1.9
+structlog==24.4.0
+python-dotenv==1.0.1
+
+# Phase 3 / 4 (lazy-imported where used)
+boto3==1.35.84
+SQLAlchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+alembic==1.14.0

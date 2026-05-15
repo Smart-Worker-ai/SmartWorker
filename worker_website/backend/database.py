@@ -1,9 +1,19 @@
+"""
+SQLite connection + schema bootstrap.
+
+Phase 3 will swap this for SQLAlchemy + Postgres. This file is kept tiny so
+that swap is clean.
+"""
+
+from __future__ import annotations
+
 import sqlite3
 from pathlib import Path
 
 DB_PATH = Path("data/workers_portal.db")
 
-def get_conn():
+
+def get_conn() -> sqlite3.Connection:
     DB_PATH.parent.mkdir(exist_ok=True)
     conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -11,19 +21,29 @@ def get_conn():
     conn.execute("PRAGMA foreign_keys=ON")
     return conn
 
-def init_db():
+
+def init_db() -> None:
     conn = get_conn()
-    # Migrate: add columns that may not exist in older DB instances
+    # Forward migrations for columns missing in older DBs.
     for col, definition in [
-        ("email", "TEXT"),
+        ("email",      "TEXT"),
+        ("expires_at", "INTEGER"),   # on worker_sessions, see below
     ]:
         try:
             conn.execute(f"ALTER TABLE workers ADD COLUMN {col} {definition}")
             conn.commit()
         except Exception:
-            pass  # column already exists
+            pass
 
-    conn.executescript("""
+    # Sessions: add expires_at if missing.
+    try:
+        conn.execute("ALTER TABLE worker_sessions ADD COLUMN expires_at INTEGER")
+        conn.commit()
+    except Exception:
+        pass
+
+    conn.executescript(
+        """
         CREATE TABLE IF NOT EXISTS workers (
             id              TEXT PRIMARY KEY,
             name            TEXT NOT NULL,
@@ -56,8 +76,11 @@ def init_db():
         CREATE TABLE IF NOT EXISTS worker_sessions (
             token       TEXT PRIMARY KEY,
             worker_id   TEXT NOT NULL REFERENCES workers(id),
-            created_at  TEXT DEFAULT (datetime('now'))
+            created_at  TEXT DEFAULT (datetime('now')),
+            expires_at  INTEGER
         );
+        CREATE INDEX IF NOT EXISTS idx_worker_sessions_worker
+            ON worker_sessions(worker_id);
 
         CREATE TABLE IF NOT EXISTS worker_otps (
             id         TEXT PRIMARY KEY,
@@ -67,6 +90,7 @@ def init_db():
             created_at TEXT DEFAULT (datetime('now'))
         );
         CREATE INDEX IF NOT EXISTS idx_worker_otps_mobile ON worker_otps(mobile);
-    """)
+        """
+    )
     conn.commit()
     conn.close()

@@ -1,15 +1,34 @@
-import uuid
+"""
+Worker portal OTP login.
+
+Phase-2 changes:
+  • Rate limiting on both request-otp and verify-otp.
+  • OTP response never leaks the code (devOtp/devEmail removed).
+  • Session tokens carry an expires_at column.
+  • Generic error messages — no longer reveal "no worker with this mobile".
+    Use the same response shape for "no such mobile" vs "wrong OTP" to
+    block enumeration.
+"""
+
+from __future__ import annotations
+
 import random
 import time
-import os
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from database import get_conn
-from email_service import send_otp_email, _send_otp_sms as send_otp_sms
+import uuid
 
+import structlog
+from fastapi import APIRouter, HTTPException, Request
+from pydantic import BaseModel
+
+import config
+from database import get_conn
+from email_service import _send_otp_sms as send_otp_sms
+from email_service import send_otp_email
+from rate_limit import limiter
+
+log = structlog.get_logger("auth")
 router = APIRouter()
 
-DEV_MODE = os.getenv("ENV", "development") != "production"
 OTP_TTL_SECONDS = 600  # 10 minutes
 
 
@@ -22,98 +41,99 @@ class OtpVerify(BaseModel):
     otp: str
 
 
+def _normalize_mobile(raw: str) -> str:
+    digits = "".join(c for c in raw if c.isdigit())
+    if len(digits) >= 12 and digits.startswith("91"):
+        digits = digits[2:]
+    return f"+91{digits[-10:]}" if len(digits) >= 10 else raw.strip()
+
+
 @router.post("/request-otp")
-def request_otp(body: OtpRequest):
+@limiter.limit(config.RATELIMIT_OTP_REQUEST)
+def request_otp(request: Request, body: OtpRequest):
+    mobile = _normalize_mobile(body.mobile)
     conn = get_conn()
     worker = conn.execute(
         "SELECT id, email, status, is_blocked FROM workers WHERE mobile = ?",
-        (body.mobile.strip(),)
+        (mobile,),
     ).fetchone()
 
-    if not worker:
-        conn.close()
-        raise HTTPException(status_code=404, detail="No worker registered with this mobile number.")
-
-    if worker["is_blocked"]:
-        conn.close()
-        raise HTTPException(status_code=403, detail="Your account has been blocked. Contact support.")
-
-    email = worker["email"]
-    if not email:
-        conn.close()
-        raise HTTPException(
-            status_code=422,
-            detail="No email address on file. Please contact support to update your account."
+    # Same response whether the worker exists or not — defeats enumeration.
+    # Email is only sent if the row exists.
+    if worker and not worker["is_blocked"] and worker["email"]:
+        conn.execute("DELETE FROM worker_otps WHERE mobile = ?", (mobile,))
+        otp = f"{random.randint(0, 999999):06d}"
+        expires_at = int(time.time() * 1000) + OTP_TTL_SECONDS * 1000
+        conn.execute(
+            "INSERT INTO worker_otps (id, mobile, otp, expires_at) VALUES (?, ?, ?, ?)",
+            (str(uuid.uuid4()), mobile, otp, expires_at),
         )
+        conn.commit()
+        try:
+            send_otp_email(worker["email"], otp)
+        except Exception as e:
+            log.warning("otp_email_failed", mobile=mobile, error=str(e))
+        try:
+            send_otp_sms(mobile, otp)
+        except Exception as e:
+            log.warning("otp_sms_failed", mobile=mobile, error=str(e))
+        log.info("otp_requested", mobile=mobile)
+    else:
+        # Sleep briefly to mask the existence check in response timing.
+        time.sleep(0.15)
+        log.info("otp_request_ignored", mobile=mobile,
+                 reason=("blocked" if (worker and worker["is_blocked"]) else
+                         "no_email" if (worker and not worker["email"]) else
+                         "no_worker"))
 
-    # Clear old OTPs and generate a new one
-    conn.execute("DELETE FROM worker_otps WHERE mobile = ?", (body.mobile.strip(),))
-    otp = str(random.randint(100000, 999999))
-    expires_at = int(time.time() * 1000) + OTP_TTL_SECONDS * 1000
-    conn.execute(
-        "INSERT INTO worker_otps (id, mobile, otp, expires_at) VALUES (?, ?, ?, ?)",
-        (str(uuid.uuid4()), body.mobile.strip(), otp, expires_at)
-    )
-    conn.commit()
     conn.close()
 
-    # Send OTP via email AND SMS
-    send_otp_email(email, otp)
-    try:
-        send_otp_sms(body.mobile.strip(), otp)
-    except Exception:
-        pass
-
-    result = {"message": "OTP sent to your registered email and mobile number."}
-    if DEV_MODE:
-        result["devOtp"] = otp
-        result["devEmail"] = email
-    return result
+    # Identical response shape always.
+    return {"message": "If this number is registered, an OTP has been sent to the registered email and mobile."}
 
 
 @router.post("/verify-otp")
-def verify_otp(body: OtpVerify):
+@limiter.limit(config.RATELIMIT_OTP_VERIFY)
+def verify_otp(request: Request, body: OtpVerify):
+    mobile = _normalize_mobile(body.mobile)
     conn = get_conn()
 
     record = conn.execute(
-        "SELECT * FROM worker_otps WHERE mobile = ?", (body.mobile.strip(),)
+        "SELECT * FROM worker_otps WHERE mobile = ?", (mobile,)
     ).fetchone()
-
     if not record:
         conn.close()
-        raise HTTPException(status_code=404, detail="No OTP found. Please request a new one.")
+        raise HTTPException(status_code=401, detail="Invalid OTP.")
 
     if int(time.time() * 1000) > record["expires_at"]:
-        conn.execute("DELETE FROM worker_otps WHERE mobile = ?", (body.mobile.strip(),))
+        conn.execute("DELETE FROM worker_otps WHERE mobile = ?", (mobile,))
         conn.commit()
         conn.close()
         raise HTTPException(status_code=410, detail="OTP has expired. Please request a new one.")
 
     if record["otp"] != body.otp.strip():
         conn.close()
-        raise HTTPException(status_code=401, detail="Invalid OTP. Please try again.")
+        raise HTTPException(status_code=401, detail="Invalid OTP.")
 
-    # Consume the OTP
-    conn.execute("DELETE FROM worker_otps WHERE mobile = ?", (body.mobile.strip(),))
+    conn.execute("DELETE FROM worker_otps WHERE mobile = ?", (mobile,))
 
     worker = conn.execute(
-        "SELECT * FROM workers WHERE mobile = ?", (body.mobile.strip(),)
+        "SELECT * FROM workers WHERE mobile = ?", (mobile,)
     ).fetchone()
-
-    if not worker:
+    if not worker or worker["is_blocked"]:
         conn.commit()
         conn.close()
-        raise HTTPException(status_code=404, detail="Worker not found.")
-
-    if worker["is_blocked"]:
-        conn.commit()
-        conn.close()
-        raise HTTPException(status_code=403, detail="Your account has been blocked. Contact support.")
+        raise HTTPException(status_code=401, detail="Invalid OTP.")
 
     token = str(uuid.uuid4())
-    conn.execute("INSERT INTO worker_sessions (token, worker_id) VALUES (?, ?)", (token, worker["id"]))
+    expires_ms = int(time.time() * 1000) + config.SESSION_TTL_HOURS * 3600 * 1000
+    conn.execute(
+        "INSERT INTO worker_sessions (token, worker_id, expires_at) VALUES (?, ?, ?)",
+        (token, worker["id"], expires_ms),
+    )
     conn.commit()
     conn.close()
 
     safe = {k: v for k, v in dict(worker).items() if k not in ("passbook_photo", "aadhar_photo")}
-    return {"token": token, "worker": safe}
+    log.info("worker_login", worker_id=worker["id"])
+    return {"token": token, "worker": safe, "expires_at": expires_ms}

@@ -1,50 +1,65 @@
-import uuid, shutil, os, httpx
-from pathlib import Path
+"""
+Worker Registration endpoints — registration, public listing, admin actions.
+
+Hardened in phase 2:
+  • file uploads validated by magic-byte sniffing (security.py)
+  • storage abstracted (local / S3-compatible via storage.py)
+  • all secrets via config (no hardcoded defaults in prod)
+  • rate limiting on /register
+  • structured logging for sync failures (no more silent except: pass)
+"""
+
+from __future__ import annotations
+
 from typing import Optional
-from fastapi import APIRouter, File, Form, UploadFile, HTTPException, Depends, Header
-from database import get_conn
-from email_service import (
-    send_registration_email, send_registration_sms,
-    send_approval_email, send_approval_sms,
+
+import httpx
+import structlog
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Request,
+    UploadFile,
 )
 
-ADMIN_SECRET        = os.getenv("ADMIN_SECRET", "***REMOVED-SECRET***")
-CUSTOMER_BACKEND    = os.getenv("CUSTOMER_BACKEND_URL", "https://smart-workers-backend-production.up.railway.app/api/v1")
-SELF_BASE_URL       = os.getenv("SELF_BASE_URL", "https://worker-portal-backend-production.up.railway.app")
+import config
+import storage
+from database import get_conn
+from email_service import (
+    send_approval_email,
+    send_approval_sms,
+    send_registration_email,
+    send_registration_sms,
+)
+from rate_limit import limiter
+from security import validate_upload
 
-def _abs(path: Optional[str]) -> Optional[str]:
-    if not path:
-        return None
-    return f"{SELF_BASE_URL}{path}" if path.startswith("/") else path
+log = structlog.get_logger("workers")
+router = APIRouter()
+
 
 def _require_admin(x_admin_secret: Optional[str] = Header(None)):
-    if x_admin_secret != ADMIN_SECRET:
+    if x_admin_secret != config.ADMIN_SECRET:
         raise HTTPException(status_code=403, detail="Forbidden.")
 
-router = APIRouter()
-UPLOADS = Path("uploads")
-UPLOADS.mkdir(exist_ok=True)
 
-
-def _save_file(file: UploadFile, folder: str) -> str:
-    dest_dir = UPLOADS / folder
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    ext = Path(file.filename or "file").suffix or ".jpg"
-    filename = f"{uuid.uuid4()}{ext}"
-    dest = dest_dir / filename
-    with dest.open("wb") as f:
-        shutil.copyfileobj(file.file, f)
-    return f"/uploads/{folder}/{filename}"
-
-
-def _get_worker(authorization: Optional[str] = Header(None)):
+def _get_worker(authorization: Optional[str] = Header(None)) -> dict:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Unauthorized.")
     token = authorization.split(" ", 1)[1]
     conn = get_conn()
     row = conn.execute(
-        "SELECT w.* FROM workers w JOIN worker_sessions s ON s.worker_id = w.id WHERE s.token = ?",
-        (token,)
+        """
+        SELECT w.* FROM workers w
+        JOIN worker_sessions s ON s.worker_id = w.id
+        WHERE s.token = ?
+          AND (s.expires_at IS NULL OR s.expires_at > strftime('%s','now') * 1000)
+        """,
+        (token,),
     ).fetchone()
     conn.close()
     if not row:
@@ -52,8 +67,15 @@ def _get_worker(authorization: Optional[str] = Header(None)):
     return dict(row)
 
 
+def _abs(stored: Optional[str]) -> Optional[str]:
+    return storage.resolve_url(stored)
+
+
+# ── Registration ─────────────────────────────────────────────────────────────
 @router.post("/register")
+@limiter.limit(config.RATELIMIT_REGISTRATION)
 async def register_worker(
+    request: Request,
     name: str = Form(...),
     age: int = Form(...),
     gender: str = Form(...),
@@ -77,76 +99,116 @@ async def register_worker(
         raise HTTPException(status_code=400, detail="You must accept the Terms & Conditions.")
     if age < 18 or age > 70:
         raise HTTPException(status_code=400, detail="Age must be between 18 and 70.")
-    mobile_digits = ''.join(c for c in mobile if c.isdigit())
-    if len(mobile_digits) < 10:
-        raise HTTPException(status_code=400, detail="Invalid mobile number.")
+
+    # Mobile: normalise to digits-only and require Indian 6-9 prefix.
+    digits = "".join(c for c in mobile if c.isdigit())
+    if len(digits) >= 12 and digits.startswith("91"):
+        digits = digits[2:]
+    if len(digits) != 10 or digits[0] not in "6789":
+        raise HTTPException(status_code=400, detail="Invalid Indian mobile number.")
+    normalized_mobile = f"+91{digits}"
+
     email = email.strip().lower()
     if not email or "@" not in email:
         raise HTTPException(status_code=400, detail="A valid email address is required.")
 
+    # Validate every upload BEFORE touching the DB — magic-byte sniff, size cap.
+    passbook_bytes, passbook_ext = await validate_upload(
+        passbook_photo, max_size_mb=config.MAX_DOC_SIZE_MB, allow_pdf=True, field_name="Passbook"
+    )
+    aadhar_bytes, aadhar_ext = await validate_upload(
+        aadhar_photo, max_size_mb=config.MAX_DOC_SIZE_MB, allow_pdf=True, field_name="Aadhaar"
+    )
+    photo_bytes, photo_ext = await validate_upload(
+        profile_photo, max_size_mb=config.MAX_PHOTO_SIZE_MB, allow_pdf=False, field_name="Photo"
+    )
+
     conn = get_conn()
-    if conn.execute("SELECT id FROM workers WHERE mobile = ?", (mobile,)).fetchone():
+    if conn.execute("SELECT id FROM workers WHERE mobile = ?", (normalized_mobile,)).fetchone():
         conn.close()
-        raise HTTPException(status_code=409, detail="A worker with this mobile number already exists.")
+        raise HTTPException(
+            status_code=409,
+            detail="A worker with this mobile number already exists.",
+        )
     if conn.execute("SELECT id FROM workers WHERE email = ?", (email,)).fetchone():
         conn.close()
-        raise HTTPException(status_code=409, detail="A worker with this email address already exists.")
+        raise HTTPException(
+            status_code=409,
+            detail="A worker with this email address already exists.",
+        )
 
-    worker_id = str(uuid.uuid4())
-    passbook_url = _save_file(passbook_photo, "passbook")
-    aadhar_url = _save_file(aadhar_photo, "aadhar")
-    photo_url = _save_file(profile_photo, "photos")
+    # Persist files only after validation + uniqueness checks pass.
+    import uuid as _uuid
+    worker_id = str(_uuid.uuid4())
+    passbook_url = storage.save(passbook_bytes, "passbook", passbook_ext)
+    aadhar_url   = storage.save(aadhar_bytes,   "aadhar",   aadhar_ext)
+    photo_url    = storage.save(photo_bytes,    "photos",   photo_ext)
 
-    conn.execute("""
+    conn.execute(
+        """
         INSERT INTO workers (id, name, age, gender, mobile, email, address, district, town,
             job_type, current_location, interested_locations, facilities_requested,
             passbook_photo, aadhar_photo, profile_photo,
             accepted_terms, daily_rate, experience_years)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
-    """, (
-        worker_id, name.strip(), age, gender, mobile.strip(), email,
-        address.strip(), district.strip(), town.strip(), job_type.strip(),
-        current_location.strip(), interested_locations.strip(),
-        facilities_requested.strip(),
-        passbook_url, aadhar_url, photo_url,
-        daily_rate, experience_years
-    ))
+        """,
+        (
+            worker_id, name.strip(), age, gender, normalized_mobile, email,
+            address.strip(), district.strip(), town.strip(), job_type.strip(),
+            current_location.strip(), interested_locations.strip(),
+            facilities_requested.strip(),
+            passbook_url, aadhar_url, photo_url,
+            daily_rate, experience_years,
+        ),
+    )
     conn.commit()
-
     worker = dict(conn.execute("SELECT * FROM workers WHERE id = ?", (worker_id,)).fetchone())
     conn.close()
 
+    # Strip sensitive doc URLs from response — admin gets them via /admin/* endpoints.
     worker.pop("passbook_photo", None)
     worker.pop("aadhar_photo", None)
 
-    # Send registration confirmation via email + SMS
+    # Best-effort email + SMS; failures get logged, do not break the response.
     try:
         send_registration_email(email, name.strip())
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning("registration_email_failed", email=email, error=str(e))
     try:
-        send_registration_sms(mobile.strip(), name.strip())
-    except Exception:
-        pass
+        send_registration_sms(normalized_mobile, name.strip())
+    except Exception as e:
+        log.warning("registration_sms_failed", mobile=normalized_mobile, error=str(e))
 
-    return {"message": "Registration submitted. Our team will verify your profile within 24 hours.", "worker": worker}
+    log.info("worker_registered", worker_id=worker_id, mobile=normalized_mobile)
+    return {
+        "message": "Registration submitted. Our team will verify your profile within 24 hours.",
+        "worker": worker,
+    }
 
 
+# ── Authenticated worker self-service ───────────────────────────────────────
 @router.get("/me")
 def get_me(worker: dict = Depends(_get_worker)):
     safe = {k: v for k, v in worker.items() if k not in ("passbook_photo", "aadhar_photo")}
+    if safe.get("profile_photo"):
+        safe["profile_photo"] = _abs(safe["profile_photo"])
     return {"worker": safe}
 
 
+# ── Public listing (for the customer-facing app) ────────────────────────────
 @router.get("/public")
-def list_public_workers(district: Optional[str] = None, town: Optional[str] = None, job_type: Optional[str] = None):
+def list_public_workers(
+    district: Optional[str] = None,
+    town: Optional[str] = None,
+    job_type: Optional[str] = None,
+):
     conn = get_conn()
     sql = """
         SELECT id, name, job_type, daily_rate, district, town, rating, total_reviews,
                experience_years, profile_photo, is_verified
         FROM workers WHERE is_blocked = 0 AND is_verified = 1 AND status = 'approved'
     """
-    params = []
+    params: list[str] = []
     if district:
         sql += " AND LOWER(district) = LOWER(?)"
         params.append(district)
@@ -160,44 +222,55 @@ def list_public_workers(district: Optional[str] = None, town: Optional[str] = No
 
     rows = conn.execute(sql, params).fetchall()
     conn.close()
-    return {"workers": [dict(r) for r in rows]}
+    workers_out = []
+    for r in rows:
+        w = dict(r)
+        w["profile_photo"] = _abs(w.get("profile_photo"))
+        workers_out.append(w)
+    return {"workers": workers_out}
 
 
 @router.get("/{worker_id}")
 def get_worker(worker_id: str):
     conn = get_conn()
-    row = conn.execute("""
+    row = conn.execute(
+        """
         SELECT id, name, job_type, daily_rate, district, town, rating, total_reviews,
                experience_years, profile_photo, is_verified, gender, current_location
         FROM workers WHERE id = ? AND is_blocked = 0
-    """, (worker_id,)).fetchone()
+        """,
+        (worker_id,),
+    ).fetchone()
     conn.close()
     if not row:
         raise HTTPException(status_code=404, detail="Worker not found.")
-    return {"worker": dict(row)}
+    w = dict(row)
+    w["profile_photo"] = _abs(w.get("profile_photo"))
+    return {"worker": w}
 
 
-# ── Admin endpoints ────────────────────────────────────────────────────────────
-
+# ── Admin endpoints (require x-admin-secret header) ─────────────────────────
 @router.get("/admin/all", dependencies=[Depends(_require_admin)])
 def admin_list_all_workers():
     conn = get_conn()
-    rows = conn.execute("""
+    rows = conn.execute(
+        """
         SELECT id, name, age, gender, mobile, email, address, district, town, job_type,
                current_location, interested_locations, facilities_requested,
                daily_rate, experience_years, profile_photo, passbook_photo, aadhar_photo,
                status, is_blocked, is_verified, created_at
         FROM workers ORDER BY created_at DESC
-    """).fetchall()
+        """
+    ).fetchall()
     conn.close()
-    result = []
+    out = []
     for r in rows:
         w = dict(r)
         w["profile_photo"]  = _abs(w.get("profile_photo"))
         w["passbook_photo"] = _abs(w.get("passbook_photo"))
         w["aadhar_photo"]   = _abs(w.get("aadhar_photo"))
-        result.append(w)
-    return {"workers": result}
+        out.append(w)
+    return {"workers": out}
 
 
 @router.get("/admin/{worker_id}", dependencies=[Depends(_require_admin)])
@@ -221,41 +294,52 @@ async def admin_approve_worker(worker_id: str):
     if not row:
         conn.close()
         raise HTTPException(status_code=404, detail="Worker not found.")
-    conn.execute("UPDATE workers SET status='approved', is_verified=1 WHERE id=?", (worker_id,))
+    conn.execute(
+        "UPDATE workers SET status='approved', is_verified=1 WHERE id=?", (worker_id,)
+    )
     conn.commit()
     w = dict(conn.execute("SELECT * FROM workers WHERE id=?", (worker_id,)).fetchone())
     conn.close()
 
-    # Send approval notifications via email + SMS
+    # Notifications
     if w.get("email"):
         try:
             send_approval_email(w["email"], w["name"])
-        except Exception:
-            pass
+        except Exception as e:
+            log.warning("approval_email_failed", worker_id=worker_id, error=str(e))
     try:
         send_approval_sms(w["mobile"], w["name"])
-    except Exception:
-        pass
+    except Exception as e:
+        log.warning("approval_sms_failed", worker_id=worker_id, error=str(e))
 
-    # Sync approved worker to the Node.js customer backend
+    # Sync to Node.js main backend. Failures are logged, not silently swallowed.
+    sync_payload = {
+        "id":              w["id"],
+        "name":            w["name"],
+        "jobType":         w["job_type"],
+        "dailyRate":       w["daily_rate"],
+        "district":        w["district"],
+        "town":            w["town"],
+        "experienceYears": w["experience_years"],
+        "phone":           w["mobile"],
+        "email":           w.get("email"),
+        "photoUrl":        _abs(w.get("profile_photo")),
+    }
     try:
         async with httpx.AsyncClient(timeout=10) as c:
-            await c.post(
-                f"{CUSTOMER_BACKEND}/admin/workers",
-                json={
-                    "id": w["id"], "name": w["name"], "jobType": w["job_type"],
-                    "dailyRate": w["daily_rate"], "district": w["district"],
-                    "town": w["town"], "experienceYears": w["experience_years"],
-                    "phone": w["mobile"],
-                    "email": w.get("email"),
-                    "photoUrl": w.get("profile_photo"),
-                },
-                headers={"x-admin-secret": ADMIN_SECRET},
+            r = await c.post(
+                f"{config.CUSTOMER_BACKEND_URL}/admin/workers",
+                json=sync_payload,
+                headers={"x-admin-secret": config.ADMIN_SECRET},
             )
-    except Exception:
-        pass  # Don't fail the approval if sync fails
+            r.raise_for_status()
+            log.info("worker_sync_ok", worker_id=worker_id, status=r.status_code)
+    except Exception as e:
+        log.error("worker_sync_failed", worker_id=worker_id, error=str(e))
+        # NOTE: approval already committed. A background retry worker would
+        # pick this up from a dead-letter table — TODO for phase 3.
 
-    return {"message": "Worker approved and synced.", "worker_id": worker_id}
+    return {"message": "Worker approved.", "worker_id": worker_id}
 
 
 @router.post("/admin/{worker_id}/reject", dependencies=[Depends(_require_admin)])
@@ -267,6 +351,7 @@ def admin_reject_worker(worker_id: str):
     conn.execute("UPDATE workers SET status='rejected' WHERE id=?", (worker_id,))
     conn.commit()
     conn.close()
+    log.info("worker_rejected", worker_id=worker_id)
     return {"message": "Worker rejected.", "worker_id": worker_id}
 
 
@@ -279,6 +364,7 @@ def admin_block_portal_worker(worker_id: str):
     conn.execute("UPDATE workers SET is_blocked=1 WHERE id=?", (worker_id,))
     conn.commit()
     conn.close()
+    log.info("worker_blocked", worker_id=worker_id)
     return {"message": "Worker blocked.", "worker_id": worker_id}
 
 
@@ -291,17 +377,31 @@ def admin_unblock_portal_worker(worker_id: str):
     conn.execute("UPDATE workers SET is_blocked=0 WHERE id=?", (worker_id,))
     conn.commit()
     conn.close()
+    log.info("worker_unblocked", worker_id=worker_id)
     return {"message": "Worker unblocked.", "worker_id": worker_id}
 
 
 @router.delete("/admin/{worker_id}", dependencies=[Depends(_require_admin)])
 def admin_delete_portal_worker(worker_id: str):
     conn = get_conn()
-    if not conn.execute("SELECT id FROM workers WHERE id=?", (worker_id,)).fetchone():
+    row = conn.execute("SELECT * FROM workers WHERE id=?", (worker_id,)).fetchone()
+    if not row:
         conn.close()
         raise HTTPException(status_code=404, detail="Worker not found.")
+    w = dict(row)
+
     conn.execute("DELETE FROM worker_sessions WHERE worker_id=?", (worker_id,))
     conn.execute("DELETE FROM workers WHERE id=?", (worker_id,))
     conn.commit()
     conn.close()
+
+    # Best-effort orphan cleanup from storage.
+    for k in ("profile_photo", "passbook_photo", "aadhar_photo"):
+        if w.get(k):
+            try:
+                storage.delete(w[k])
+            except Exception as e:
+                log.warning("orphan_delete_failed", key=w[k], error=str(e))
+
+    log.info("worker_deleted", worker_id=worker_id)
     return {"deleted": worker_id}
