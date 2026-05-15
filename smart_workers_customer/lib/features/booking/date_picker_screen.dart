@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme/app_colors.dart';
 import '../workers/worker_model.dart';
 import 'booking_provider.dart';
 import 'payment_screen.dart';
@@ -98,19 +99,19 @@ class _DatePickerScreenState extends ConsumerState<DatePickerScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: Colors.red.shade50,
+                  color: context.c.tintBg(Colors.red),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.red.shade100),
+                  border: Border.all(color: context.c.tintBorder(Colors.red)),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.event_busy, color: Colors.red.shade400, size: 16),
+                    Icon(Icons.event_busy, color: context.c.tintText(Colors.red), size: 16),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         '${effectiveWorker.bookedDates.length} date(s) already booked — shown as unavailable in calendar.',
                         style:
-                            TextStyle(color: Colors.red.shade700, fontSize: 12),
+                            TextStyle(color: context.c.tintText(Colors.red), fontSize: 12),
                       ),
                     ),
                   ],
@@ -123,19 +124,19 @@ class _DatePickerScreenState extends ConsumerState<DatePickerScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.blue.shade50,
+                color: context.c.tintBg(Colors.blue),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.blue.shade200),
+                border: Border.all(color: context.c.tintBorder(Colors.blue)),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: Colors.blue.shade700, size: 18),
+                  Icon(Icons.info_outline, color: context.c.tintText(Colors.blue), size: 18),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'Earliest date: ${_fmt(_firstAllowedDate)}  (24-hour advance booking)',
                       style:
-                          TextStyle(color: Colors.blue.shade700, fontSize: 13),
+                          TextStyle(color: context.c.tintText(Colors.blue), fontSize: 13),
                     ),
                   ),
                 ],
@@ -162,7 +163,7 @@ class _DatePickerScreenState extends ConsumerState<DatePickerScreen> {
                       ? 'Tap to select date'
                       : _fmt(_selectedDate!),
                   style: TextStyle(
-                      color: _selectedDate == null ? Colors.grey : null,
+                      color: _selectedDate == null ? context.c.muted : null,
                       fontSize: 16),
                 ),
               ),

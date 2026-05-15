@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme/app_colors.dart';
 import '../booking/booking_provider.dart';
 import '../search/search_screen.dart';
 
@@ -142,17 +143,17 @@ class _Empty extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.handyman_outlined,
-                size: 72, color: Colors.grey.shade400),
+                size: 72, color: context.c.muted),
             const SizedBox(height: 16),
             Text('No bookings yet',
                 style: theme.textTheme.titleLarge
-                    ?.copyWith(color: Colors.grey.shade600)),
+                    ?.copyWith(color: context.c.subtext)),
             const SizedBox(height: 8),
             Text(
               'Book a skilled worker for any home service.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: Colors.grey),
+                  ?.copyWith(color: context.c.subtext),
             ),
             const SizedBox(height: 28),
             FilledButton.icon(
@@ -248,12 +249,12 @@ class _BookingCard extends StatelessWidget {
             const Divider(height: 20),
             Row(
               children: [
-                const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                Icon(Icons.calendar_today, size: 14, color: context.c.muted),
                 const SizedBox(width: 6),
                 Text(_shortDate(booking['date'] as String? ?? ''),
                     style: theme.textTheme.bodySmall),
                 const SizedBox(width: 16),
-                const Icon(Icons.timelapse, size: 14, color: Colors.grey),
+                Icon(Icons.timelapse, size: 14, color: context.c.muted),
                 const SizedBox(width: 6),
                 Text('${booking['numberOfDays'] ?? '—'} day(s)',
                     style: theme.textTheme.bodySmall),

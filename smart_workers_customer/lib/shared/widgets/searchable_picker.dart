@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/theme/app_colors.dart';
 
 /// Shows a bottom sheet with a live-search list.
 /// Returns the selected string, or null if dismissed.
@@ -84,7 +85,7 @@ class _SearchablePickerSheetState extends State<_SearchablePickerSheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: context.c.border,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -139,10 +140,10 @@ class _SearchablePickerSheetState extends State<_SearchablePickerSheet> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.search_off,
-                            size: 40, color: Colors.grey.shade400),
+                            size: 40, color: context.c.muted),
                         const SizedBox(height: 8),
                         Text('No results found',
-                            style: TextStyle(color: Colors.grey.shade600)),
+                            style: TextStyle(color: context.c.subtext)),
                       ],
                     ),
                   )

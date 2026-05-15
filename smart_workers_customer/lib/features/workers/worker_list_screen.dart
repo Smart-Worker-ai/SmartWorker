@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'worker_model.dart';
+import '../../core/theme/app_colors.dart';
 import '../booking/booking_provider.dart';
 import '../booking/date_picker_screen.dart';
 
@@ -41,7 +42,7 @@ class WorkerListScreen extends ConsumerWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.wifi_off, size: 48, color: Colors.grey),
+                Icon(Icons.wifi_off, size: 48, color: context.c.muted),
                 const SizedBox(height: 12),
                 Text('Could not load workers', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 4),
@@ -65,11 +66,11 @@ class WorkerListScreen extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.person_search, size: 56, color: Colors.grey.shade400),
+                  Icon(Icons.person_search, size: 56, color: context.c.muted),
                   const SizedBox(height: 12),
                   Text('No workers found',
                       style: theme.textTheme.titleMedium
-                          ?.copyWith(color: Colors.grey.shade600)),
+                          ?.copyWith(color: context.c.subtext)),
                   const SizedBox(height: 4),
                   const Text('Try a different location or job type.'),
                 ],

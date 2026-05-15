@@ -53,7 +53,7 @@ class _TermsScreenState extends State<TermsScreen> {
                           ?.copyWith(fontWeight: FontWeight.w800)),
                   const SizedBox(height: 4),
                   Text('Last updated: April 2026',
-                      style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                      style: TextStyle(color: c.subtext, fontSize: 12)),
                   const SizedBox(height: 20),
                   ..._sections.map((s) => _Section(title: s.$1, body: s.$2)),
                   const SizedBox(height: 20),
@@ -61,11 +61,9 @@ class _TermsScreenState extends State<TermsScreen> {
                     Center(
                       child: Column(
                         children: [
-                          Icon(Icons.keyboard_arrow_down,
-                              color: Colors.grey.shade400),
+                          Icon(Icons.keyboard_arrow_down, color: c.muted),
                           Text('Scroll to read all',
-                              style: TextStyle(
-                                  color: Colors.grey.shade400, fontSize: 12)),
+                              style: TextStyle(color: c.muted, fontSize: 12)),
                         ],
                       ),
                     ),

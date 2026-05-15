@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme/app_colors.dart';
 import '../auth/auth_provider.dart';
 import '../booking/booking_provider.dart';
 import '../search/search_screen.dart';
@@ -45,7 +46,7 @@ class HomeScreen extends ConsumerWidget {
     final name = (user?['name'] as String? ?? 'there').split(' ').first;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4FF),
+      backgroundColor: context.c.bgDeep,
       body: RefreshIndicator(
         onRefresh: () async => ref.invalidate(myBookingsProvider),
         child: CustomScrollView(
@@ -178,7 +179,7 @@ void _showNotifications(BuildContext context) {
           Container(
             width: 36, height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.shade300,
+              color: context.c.border,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -192,13 +193,13 @@ void _showNotifications(BuildContext context) {
             ],
           ),
           const SizedBox(height: 32),
-          const Icon(Icons.notifications_off_outlined, size: 48, color: Colors.grey),
+          Icon(Icons.notifications_off_outlined, size: 48, color: context.c.muted),
           const SizedBox(height: 12),
-          const Text('No notifications yet',
-              style: TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+          Text('No notifications yet',
+              style: TextStyle(fontWeight: FontWeight.w600, color: context.c.text)),
           const SizedBox(height: 6),
-          Text('You\'ll be notified about booking updates here',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+          Text("You'll be notified about booking updates here",
+              style: TextStyle(fontSize: 13, color: context.c.subtext)),
           const SizedBox(height: 24),
         ],
       ),
@@ -343,11 +344,11 @@ class _StatCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.c.bgNavy,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: color.withValues(alpha: 0.18),
+              color: color.withValues(alpha: context.c.isDark ? 0.30 : 0.18),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -370,9 +371,9 @@ class _StatCard extends StatelessWidget {
                     fontWeight: FontWeight.w800, fontSize: 15, color: color)),
             const SizedBox(height: 2),
             Text(label,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 10,
-                    color: Colors.grey,
+                    color: context.c.subtext,
                     fontWeight: FontWeight.w500)),
           ],
         ),
@@ -439,7 +440,7 @@ class _QuickSearchCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.c.bgNavy,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
                 color: theme.colorScheme.primary.withValues(alpha: 0.15)),
@@ -472,7 +473,7 @@ class _QuickSearchCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text('District · Area · Service type',
                         style: theme.textTheme.bodySmall
-                            ?.copyWith(color: Colors.grey.shade500)),
+                            ?.copyWith(color: context.c.subtext)),
                   ],
                 ),
               ),
@@ -502,10 +503,10 @@ class _SectionHeader extends StatelessWidget {
           Icon(icon, size: 17, color: const Color(0xFF1565C0)),
           const SizedBox(width: 8),
           Text(title,
-              style: const TextStyle(
+              style: TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 14,
-                  color: Color(0xFF0D2B6E),
+                  color: context.c.text,
                   letterSpacing: 0.2)),
         ],
       ),
@@ -526,11 +527,11 @@ class _CategoryCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.c.bgNavy,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: category.color.withValues(alpha: 0.10),
+              color: category.color.withValues(alpha: context.c.isDark ? 0.20 : 0.10),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
@@ -542,7 +543,7 @@ class _CategoryCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(11),
               decoration: BoxDecoration(
-                color: category.color.withValues(alpha: 0.10),
+                color: category.color.withValues(alpha: context.c.isDark ? 0.20 : 0.10),
                 shape: BoxShape.circle,
               ),
               child: Icon(category.icon, color: category.color, size: 22),
@@ -555,10 +556,10 @@ class _CategoryCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF37474F),
+                    color: context.c.text,
                     height: 1.3),
               ),
             ),
@@ -591,11 +592,11 @@ class _RecentBookingTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.c.bgNavy,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: Colors.black.withValues(alpha: context.c.isDark ? 0.30 : 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2)),
         ],
@@ -605,7 +606,7 @@ class _RecentBookingTile extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: m.color.withValues(alpha: 0.10),
+              color: m.color.withValues(alpha: context.c.isDark ? 0.20 : 0.10),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(_jobIcon(booking['jobType'] as String? ?? ''),
@@ -617,12 +618,13 @@ class _RecentBookingTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(booking['workerName'] as String? ?? '',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 14)),
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 14,
+                        color: context.c.text)),
                 const SizedBox(height: 3),
                 Text(
                   '${booking['jobType']}  ·  ${_shortDate(booking['date'] as String? ?? '')}',
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+                  style: TextStyle(color: context.c.subtext, fontSize: 12),
                 ),
               ],
             ),
@@ -639,7 +641,7 @@ class _RecentBookingTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: m.color.withValues(alpha: 0.10),
+                  color: m.color.withValues(alpha: context.c.isDark ? 0.20 : 0.10),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
@@ -693,30 +695,30 @@ class _EmptyActivity extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.c.bgNavy,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade100),
+          border: Border.all(color: context.c.border),
         ),
         child: Column(
           children: [
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF1565C0).withValues(alpha: 0.06),
+                color: const Color(0xFF1565C0).withValues(alpha: context.c.isDark ? 0.15 : 0.06),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.inbox_outlined,
                   size: 32, color: Color(0xFF1565C0)),
             ),
             const SizedBox(height: 14),
-            const Text('No bookings yet',
+            Text('No bookings yet',
                 style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 15,
-                    color: Color(0xFF37474F))),
+                    color: context.c.text)),
             const SizedBox(height: 5),
             Text('Tap Search to book your first worker',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                style: TextStyle(fontSize: 12, color: context.c.subtext)),
           ],
         ),
       ),

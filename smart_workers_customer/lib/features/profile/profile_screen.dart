@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme/app_colors.dart';
 import '../auth/auth_provider.dart';
 import '../auth/welcome_screen.dart';
 import '../grievance/grievance_screen.dart';
@@ -190,11 +191,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       if (phone.isNotEmpty)
                         Text(phone,
                             style: theme.textTheme.bodyMedium
-                                ?.copyWith(color: Colors.grey)),
+                                ?.copyWith(color: context.c.subtext)),
                       if (email.isNotEmpty)
                         Text(email,
                             style: theme.textTheme.bodyMedium
-                                ?.copyWith(color: Colors.grey)),
+                                ?.copyWith(color: context.c.subtext)),
                     ],
                     const SizedBox(height: 12),
                     Container(
@@ -326,13 +327,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: context.c.border,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const Text('Choose Avatar Color',
+              Text('Choose Avatar Color',
                   style: TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w700)),
+                      fontSize: 16, fontWeight: FontWeight.w700,
+                      color: context.c.text)),
               const SizedBox(height: 20),
               Wrap(
                 spacing: 16,
@@ -352,7 +354,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         color: _avatarColors[i],
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: selected ? Colors.black : Colors.transparent,
+                          color: selected ? context.c.text : Colors.transparent,
                           width: 3,
                         ),
                         boxShadow: selected
@@ -399,13 +401,13 @@ class _Tile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: Colors.grey),
+      leading: Icon(icon, color: context.c.muted),
       title: Text(title,
-          style: const TextStyle(fontSize: 13, color: Colors.grey)),
+          style: TextStyle(fontSize: 13, color: context.c.subtext)),
       subtitle: Text(subtitle,
-          style: const TextStyle(
+          style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: context.c.text,
               fontSize: 15)),
     );
   }

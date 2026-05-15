@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme/app_colors.dart';
 import '../auth/auth_provider.dart';
 
 // ── Provider ──────────────────────────────────────────────────────────────────
@@ -79,16 +80,16 @@ class _EmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.support_agent_outlined,
-                size: 64, color: Colors.grey.shade400),
+                size: 64, color: context.c.muted),
             const SizedBox(height: 16),
             Text('No grievances yet',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Colors.grey.shade600, fontWeight: FontWeight.w600)),
+                    color: context.c.subtext, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
             Text(
               'Had an issue with a worker or booking?\nReport it and our team will look into it.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+              style: TextStyle(color: context.c.subtext, fontSize: 13),
             ),
             const SizedBox(height: 24),
             FilledButton.icon(
@@ -132,19 +133,15 @@ class _GrievanceCard extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: isOpen ? Colors.orange.shade50 : Colors.green.shade50,
+                    color: context.c.tintBg(isOpen ? Colors.orange : Colors.green),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                        color: isOpen
-                            ? Colors.orange.shade200
-                            : Colors.green.shade200),
+                        color: context.c.tintBorder(isOpen ? Colors.orange : Colors.green)),
                   ),
                   child: Text(
                     isOpen ? 'Open' : 'Resolved',
                     style: TextStyle(
-                        color: isOpen
-                            ? Colors.orange.shade800
-                            : Colors.green.shade800,
+                        color: context.c.tintText(isOpen ? Colors.orange : Colors.green),
                         fontWeight: FontWeight.w600,
                         fontSize: 12),
                   ),
@@ -154,27 +151,27 @@ class _GrievanceCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               grievance['description'] as String? ?? '',
-              style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+              style: TextStyle(color: context.c.subtext, fontSize: 13),
             ),
             if (adminNote != null && adminNote.isNotEmpty) ...[
               const SizedBox(height: 10),
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
+                  color: context.c.tintBg(Colors.blue),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.blue.shade100),
+                  border: Border.all(color: context.c.tintBorder(Colors.blue)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(Icons.admin_panel_settings_outlined,
-                        size: 16, color: Colors.blue.shade700),
+                        size: 16, color: context.c.tintText(Colors.blue)),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text('Admin: $adminNote',
                           style: TextStyle(
-                              color: Colors.blue.shade800,
+                              color: context.c.tintText(Colors.blue),
                               fontSize: 12)),
                     ),
                   ],
@@ -184,7 +181,7 @@ class _GrievanceCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               _fmtDate(grievance['created_at'] as String? ?? ''),
-              style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
+              style: TextStyle(color: context.c.muted, fontSize: 11),
             ),
           ],
         ),
@@ -271,19 +268,19 @@ class _ReportGrievanceScreenState
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.orange.shade50,
+                color: context.c.tintBg(Colors.orange),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.orange.shade200),
+                border: Border.all(color: context.c.tintBorder(Colors.orange)),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: Colors.orange.shade700),
+                  Icon(Icons.info_outline, color: context.c.tintText(Colors.orange)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'Your grievance will be reviewed by our admin team within 24–48 hours.',
                       style: TextStyle(
-                          color: Colors.orange.shade800, fontSize: 13),
+                          color: context.c.tintText(Colors.orange), fontSize: 13),
                     ),
                   ),
                 ],

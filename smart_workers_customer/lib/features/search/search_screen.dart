@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/location_data.dart';
+import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/searchable_picker.dart';
 import '../booking/booking_provider.dart';
 import '../workers/worker_list_screen.dart';
@@ -101,7 +102,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     final canSearch = _district != null && _town != null;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F6FB),
+      backgroundColor: context.c.bgDeep,
       appBar: AppBar(
         backgroundColor: const Color(0xFF1565C0),
         foregroundColor: Colors.white,
@@ -167,13 +168,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 10),
               child: Row(
                 children: [
-                  const Icon(Icons.build_circle_outlined,
-                      size: 18, color: Color(0xFF1A237E)),
+                  Icon(Icons.build_circle_outlined,
+                      size: 18, color: context.c.text),
                   const SizedBox(width: 8),
                   Text('Type of Worker',
                       style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w800,
-                          color: const Color(0xFF1A237E))),
+                          color: context.c.text)),
                 ],
               ),
             ),
@@ -191,13 +192,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       duration: const Duration(milliseconds: 200),
                       decoration: BoxDecoration(
                         color: selected
-                            ? jt.color.withValues(alpha: 0.12)
-                            : Colors.white,
+                            ? jt.color.withValues(alpha: context.c.isDark ? 0.20 : 0.12)
+                            : context.c.bgNavy,
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: selected
-                              ? jt.color
-                              : Colors.grey.shade200,
+                          color: selected ? jt.color : context.c.border,
                           width: selected ? 2 : 1,
                         ),
                         boxShadow: selected
@@ -215,7 +214,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         children: [
                           Icon(jt.icon,
                               size: 24,
-                              color: selected ? jt.color : Colors.grey.shade500),
+                              color: selected ? jt.color : context.c.muted),
                           const SizedBox(height: 6),
                           Text(
                             jt.label,
@@ -227,7 +226,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               fontWeight: selected
                                   ? FontWeight.w700
                                   : FontWeight.w500,
-                              color: selected ? jt.color : Colors.grey.shade600,
+                              color: selected ? jt.color : context.c.subtext,
                             ),
                           ),
                         ],
@@ -262,7 +261,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   backgroundColor: const Color(0xFF1565C0),
-                  disabledBackgroundColor: Colors.grey.shade200,
+                  disabledBackgroundColor: context.c.surface,
                 ),
               ),
             ),

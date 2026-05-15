@@ -51,4 +51,21 @@ class AppPalette {
 
   // Convenience opacities
   Color get scrim => isDark ? Colors.black.withValues(alpha: 0.5) : Colors.black.withValues(alpha: 0.25);
+
+  // ── Helpers for tinted info / status banners ────────────────────────────
+  // Use these instead of `Colors.red.shade50`, `Colors.blue.shade200`, etc.
+  // so banners adapt to dark mode automatically.
+
+  /// Background tint for an accent — pale on light, deeper translucent on dark.
+  Color tintBg(Color base) =>
+      base.withValues(alpha: isDark ? 0.16 : 0.10);
+
+  /// Border tint for an accent.
+  Color tintBorder(Color base) =>
+      base.withValues(alpha: isDark ? 0.45 : 0.25);
+
+  /// Text tint for an accent on its own tinted background.
+  /// Light mode: deep shade (e.g. shade800). Dark mode: bright (e.g. shade300).
+  Color tintText(MaterialColor base) =>
+      isDark ? base.shade300 : base.shade800;
 }

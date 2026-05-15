@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme/app_colors.dart';
 import 'booking_provider.dart';
 import '../../../shared/app_shell.dart';
 
@@ -289,7 +290,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                   _PriceRow(
                     label: 'Platform fee (5%)',
                     value: '₹${platformFee.toInt()}',
-                    valueColor: Colors.grey,
+                    valueColor: context.c.subtext,
                   ),
                   const Divider(height: 20),
                   _PriceRow(
@@ -304,19 +305,19 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.green.shade50,
+                      color: context.c.tintBg(Colors.green),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.green.shade200),
+                      border: Border.all(color: context.c.tintBorder(Colors.green)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.payments_outlined,
-                            color: Colors.green.shade700, size: 18),
+                            color: context.c.tintText(Colors.green), size: 18),
                         const SizedBox(width: 8),
                         Text('Pay on service completion',
                             style: TextStyle(
-                                color: Colors.green.shade700,
+                                color: context.c.tintText(Colors.green),
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13)),
                       ],
@@ -383,10 +384,10 @@ class _Section extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title,
-                style: const TextStyle(
+                style: TextStyle(
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
-                    color: Colors.grey)),
+                    color: context.c.subtext)),
             const SizedBox(height: 12),
             child,
           ],
@@ -407,10 +408,10 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: Colors.grey),
+        Icon(icon, size: 16, color: context.c.muted),
         const SizedBox(width: 10),
         Text('$label: ',
-            style: const TextStyle(color: Colors.grey, fontSize: 13)),
+            style: TextStyle(color: context.c.subtext, fontSize: 13)),
         Expanded(
           child: Text(value,
               style: const TextStyle(
