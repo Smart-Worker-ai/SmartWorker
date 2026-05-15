@@ -20,7 +20,7 @@ from slowapi.util import get_remote_address
 from starlette.middleware.base import BaseHTTPMiddleware
 
 import config
-from database import init_db
+from db import init_models, IS_SQLITE
 from rate_limit import limiter
 from routers import auth, workers
 
@@ -108,14 +108,16 @@ if not config.USE_S3_STORAGE:
 
 
 @app.on_event("startup")
-def startup():
-    init_db()
+async def startup():
+    # Dev / SQLite: auto-create tables. Production (Postgres): rely on Alembic.
+    if IS_SQLITE:
+        await init_models()
     log.info(
         "boot",
         env=config.ENV,
         cors_origins=config.CORS_ORIGINS,
         storage="s3" if config.USE_S3_STORAGE else "local",
-        db=("postgres" if config.DATABASE_URL else "sqlite"),
+        db=("postgres" if not IS_SQLITE else "sqlite"),
     )
 
 
