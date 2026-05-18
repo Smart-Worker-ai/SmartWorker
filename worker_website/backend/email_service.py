@@ -71,11 +71,20 @@ def _send_via_custom_gateway(phone: str, message: str) -> bool:
 
 
 def _send_sms(phone: str, message: str) -> bool:
-    if not FAST2SMS_API_KEY:
-        logger.info(f"[sms] Fast2SMS not configured — skipping SMS to {phone}")
-        return False
+    """Send a general (non-OTP) SMS. Tries self-hosted gateway first
+    (free), falls back to Fast2SMS only if gateway is unconfigured or fails.
+    """
     digits = _normalize_phone(phone)
     if len(digits) != 10:
+        return False
+
+    # 1. Custom self-hosted Android SMS Gateway — free, no third party.
+    if _send_via_custom_gateway(phone, message):
+        return True
+
+    # 2. Fast2SMS fallback (paid). Skip if not configured.
+    if not FAST2SMS_API_KEY:
+        logger.info(f"[sms] No gateway available — dropping SMS to {phone}")
         return False
     try:
         payload = json.dumps({
@@ -102,36 +111,10 @@ def _send_sms(phone: str, message: str) -> bool:
 
 
 def _send_otp_sms(phone: str, otp: str) -> bool:
-    if not FAST2SMS_API_KEY:
-        logger.info(f"[sms] Fast2SMS not configured — skipping OTP SMS to {phone}")
-        return False
-    digits = _normalize_phone(phone)
-    if len(digits) != 10:
-        return False
-    try:
-        msg = f"Your Smart Workers OTP is {otp}. Valid for 10 minutes. Do not share with anyone."
-        # 1. Try custom self-hosted gateway first
-        if _send_via_custom_gateway(phone, msg):
-            return True
-        payload = json.dumps({
-            "route": "q",
-            "message": msg,
-            "language": "english",
-            "flash": 0,
-            "numbers": digits,
-        }).encode("utf-8")
-        req = urllib.request.Request(
-            "https://www.fast2sms.com/dev/bulkV2",
-            data=payload,
-            headers={"Authorization": FAST2SMS_API_KEY, "Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            data = json.loads(resp.read())
-        return bool(data.get("return"))
-    except Exception as e:
-        logger.error(f"[sms] OTP send failed to {phone}: {e}")
-        return False
+    """OTP-specific message format. Routes through the same dispatcher as
+    `_send_sms` so the custom gateway is the default everywhere."""
+    msg = f"Your Smart Workers OTP is {otp}. Valid for 10 minutes. Do not share with anyone."
+    return _send_sms(phone, msg)
 
 
 # ── Table helper ──────────────────────────────────────────────────────────────
