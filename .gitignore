@@ -3,6 +3,10 @@ node_modules/
 .env.*
 !.env.example
 !.env.*.example
+
+# sms-gateway lives on its own branch (feature/custom-sms-gateway).
+# Master never tracks it; integration is HTTP-only via SMS_GATEWAY_URL env.
+sms-gateway/
 .DS_Store
 build/
 coverage/

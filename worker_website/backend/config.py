@@ -120,6 +120,18 @@ SESSION_TTL_HOURS: int = int(_optional("SESSION_TTL_HOURS", "24"))
 MAX_DOC_SIZE_MB: int = int(_optional("MAX_DOC_SIZE_MB", "5"))
 MAX_PHOTO_SIZE_MB: int = int(_optional("MAX_PHOTO_SIZE_MB", "2"))
 
+# ── SMS Gateway (self-hosted, feature/custom-sms-gateway branch) ────────────
+# Worker_website is a CLIENT only. The gateway owns OTP storage + send + verify
+# and all transactional SMS dispatch. If these are unset, SMS dispatch is
+# silently skipped (email-only OTP still works).
+SMS_GATEWAY_URL: Optional[str] = os.getenv("SMS_GATEWAY_URL")
+SMS_GATEWAY_HMAC_SECRET: Optional[str] = os.getenv("SMS_GATEWAY_HMAC_SECRET")
+if IS_PROD and not (SMS_GATEWAY_URL and SMS_GATEWAY_HMAC_SECRET):
+    raise RuntimeError(
+        "Production requires SMS_GATEWAY_URL + SMS_GATEWAY_HMAC_SECRET. "
+        "Point at the deployed sms-gateway service."
+    )
+
 # ── Rate limiting ────────────────────────────────────────────────────────────
 # Backed by slowapi. Per-IP unless we add a user/session key.
 RATELIMIT_REGISTRATION: str = _optional("RATELIMIT_REGISTRATION", "3/hour")

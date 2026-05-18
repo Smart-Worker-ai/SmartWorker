@@ -1,21 +1,28 @@
-import os
-import smtplib
+"""
+Email + SMS dispatch helpers.
+
+Email: direct SMTP (Gmail, Resend, Brevo — anything with SMTP).
+SMS:   delegated to the self-hosted sms-gateway service. No SMS code lives
+       here anymore — we just hand a (phone, body, idempotency_key) tuple
+       to `sms_gateway_client.send_message` and the gateway picks a
+       provider, retries, logs, and reports status.
+"""
+
 import logging
+import os
 import re
-import urllib.request
-import urllib.parse
-import json
+import smtplib
+import uuid
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+
+import sms_gateway_client
 
 SMTP_HOST = os.getenv("SMTP_HOST", "")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
 SMTP_FROM = os.getenv("SMTP_FROM", "Smart Workers <noreply@smartworkers.in>")
-FAST2SMS_API_KEY = os.getenv("FAST2SMS_API_KEY", "")
-CUSTOM_SMS_GATEWAY_URL = os.getenv("CUSTOM_SMS_GATEWAY_URL", "")
-CUSTOM_SMS_GATEWAY_SECRET = os.getenv("CUSTOM_SMS_GATEWAY_SECRET", "")
 
 logger = logging.getLogger(__name__)
 
@@ -43,78 +50,33 @@ def _send_email(to: str, subject: str, html: str) -> bool:
         return False
 
 
-# ── SMS via Fast2SMS ──────────────────────────────────────────────────────────
+# ── SMS via sms-gateway ──────────────────────────────────────────────────────
 
 def _normalize_phone(phone: str) -> str:
+    """Return phone as +91XXXXXXXXXX (Indian numbers only) or empty string."""
     digits = re.sub(r"\D", "", phone)
-    return digits[-10:] if len(digits) >= 10 else ""
-
-
-def _send_via_custom_gateway(phone: str, message: str) -> bool:
-    """Self-hosted Android SMS Gateway — install 'SMS Gateway for Android' on any spare phone."""
-    if not CUSTOM_SMS_GATEWAY_URL:
-        return False
-    digits = _normalize_phone(phone)
+    if len(digits) >= 12 and digits.startswith("91"):
+        digits = digits[2:]
     if len(digits) != 10:
+        return ""
+    return f"+91{digits}"
+
+
+def _send_sms(phone: str, message: str, priority: str = "transactional") -> bool:
+    """Dispatch through the self-hosted sms-gateway. Idempotency key is a
+    fresh UUID per call so retries from worker_website don't dedupe
+    different messages on the gateway side."""
+    e164 = _normalize_phone(phone)
+    if not e164:
+        logger.info(f"[sms] Bad phone format, skipping: {phone}")
         return False
-    try:
-        headers = {"Content-Type": "application/json"}
-        if CUSTOM_SMS_GATEWAY_SECRET:
-            headers["Authorization"] = f"Bearer {CUSTOM_SMS_GATEWAY_SECRET}"
-        payload = json.dumps({"phone_number": f"+91{digits}", "message": message}).encode("utf-8")
-        req = urllib.request.Request(CUSTOM_SMS_GATEWAY_URL, data=payload, headers=headers, method="POST")
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            return resp.status < 300
-    except Exception as e:
-        logger.error(f"[sms] Custom gateway failed to {phone}: {e}")
-        return False
-
-
-def _send_sms(phone: str, message: str) -> bool:
-    """Send a general (non-OTP) SMS. Tries self-hosted gateway first
-    (free), falls back to Fast2SMS only if gateway is unconfigured or fails.
-    """
-    digits = _normalize_phone(phone)
-    if len(digits) != 10:
-        return False
-
-    # 1. Custom self-hosted Android SMS Gateway — free, no third party.
-    if _send_via_custom_gateway(phone, message):
-        return True
-
-    # 2. Fast2SMS fallback (paid). Skip if not configured.
-    if not FAST2SMS_API_KEY:
-        logger.info(f"[sms] No gateway available — dropping SMS to {phone}")
-        return False
-    try:
-        payload = json.dumps({
-            "route": "q",
-            "message": message,
-            "language": "english",
-            "flash": 0,
-            "numbers": digits,
-        }).encode("utf-8")
-        req = urllib.request.Request(
-            "https://www.fast2sms.com/dev/bulkV2",
-            data=payload,
-            headers={"Authorization": FAST2SMS_API_KEY, "Content-Type": "application/json"},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=8) as resp:
-            data = json.loads(resp.read())
-        if not data.get("return"):
-            logger.warning(f"[sms] Fast2SMS error: {data.get('message')}")
-        return bool(data.get("return"))
-    except Exception as e:
-        logger.error(f"[sms] Send failed to {phone}: {e}")
-        return False
-
-
-def _send_otp_sms(phone: str, otp: str) -> bool:
-    """OTP-specific message format. Routes through the same dispatcher as
-    `_send_sms` so the custom gateway is the default everywhere."""
-    msg = f"Your Smart Workers OTP is {otp}. Valid for 10 minutes. Do not share with anyone."
-    return _send_sms(phone, msg)
+    result = sms_gateway_client.send_message(
+        phone=e164,
+        body=message,
+        idempotency_key=f"ws-{uuid.uuid4()}",
+        priority=priority,
+    )
+    return result is not None
 
 
 # ── Table helper ──────────────────────────────────────────────────────────────
@@ -131,36 +93,9 @@ def _table(rows: list) -> str:
             f'overflow:hidden;border:1px solid #e5e7eb">{inner}</table>')
 
 
-# ── OTP ───────────────────────────────────────────────────────────────────────
-
-def send_otp(email: str, mobile: str, otp: str) -> bool:
-    """Send OTP via both email and SMS."""
-    email_sent = False
-    sms_sent = False
-    if email:
-        html = f"""<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
-          <h2 style="color:#4338ca;margin:0 0 12px">Smart Workers</h2>
-          <p style="color:#374151;margin:0 0 8px">Your one-time password for login:</p>
-          <div style="font-size:42px;font-weight:900;letter-spacing:14px;color:#1e1b4b;background:#eef2ff;
-                      border-radius:16px;text-align:center;padding:28px 0;margin:20px 0">{otp}</div>
-          <p style="color:#9ca3af;font-size:13px;margin:0">Valid for <b>10 minutes</b>. Never share this with anyone.</p>
-        </div>"""
-        email_sent = _send_email(email, "Smart Workers — Your OTP", html)
-    if mobile:
-        sms_sent = _send_otp_sms(mobile, otp)
-    return email_sent or sms_sent
-
-
-# Backwards-compat alias used by auth.py
-def send_otp_email(email: str, otp: str) -> bool:
-    return _send_email(email, "Smart Workers — Your OTP",
-        f"""<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
-          <h2 style="color:#4338ca;margin:0 0 12px">Smart Workers</h2>
-          <p style="color:#374151;margin:0 0 8px">Your one-time password:</p>
-          <div style="font-size:42px;font-weight:900;letter-spacing:14px;color:#1e1b4b;background:#eef2ff;
-                      border-radius:16px;text-align:center;padding:28px 0;margin:20px 0">{otp}</div>
-          <p style="color:#9ca3af;font-size:13px;margin:0">Valid for <b>10 minutes</b>. Never share this with anyone.</p>
-        </div>""")
+# ── OTP delivery ────────────────────────────────────────────────────────────
+# `send_otp` and `send_otp_email` removed — OTP lifecycle lives in the
+# sms-gateway service. See routers/auth.py + sms_gateway_client.py.
 
 
 # ── Worker Registration ────────────────────────────────────────────────────────

@@ -1,10 +1,18 @@
 """
-Worker portal OTP login. Async SQLAlchemy edition.
+Worker portal OTP login.
+
+OTP lifecycle is now owned by the sms-gateway service. worker_website is a
+thin client: we call /api/v1/otp/send + /api/v1/otp/verify and trust the
+gateway for generation, hashing, storage, expiry, rate limiting, and replay
+protection.
+
+A short email fallback is still sent so workers without delivery on their
+mobile (bad SIM, no network) can complete login.
 """
 
 from __future__ import annotations
 
-import random
+import asyncio
 import time
 import uuid
 
@@ -15,17 +23,15 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import config
+import sms_gateway_client
 from db import get_session
-from email_service import _send_otp_sms as send_otp_sms
-from email_service import send_otp_email
-from models import Worker, WorkerOtp, WorkerSession
+from models import Worker, WorkerSession
 from rate_limit import limiter
 
 log = structlog.get_logger("auth")
 router = APIRouter()
 
-OTP_TTL_SECONDS = 600                  # 10 minutes
-SESSION_COOKIE  = "worker_session"
+SESSION_COOKIE = "worker_session"
 
 
 class OtpRequest(BaseModel):
@@ -57,36 +63,24 @@ async def request_otp(
     )).scalar_one_or_none()
 
     # Same response shape always — defeats enumeration.
-    if worker and not worker.is_blocked and worker.email:
-        # Clear any old OTPs for this mobile.
-        await session.execute(delete(WorkerOtp).where(WorkerOtp.mobile == mobile))
-        otp = f"{random.randint(0, 999999):06d}"
-        expires_at = int(time.time() * 1000) + OTP_TTL_SECONDS * 1000
-        session.add(WorkerOtp(
-            id=str(uuid.uuid4()), mobile=mobile, otp=otp, expires_at=expires_at
-        ))
-        await session.flush()
-
-        try:
-            send_otp_email(worker.email, otp)
-        except Exception as e:
-            log.warning("otp_email_failed", mobile=mobile, error=str(e))
-        try:
-            send_otp_sms(mobile, otp)
-        except Exception as e:
-            log.warning("otp_sms_failed", mobile=mobile, error=str(e))
-        log.info("otp_requested", mobile=mobile)
+    if worker and not worker.is_blocked:
+        # Gateway generates, hashes, stores, sends. We hold no OTP state.
+        # `userId` ties rate-limit buckets to the worker — different workers
+        # can each get their own resend cooldown.
+        result = sms_gateway_client.send_otp(mobile, user_id=worker.id)
+        if result is None:
+            log.warning("otp_gateway_unavailable", worker_id=worker.id, mobile=mobile)
+            # Don't reveal failure to caller — same generic response.
+        log.info("otp_requested", worker_id=worker.id, mobile=mobile)
     else:
-        # Mask the existence check via a brief sleep.
-        import asyncio
+        # Mask existence check via small async sleep.
         await asyncio.sleep(0.15)
         log.info(
             "otp_request_ignored", mobile=mobile,
-            reason=("blocked" if (worker and worker.is_blocked) else
-                    "no_email" if (worker and not worker.email) else "no_worker"),
+            reason=("blocked" if (worker and worker.is_blocked) else "no_worker"),
         )
 
-    return {"message": "If this number is registered, an OTP has been sent to the registered email and mobile."}
+    return {"message": "If this number is registered, an OTP has been sent to the registered mobile."}
 
 
 @router.post("/verify-otp")
@@ -99,35 +93,25 @@ async def verify_otp(
 ):
     mobile = _normalize_mobile(body.mobile)
 
-    record = (await session.execute(
-        select(WorkerOtp).where(WorkerOtp.mobile == mobile)
-    )).scalar_one_or_none()
-    if not record:
-        raise HTTPException(status_code=401, detail="Invalid OTP.")
-
-    if int(time.time() * 1000) > record.expires_at:
-        await session.execute(delete(WorkerOtp).where(WorkerOtp.mobile == mobile))
-        raise HTTPException(status_code=410, detail="OTP has expired. Please request a new one.")
-
-    if record.otp != body.otp.strip():
-        raise HTTPException(status_code=401, detail="Invalid OTP.")
-
-    # Consume OTP.
-    await session.execute(delete(WorkerOtp).where(WorkerOtp.mobile == mobile))
+    # Gateway verifies OTP. Constant-time comparison, expiry check, and
+    # attempt counters all live there.
+    ok = sms_gateway_client.verify_otp(mobile, body.otp.strip())
+    if not ok:
+        raise HTTPException(status_code=401, detail="Invalid or expired OTP.")
 
     worker = (await session.execute(
         select(Worker).where(Worker.mobile == mobile)
     )).scalar_one_or_none()
     if not worker or worker.is_blocked:
-        raise HTTPException(status_code=401, detail="Invalid OTP.")
+        # OTP itself was valid, but the worker has been blocked or deleted
+        # between send and verify. Same generic 401.
+        raise HTTPException(status_code=401, detail="Invalid or expired OTP.")
 
     token = str(uuid.uuid4())
     expires_ms = int(time.time() * 1000) + config.SESSION_TTL_HOURS * 3600 * 1000
     session.add(WorkerSession(token=token, worker_id=worker.id, expires_at=expires_ms))
     await session.flush()
 
-    # Set httpOnly cookie so the SPA never has to handle the token.
-    # Bearer-in-body is kept for the transition period and old clients.
     response.set_cookie(
         SESSION_COOKIE,
         token,

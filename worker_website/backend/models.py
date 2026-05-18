@@ -82,17 +82,9 @@ class WorkerSession(Base):
     worker: Mapped["Worker"] = relationship(back_populates="sessions")
 
 
-class WorkerOtp(Base):
-    __tablename__ = "worker_otps"
-
-    id:         Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    mobile:     Mapped[str] = mapped_column(String(20), nullable=False, index=True)
-    otp:        Mapped[str] = mapped_column(String(6),  nullable=False)
-    expires_at: Mapped[int] = mapped_column(BigInteger, nullable=False)  # epoch ms
-    created_at: Mapped[datetime] = mapped_column(
-        server_default=func.now(),
-        default=lambda: datetime.now(timezone.utc),
-    )
+# NOTE: WorkerOtp model deleted in 0002_drop_otp_table. OTP storage is now
+# owned by the sms-gateway service (HMAC-secured Postgres + Redis backend).
+# Search history if you need the old schema; do NOT re-introduce it here.
 
 
 # ── Outbox / dead-letter for the Node.js worker-approval sync ───────────────
