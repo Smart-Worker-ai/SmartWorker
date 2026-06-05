@@ -1,233 +1,243 @@
 # Smart Workers — Monorepo
 
-Full-stack platform for connecting workers and customers in Kerala.
-Three backends, two React frontends (Vercel), two Flutter apps, one SMS gateway — all wired together via Docker Compose behind a Caddy reverse proxy.
+Kerala-focused platform connecting customers with skilled workers. Three backends, two React frontends, two Flutter apps, one SMS gateway.
 
 ---
 
-## Repository Layout
+## Repository Map
 
 ```
 SmartWorker/
-├── workers-portal-backend/     Node.js / Express  — customer-facing API (port 3000)
+├── workers-portal-backend/     Node.js/Express   — customer API        (port 3000)
 ├── worker_website/
-│   ├── backend/                Python FastAPI      — worker registration API (port 8000)
-│   └── frontend/               React               — worker portal UI (Vercel)
+│   ├── backend/                Python FastAPI    — worker registration  (port 8000)
+│   └── frontend/               React + Vite      — worker portal UI
 ├── admin_portal/
-│   ├── backend/                Python FastAPI      — admin dashboard API (port 8001)
-│   └── frontend/               React               — admin portal UI (Vercel)
-├── smart_workers_customer/     Flutter             — customer mobile app (Firebase App Distribution)
-├── workers_portal_app/         Flutter             — worker mobile app
-├── sms-gateway/                Node.js             — SMS queue microservice
-├── docker-compose.yml          brings up all 3 backends + postgres + caddy
-├── Caddyfile                   reverse proxy config (auto-HTTPS via Let's Encrypt)
-├── deploy.sh                   Firebase APK distribution (Linux / Mac / Git Bash)
-├── deploy.ps1                  Firebase APK + backend deployment (Windows PowerShell)
-├── DEPLOY.md                   full production runbook — READ THIS FIRST
-└── .env.*.example              env templates for each service
+│   ├── backend/                Python FastAPI    — admin dashboard API  (port 8001)
+│   └── frontend/               React + Vite      — admin portal UI
+├── smart_workers_customer/     Flutter           — customer mobile app
+├── workers_portal_app/         Flutter           — worker mobile app
+├── sms-gateway/                Node.js           — SMS queue service
+└── docker-compose.yml          production wiring (postgres + caddy + all 3 backends)
 ```
 
 ---
 
-## Architecture at a Glance
+## How Services Talk to Each Other
 
 ```
-Internet
-   |
-Cloudflare (DNS + DDoS + CDN)
-   |
-Caddy (auto-HTTPS, reverse proxy)
-   |---> api.smartworkers.in          --> node_backend   :3000
-   |---> workers-api.smartworkers.in  --> worker_backend :8000
-   \---> admin-api.smartworkers.in    --> admin_backend  :8001
+Customer Flutter app
+    --> workers-portal-backend (Node.js, :3000)
+            --> worker_website/backend (/api/workers)  via ADMIN_SECRET header
+            --> admin_portal/backend                   via CUSTOMER_BACKEND_ADMIN_SECRET
 
-Frontends (not in docker-compose — deployed to Vercel):
-   workers.smartworkers.in  --> worker_website/frontend
-   admin.smartworkers.in    --> admin_portal/frontend
+Worker React frontend
+    --> worker_website/backend (FastAPI, :8000)
 
-Mobile apps:
-   Customer app  --> smart_workers_customer (Flutter, Firebase App Distribution)
-   Worker app    --> workers_portal_app (Flutter)
+Admin React frontend
+    --> admin_portal/backend (FastAPI, :8001)
+            --> workers-portal-backend  (proxies customer data)
+            --> worker_website/backend  (proxies worker data)
 ```
 
-All three backends share one Postgres 16 container. `ADMIN_SECRET` is a shared token that ties node_backend to worker_backend and admin_backend — it must match across the relevant .env files (see below).
+**Two shared secrets tie the services together — they must match across .env files:**
+- `ADMIN_SECRET` in `.env.node` must equal `ADMIN_SECRET` in `.env.worker`
+- `ADMIN_SECRET` in `.env.node` must equal `CUSTOMER_BACKEND_ADMIN_SECRET` in `.env.admin`
 
 ---
 
-## Current Status (as of handover)
+## Running Locally (no Docker needed)
 
-| Item | Status |
+Each backend has a dev-friendly fallback — SQLite instead of Postgres, local disk instead of R2. You can run any one service in isolation.
+
+### 1. Node.js backend (`workers-portal-backend`)
+
+Uses **SQLite** locally — no database setup needed. Auto-creates schema and seeds 33 Kerala workers on first run.
+
+```bash
+cd workers-portal-backend
+cp .env.example .env        # edit: set JWT_SECRET, ENCRYPTION_KEY, ADMIN_SECRET to anything
+npm install
+npm run dev                  # starts on :3000, hot-reloads on file changes
+```
+
+Minimal `.env` for local work:
+```
+NODE_ENV=development
+PORT=3000
+JWT_SECRET=any-long-random-string
+ENCRYPTION_KEY=exactly-32-characters-here!!
+ADMIN_SECRET=any-secret
+```
+
+**API routes** (`/api/v1/...`):
+
+| Route | What it does |
 |---|---|
-| All backend source code | In repo |
-| docker-compose.yml + Caddyfile | In repo, tested |
-| .env files (secrets) | **NOT in git** — get them from hareesh (securely) |
-| Local Docker on Windows (Dell Inspiron 3505) | Blocked — AMD SVM virtualization not activating. Needs BIOS update or VPS deploy |
-| VPS (Hetzner CX22) | Not provisioned yet |
-| Domain + Cloudflare DNS | Not set up yet |
-| Firebase service account JSON | Not filled in .env.node yet |
-| SMTP credentials | Not filled in yet |
-| Cloudflare R2 bucket | Not created yet |
-| Sentry SDK | Not wired in (TODO) |
-| Admin password bcrypt hash | Placeholder in .env.admin — must change before production |
+| `GET /health` | Health check |
+| `POST /auth/...` | Firebase phone auth + email/OTP auth |
+| `GET /workers` | List/search workers |
+| `POST /bookings` | Create booking |
+| `GET /bookings/:id` | Booking detail |
+| `POST /feedback` | Submit worker review |
+| `POST /grievances` | Raise a grievance |
+| `GET /vault/...` | Encrypted customer vault data |
+| `GET /admin/...` | Admin-only endpoints (requires `x-admin-secret` header) |
 
 ---
 
-## Environment Files (Secrets — Not in Git)
+### 2. Worker backend (`worker_website/backend`)
 
-There are four `.env` files that must never be committed. Get the current versions from hareesh via a secure channel (WhatsApp, Signal, 1Password, etc.) — do NOT email them.
+Uses **SQLite** when `ENV=development` and no `DATABASE_URL` is set. File uploads go to a local `uploads/` folder.
 
-| File | Used by | Key secrets |
-|---|---|---|
-| `.env` | docker-compose (postgres) | `POSTGRES_PASSWORD` |
-| `.env.node` | node_backend | `JWT_SECRET`, `ENCRYPTION_KEY`, `ADMIN_SECRET`, Firebase JSON, SMTP |
-| `.env.worker` | worker_backend | `ADMIN_SECRET` (must match .env.node's value), R2 creds, SMTP |
-| `.env.admin` | admin_backend | `JWT_SECRET`, `ADMIN_PASSWORD_HASH`, `CUSTOMER_BACKEND_ADMIN_SECRET` |
+```bash
+cd worker_website/backend
+python -m venv .venv
+.venv\Scripts\activate          # Windows
+# or: source .venv/bin/activate  (Mac/Linux)
+pip install -r requirements.txt
+```
 
-Template files (`.env.*.example`) are in the repo and show every key that needs a value.
+Create a minimal `.env`:
+```
+ENV=development
+ADMIN_SECRET=any-secret          # must match workers-portal-backend's ADMIN_SECRET
+CORS_ORIGINS=http://localhost:5173,http://localhost:5174
+```
 
-**Secret cross-references that must match:**
-- `ADMIN_SECRET` in `.env.node` == `ADMIN_SECRET` in `.env.worker`
-- `ADMIN_SECRET` in `.env.node` == `CUSTOMER_BACKEND_ADMIN_SECRET` in `.env.admin`
+```bash
+uvicorn main:app --reload --port 8000
+```
+
+Interactive API docs at `http://localhost:8000/docs`.
+
+**API routes** (`/api/...`):
+
+| Route | What it does |
+|---|---|
+| `POST /auth/request-otp` | Send OTP to worker's phone/email |
+| `POST /auth/verify-otp` | Verify OTP, return session token |
+| `GET /workers/me` | Get own profile |
+| `POST /workers/register` | Worker self-registration |
+| `PUT /workers/me` | Update profile |
+| `POST /workers/me/documents` | Upload KYC documents |
+| `POST /workers/me/photo` | Upload profile photo |
 
 ---
 
-## How to Deploy (Production Path)
+### 3. Admin backend (`admin_portal/backend`)
 
-Local Docker is not required. The production target is a Linux VPS. See [DEPLOY.md](DEPLOY.md) for the full step-by-step runbook. Summary:
-
-### Step 1 — Provision a Hetzner CX22 VPS
-- Sign up at hetzner.com, create a CX22 (Ubuntu 24.04 LTS, ~€4.50/mo)
-- Note the public IP
-
-### Step 2 — Point DNS to the VPS
-In Cloudflare DNS, create A records pointing to the VPS IP:
-- `api.smartworkers.in`
-- `workers-api.smartworkers.in`
-- `admin-api.smartworkers.in`
-
-Keep proxy status **DNS only** (grey cloud) until Caddy issues TLS certs.
-
-### Step 3 — Set up the VPS
+**Stateless proxy** — has no database of its own. Calls node_backend and worker_backend using admin secrets. Both other backends must be running (or pointed at staging URLs) for admin to work.
 
 ```bash
-ssh root@<vps-ip>
-adduser deploy --disabled-password --gecos ""
-usermod -aG sudo deploy
-curl -fsSL https://get.docker.com | sh
-usermod -aG docker deploy
-apt install -y ufw fail2ban
-ufw allow OpenSSH && ufw allow 80,443/tcp && ufw enable
+cd admin_portal/backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
-### Step 4 — Clone and configure
+Create a minimal `.env`:
+```
+ENV=development
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD_HASH=$2b$12$placeholder    # or set ADMIN_PASSWORD=anypassword for dev only
+JWT_SECRET=any-long-string
+CUSTOMER_BACKEND_URL=http://localhost:3000/api/v1
+CUSTOMER_BACKEND_ADMIN_SECRET=any-secret  # must match node backend's ADMIN_SECRET
+WORKER_BACKEND_URL=http://localhost:8000/api
+CORS_ORIGINS=http://localhost:5173,http://localhost:5174
+```
 
 ```bash
-ssh deploy@<vps-ip>
-git clone https://github.com/d-r-o-g-o/SmartWorker.git
-cd SmartWorker
-# Upload the four .env files from your local machine:
-# scp .env .env.node .env.worker .env.admin deploy@<vps-ip>:/home/deploy/SmartWorker/
+uvicorn main:app --reload --port 8001
 ```
 
-### Step 5 — Deploy services one by one
-
-```bash
-docker compose up -d postgres
-docker compose logs -f postgres          # wait for "ready to accept connections"
-
-docker compose up -d node_backend
-docker compose logs -f node_backend      # wait for health check OK
-
-docker compose up -d worker_backend
-docker compose logs -f worker_backend
-
-docker compose up -d admin_backend
-docker compose logs -f admin_backend
-
-docker compose up -d caddy
-docker compose logs -f caddy             # watch for TLS cert issuance
-```
-
-### Step 6 — Verify
-
-```bash
-curl -I https://api.smartworkers.in/health
-curl -I https://workers-api.smartworkers.in/health
-curl -I https://admin-api.smartworkers.in/health
-```
-
-All three should return `HTTP/2 200`. Then flip Cloudflare DNS to **Proxied** (orange cloud).
+Interactive API docs at `http://localhost:8001/docs`.
 
 ---
 
-## Windows Deployment Helper
-
-`deploy.ps1` is a PowerShell script covering everything from a Windows machine:
-
-```powershell
-# Generate secrets for all .env files
-.\deploy.ps1 secrets
-
-# First-time backend deploy (copies .env templates, builds, starts)
-.\deploy.ps1 backend first
-
-# Pull latest + rebuild
-.\deploy.ps1 backend update
-
-# Stream logs
-.\deploy.ps1 backend logs
-
-# Health check (production)
-.\deploy.ps1 health smartworkers.in
-
-# Distribute Flutter APK to Firebase testers
-.\deploy.ps1 apk <FIREBASE_APP_ID> tester@email.com
-```
-
----
-
-## Frontends (Vercel)
-
-Both React frontends are deployed independently to Vercel (not part of docker-compose).
+### 4. Worker frontend (`worker_website/frontend`)
 
 ```bash
-# worker_website/frontend
 cd worker_website/frontend
-vercel --prod
-
-# admin_portal/frontend
-cd admin_portal/frontend
-vercel --prod
+npm install
+npm run dev          # starts on :5173
 ```
 
-Add environment variables in the Vercel dashboard pointing to the live API URLs.
+Points to `http://localhost:8000` by default for local dev.
 
 ---
 
-## Flutter Customer App (APK Distribution)
+### 5. Admin frontend (`admin_portal/frontend`)
 
 ```bash
+cd admin_portal/frontend
+npm install
+npm run dev          # starts on :5174 (or next available port)
+```
+
+Points to `http://localhost:8001` by default for local dev.
+
+---
+
+### 6. Flutter apps
+
+```bash
+# Customer app
 cd smart_workers_customer
-flutter build apk --release
+flutter pub get
+flutter run
 
-# Linux/Mac
-bash deploy.sh <FIREBASE_APP_ID> tester@email.com
-
-# Windows
-.\deploy.ps1 apk <FIREBASE_APP_ID> tester@email.com
+# Worker app
+cd workers_portal_app
+flutter pub get
+flutter run
 ```
 
 ---
 
-## Still TODO (from DEPLOY.md)
+## Environment Files
 
-- [ ] Provision VPS and set up DNS (Cloudflare)
-- [ ] Create Cloudflare R2 bucket `smartworkers-uploads`, fill R2 creds in `.env.worker`
+The four `.env` files are **not in git** (they contain secrets). Get them from Hareesh via WhatsApp/Signal — never email.
+
+| File | Lives in | Used by |
+|---|---|---|
+| `.env` | repo root | docker-compose (postgres password) |
+| `.env.node` | repo root | workers-portal-backend |
+| `.env.worker` | repo root | worker_website/backend |
+| `.env.admin` | repo root | admin_portal/backend |
+
+Each service also has an `.env.example` in its own folder showing the minimum keys needed for local development.
+
+---
+
+## What Needs Work (Open TODOs)
+
+These are the known incomplete or placeholder items across the codebase:
+
+### Security
+- [ ] **httpOnly cookies** — admin and worker frontend JWTs are currently stored in `localStorage`. Move them to httpOnly cookies so they are not accessible to JS (XSS protection). Affects `admin_portal/frontend` and `worker_website/frontend`.
+- [ ] **Certificate pinning** — the Flutter customer app uses Dio for HTTP. Add certificate pinning in `smart_workers_customer` so the app rejects MITM'd connections.
+- [ ] **Sentry error tracking** — wire `sentry-sdk[fastapi]` into `worker_website/backend` and `admin_portal/backend`. Node.js backend can use `@sentry/node`.
+
+### Flutter customer app
+- [ ] **Theme cleanup** — non-auth screens still reference the old `kBrandDeep` colour constants. Refactor them to use the new theme tokens (check `smart_workers_customer/lib/core/theme/`).
+
+### Infrastructure (only matters for deployment, not local dev)
+- [ ] Set up Hetzner CX22 VPS and point Cloudflare DNS A records at it
+- [ ] Create Cloudflare R2 bucket `smartworkers-uploads`, add creds to `.env.worker`
 - [ ] Add Firebase service account JSON to `.env.node`
-- [ ] Add SMTP credentials (Resend or Brevo) to `.env.node` and `.env.worker`
+- [ ] Add SMTP credentials to `.env.node` and `.env.worker`
 - [ ] Set a real bcrypt `ADMIN_PASSWORD_HASH` in `.env.admin`
-- [ ] Wire Sentry SDK into both Python backends (`sentry-sdk[fastapi]`)
-- [ ] Move admin/worker frontend tokens from `localStorage` to httpOnly cookies
-- [ ] Certificate pinning in the Flutter Dio client
 - [ ] Set up nightly Postgres backup cron to R2
 - [ ] Wire GitHub Actions for auto-deploy on push to master
+
+---
+
+## Repo Conventions
+
+- **Python backends**: PEP8, `structlog` for structured JSON logging, `slowapi` for rate limits, `alembic` for DB migrations (worker_backend only)
+- **Node.js backend**: ES modules (`import`/`export`), controller-service pattern, Zod for input validation
+- **React frontends**: Vite, no SSR
+- **Flutter**: feature-first folder layout under `lib/features/`
+- **Secrets**: never hardcode — always read from env. Config modules (`config.py`, `src/config/env.js`) crash-fast if required vars are missing in production.
