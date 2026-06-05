@@ -1,5 +1,7 @@
 # Smart Workers — Monorepo
 
+**GitHub:** https://github.com/d-r-o-g-o/SmartWorker
+
 Kerala-focused platform connecting customers with skilled workers. Three backends, two React frontends, two Flutter apps, one SMS gateway.
 
 ---
