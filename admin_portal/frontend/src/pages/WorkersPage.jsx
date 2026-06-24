@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Ban, CheckCircle, ShieldCheck, Star, Clock, XCircle, ChevronDown, ChevronUp, FileText, ExternalLink, Trash2, AlertTriangle } from 'lucide-react';
+import { Search, Ban, CheckCircle, ShieldCheck, Star, Clock, XCircle, ChevronDown, ChevronUp, FileText, ExternalLink, Trash2, AlertTriangle, Hash, UserCircle } from 'lucide-react';
 import api from '../api';
 import { useTheme } from '../context/ThemeContext';
+import WorkerProfileModal from './WorkerProfileModal';
 
 function ConfirmDialog({ name, type, onConfirm, onCancel }) {
   return (
@@ -127,6 +128,7 @@ export default function WorkersPage() {
   const [tab, setTab] = useState('portal');
   const [expanded, setExpanded] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [profileId, setProfileId] = useState(null);  // for WorkerProfileModal
 
   const load = () => api.get('/workers').then(r => setWorkers(r.data.workers ?? [])).finally(() => setLoading(false));
   useEffect(() => { load(); }, []);
@@ -173,6 +175,10 @@ export default function WorkersPage() {
           onConfirm={confirmDelete}
           onCancel={() => setDeleteTarget(null)}
         />
+      )}
+      {/* Full-profile modal */}
+      {profileId && (
+        <WorkerProfileModal workerId={profileId} onClose={() => setProfileId(null)} />
       )}
       <h1 className={`text-xl md:text-2xl font-black mb-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>
         {lang === 'ml' ? 'തൊഴിലാളികൾ' : 'Workers'}
@@ -224,6 +230,12 @@ export default function WorkersPage() {
                       <td className="px-4 py-3">
                         <div className="font-medium text-white">{w.name}</div>
                         <div className="text-xs text-gray-400">{w.job_type}</div>
+                        {w.worker_uid && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <Hash className="w-3 h-3 text-indigo-500" />
+                            <span className="text-xs font-mono text-indigo-400">{w.worker_uid}</span>
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-gray-400 text-xs">{w.district}<br />{w.town}</td>
 
@@ -263,6 +275,14 @@ export default function WorkersPage() {
                         <div className="flex flex-wrap gap-2 items-center">
                           {tab === 'portal' ? (
                             <>
+                              <button
+                                onClick={() => setProfileId(w.id)}
+                                id={`view-profile-${w.id}`}
+                                title="View Full Profile"
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-indigo-900/50 hover:bg-indigo-800 text-indigo-300 transition-colors"
+                              >
+                                <UserCircle className="w-3 h-3" /> Profile
+                              </button>
                               {w.status === 'pending' && (
                                 <>
                                   <button onClick={() => action(w.id, 'approve', 'portal')} disabled={!!actionId}

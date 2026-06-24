@@ -73,6 +73,13 @@ CUSTOMER_BACKEND_URL: str = _optional(
     "https://smart-workers-backend-production.up.railway.app/api/v1",
 )
 
+# ── Customer APK download URL ────────────────────────────────────────────────
+# The URL that referral links redirect to for the customer APK download.
+CUSTOMER_APK_URL: str = _optional(
+    "CUSTOMER_APK_URL",
+    "https://smart-workers-backend-production.up.railway.app/customer.apk",
+)
+
 # ── Self URL (used to build absolute photo URLs returned to admin) ──────────
 SELF_BASE_URL: str = _optional(
     "SELF_BASE_URL",

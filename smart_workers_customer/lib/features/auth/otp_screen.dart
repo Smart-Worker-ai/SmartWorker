@@ -86,14 +86,43 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     }
   }
 
+  /// Distribute a multi-character string (e.g. pasted OTP) across boxes.
+  void _distributePaste(String value, int startIndex) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    for (int i = 0; i < digits.length && (startIndex + i) < 6; i++) {
+      _ctrls[startIndex + i].text = digits[i];
+    }
+    final lastFilled = (startIndex + digits.length - 1).clamp(0, 5);
+    if (lastFilled < 5) {
+      FocusScope.of(context).requestFocus(_nodes[lastFilled + 1]);
+    } else {
+      FocusScope.of(context).unfocus();
+    }
+    if (_otp.length == 6) _verify();
+  }
+
   Future<void> _resend() async {
     setState(() => _resending = true);
     await FirebaseAuth.instance.verifyPhoneNumber(
       phoneNumber: widget.phone,
       forceResendingToken: _resendToken,
       timeout: const Duration(seconds: 60),
-      verificationCompleted: (cred) async =>
-          ref.read(authProvider.notifier).signInWithFirebaseCredential(cred),
+      verificationCompleted: (cred) async {
+        // Auto-retrieved on resend — sign in immediately.
+        final result = await ref.read(authProvider.notifier)
+            .signInWithFirebaseCredential(cred);
+        if (!mounted) return;
+        if (result.error != null) {
+          showAppSnack(context, result.error!);
+          return;
+        }
+        if (result.isNewUser) {
+          Navigator.pushReplacement(context, slideRoute(const RegistrationScreen()));
+        } else {
+          Navigator.pushAndRemoveUntil(
+              context, fadeRoute(const AppShell()), (_) => false);
+        }
+      },
       verificationFailed: (e) {
         if (!mounted) return;
         setState(() => _resending = false);
@@ -167,7 +196,13 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                   children: List.generate(6, (i) => _OtpBox(
                     controller: _ctrls[i],
                     focusNode: _nodes[i],
+                    allowPaste: i == 0,
                     onChanged: (v) {
+                      // Handle paste: if >1 char received, distribute across boxes.
+                      if (v.length > 1) {
+                        _distributePaste(v, i);
+                        return;
+                      }
                       if (v.isNotEmpty && i < 5) {
                         FocusScope.of(context).requestFocus(_nodes[i + 1]);
                       }
@@ -215,10 +250,17 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
 }
 
 class _OtpBox extends StatelessWidget {
-  const _OtpBox({required this.controller, required this.focusNode, required this.onChanged});
+  const _OtpBox({
+    required this.controller,
+    required this.focusNode,
+    required this.onChanged,
+    this.allowPaste = false,
+  });
   final TextEditingController controller;
   final FocusNode focusNode;
   final void Function(String) onChanged;
+  /// True on the first box only — lets Android paste menu deliver all 6 digits.
+  final bool allowPaste;
 
   @override
   Widget build(BuildContext context) {
@@ -230,7 +272,7 @@ class _OtpBox extends StatelessWidget {
         focusNode: focusNode,
         keyboardType: TextInputType.number,
         textAlign: TextAlign.center,
-        maxLength: 1,
+        maxLength: allowPaste ? 6 : 1,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         onChanged: onChanged,
         style: GoogleFonts.inter(color: c.text, fontWeight: FontWeight.w800, fontSize: 22),

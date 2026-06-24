@@ -4,9 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import api from '../api';
 import {
   LayoutDashboard, Users, HardHat, BookOpen, MessageSquareWarning,
-  LogOut, Wrench, Menu, X, ChevronRight, Moon, Sun, Languages,
+  LogOut, Wrench, Menu, X, ChevronRight, Moon, Sun, Languages, Bell,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import NotificationsPanel, { useNotificationsBadge } from './NotificationsPanel';
 
 const NAV = [
   { to: '/',           icon: LayoutDashboard,      label: 'Dashboard',  mlLabel: 'ഡാഷ്‌ബോർഡ്',  color: 'from-blue-500 to-indigo-600' },
@@ -52,7 +53,7 @@ function NavItem({ to, icon: Icon, label, mlLabel, color, onClick }) {
   );
 }
 
-function Sidebar({ onClose }) {
+function Sidebar({ onClose, onBell, unreadCount = 0 }) {
   const navigate = useNavigate();
   const { isDark, setIsDark, lang, setLang } = useTheme();
 
@@ -65,7 +66,7 @@ function Sidebar({ onClose }) {
 
   return (
     <aside className="w-64 shrink-0 bg-gray-950 border-r border-gray-800/50 flex flex-col h-full">
-      {/* Logo */}
+      {/* Logo + notification bell */}
       <div className="h-16 flex items-center gap-3 px-5 border-b border-gray-800/50 shrink-0">
         <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
           <Wrench className="w-4 h-4 text-white" />
@@ -74,6 +75,22 @@ function Sidebar({ onClose }) {
           <div className="font-black text-sm text-white">Smart Workers</div>
           <div className="text-xs text-gray-500">Admin Portal v1.0</div>
         </div>
+        {/* Desktop notification bell */}
+        {onBell && (
+          <button
+            id="notifications-bell-desktop"
+            onClick={onBell}
+            className="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
+            title="Activity Feed"
+          >
+            <Bell className="w-4 h-4" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-indigo-600 text-white text-xs rounded-full flex items-center justify-center font-bold px-1">
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+        )}
         {onClose && (
           <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors md:hidden">
             <X className="w-5 h-5" />
@@ -128,14 +145,23 @@ function Sidebar({ onClose }) {
 
 export default function Layout() {
   const [open, setOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const location = useLocation();
   const { isDark } = useTheme();
+  const { unread, clearBadge } = useNotificationsBadge();
+
+  const openNotif = () => {
+    clearBadge();
+    setNotifOpen(true);
+  };
 
   return (
     <div className={`flex h-screen text-white overflow-hidden ${isDark ? 'bg-gray-950' : 'bg-gray-100'}`}>
+      {/* Notifications panel (portal-level drawer) */}
+      <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
       {/* Desktop sidebar — always dark */}
       <div className="hidden md:flex h-full">
-        <Sidebar />
+        <Sidebar onBell={openNotif} unreadCount={unread} />
       </div>
 
       {/* Mobile sidebar overlay */}
@@ -177,6 +203,21 @@ export default function Layout() {
               <Wrench className="w-3.5 h-3.5 text-white" />
             </div>
             <span className={`font-bold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>Smart Workers Admin</span>
+          </div>
+          {/* Notifications bell — mobile */}
+          <div className="ml-auto">
+            <button
+              id="notifications-bell-mobile"
+              onClick={openNotif}
+              className="relative w-8 h-8 flex items-center justify-center rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
+            >
+              <Bell className="w-4 h-4" />
+              {unread > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-indigo-600 text-white text-xs rounded-full flex items-center justify-center font-bold px-1">
+                  {unread > 99 ? '99+' : unread}
+                </span>
+              )}
+            </button>
           </div>
         </header>
 

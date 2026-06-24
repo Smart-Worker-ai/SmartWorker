@@ -7,7 +7,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/common_widgets.dart';
+import '../../../shared/app_shell.dart';
+import 'auth_provider.dart';
 import 'otp_screen.dart';
+import 'registration_screen.dart';
 
 class PhoneInputScreen extends ConsumerStatefulWidget {
   const PhoneInputScreen({super.key});
@@ -30,19 +33,35 @@ class _PhoneInputScreenState extends ConsumerState<PhoneInputScreen> {
     await FirebaseAuth.instance.verifyPhoneNumber(
       phoneNumber: phone,
       timeout: const Duration(seconds: 60),
+      // Android SMS auto-retrieval: Firebase reads the SMS and signs in without user typing.
       verificationCompleted: (cred) async {
-        // Android auto-retrieval: silently sign in if possible.
         if (!mounted) return;
+        setState(() => _sending = true);
+        final result = await ref.read(authProvider.notifier)
+            .signInWithFirebaseCredential(cred);
+        if (!mounted) return;
+        setState(() => _sending = false);
+        if (result.error != null) {
+          showAppSnack(context, result.error!);
+          return;
+        }
+        if (result.isNewUser) {
+          Navigator.pushReplacement(context, slideRoute(const RegistrationScreen()));
+        } else {
+          Navigator.pushAndRemoveUntil(
+              context, fadeRoute(const AppShell()), (_) => false);
+        }
       },
       verificationFailed: (e) {
         if (!mounted) return;
         setState(() => _sending = false);
         showAppSnack(context, switch (e.code) {
-          'invalid-phone-number' => 'Invalid phone number. Use a valid 10-digit Indian number.',
-          'too-many-requests'    => 'Too many OTP requests. Wait a few minutes.',
-          'app-not-authorized'   => 'App verification failed. Contact support (SHA-1 mismatch).',
-          'missing-client-identifier' => 'Phone Auth not configured. Contact support.',
-          _                      => e.message ?? 'Failed to send OTP.',
+          'invalid-phone-number'      => 'Invalid phone number. Use a valid 10-digit Indian number.',
+          'too-many-requests'         => 'Too many OTP requests. Wait a few minutes.',
+          'app-not-authorized'        => 'SHA-1 fingerprint not registered in Firebase Console. See FIREBASE_OTP_FIX.md.',
+          'missing-client-identifier' => 'Phone Auth not configured. Enable Phone provider in Firebase Console.',
+          'quota-exceeded'            => 'SMS quota exceeded. Try again tomorrow or use a test number.',
+          _                           => e.message ?? 'Failed to send OTP.',
         });
       },
       codeSent: (verificationId, resendToken) {
