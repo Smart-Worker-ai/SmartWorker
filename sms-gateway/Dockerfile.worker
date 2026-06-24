@@ -1,0 +1,24 @@
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN npm ci --only=production && npm cache clean --force
+COPY tsconfig.json ./
+COPY src/ ./src/
+RUN npx tsc
+
+FROM node:20-alpine AS runtime
+
+WORKDIR /app
+ENV NODE_ENV=production
+
+RUN addgroup -g 1001 -S gateway && \
+    adduser -S gateway -u 1001 -G gateway
+
+COPY --from=builder --chown=gateway:gateway /app/dist ./dist
+COPY --from=builder --chown=gateway:gateway /app/node_modules ./node_modules
+COPY --chown=gateway:gateway package.json ./
+
+USER gateway
+
+CMD ["node", "dist/workers/index.js"]

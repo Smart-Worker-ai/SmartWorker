@@ -39,6 +39,9 @@ admin_portal/backend/.env
 worker_website/backend/data/*.db*
 worker_website/backend/uploads/
 
+# Frontend build artifacts (rebuilt inside Docker)
+**/dist/
+
 # Docker / Caddy local data
 caddy_data/
 caddy_config/
