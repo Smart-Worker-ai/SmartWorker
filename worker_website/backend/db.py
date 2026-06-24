@@ -37,14 +37,15 @@ def _normalize_url(url: str | None) -> str:
 DATABASE_URL = _normalize_url(config.DATABASE_URL)
 IS_SQLITE = DATABASE_URL.startswith("sqlite")
 
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=False,
-    pool_pre_ping=True,
-    # SQLite + aiosqlite ignores pool sizing; Postgres uses it.
-    pool_size=10 if not IS_SQLITE else 5,
-    max_overflow=20 if not IS_SQLITE else 0,
-)
+_engine_kwargs = {
+    "echo": False,
+    "pool_pre_ping": True,
+}
+if not IS_SQLITE:
+    _engine_kwargs["pool_size"] = 10
+    _engine_kwargs["max_overflow"] = 20
+
+engine = create_async_engine(DATABASE_URL, **_engine_kwargs)
 
 SessionLocal = async_sessionmaker(
     engine, expire_on_commit=False, class_=AsyncSession

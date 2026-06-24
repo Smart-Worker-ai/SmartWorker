@@ -6,8 +6,6 @@ Phase 4: adds worker_uid identity, referral QR/link, APK download tracking,
          and per-worker event log (admin notifications feed).
 """
 
-from __future__ import annotations
-
 import base64
 import hashlib
 import io

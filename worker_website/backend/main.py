@@ -5,8 +5,6 @@ Wires CORS (env-driven allow-list, no wildcards in prod), security headers,
 rate limiting, structured logging, and the worker / auth routers.
 """
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import structlog

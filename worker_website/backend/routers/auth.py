@@ -10,8 +10,6 @@ A short email fallback is still sent so workers without delivery on their
 mobile (bad SIM, no network) can complete login.
 """
 
-from __future__ import annotations
-
 import asyncio
 import time
 import uuid
