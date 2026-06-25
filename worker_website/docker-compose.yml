@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: workers_portal
+      POSTGRES_USER: worker_portal
+      POSTGRES_PASSWORD: dev-password-change-in-prod
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U worker_portal"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./worker_website/backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://worker_portal:dev-password-change-in-prod@postgres:5432/workers_portal
+      ENV: development
+      ADMIN_SECRET: dev-admin-secret-change-in-prod
+      CORS_ORIGINS: http://localhost:5173,http://localhost:5174
+      SELF_BASE_URL: http://localhost:8000
+      CUSTOMER_BACKEND_URL: http://localhost:3000
+      CUSTOMER_APK_URL: http://localhost:3000/app.apk
+      SMS_GATEWAY_URL: http://sms-gateway:8001
+      SMS_GATEWAY_HMAC_SECRET: dev-secret
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./worker_website/backend:/app
+      - /app/uploads
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./worker_website/frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./worker_website/frontend:/app
+      - /app/node_modules
+    environment:
+      VITE_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    command: npm run dev -- --host
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+    name: workers-network
