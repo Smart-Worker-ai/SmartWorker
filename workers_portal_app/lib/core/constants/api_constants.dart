@@ -1,3 +1,3 @@
 class ApiConstants {
-  static const baseUrl = 'https://smart-workers-backend-production.up.railway.app/api/v1';
+  static const baseUrl = 'https://api.crewzo.in/api/v1';
 }
