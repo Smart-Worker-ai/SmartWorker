@@ -46,3 +46,11 @@ worker_website/backend/uploads/
 caddy_data/
 caddy_config/
 postgres_data/
+
+# local API keys / tokens (never commit)
+neon-apikey.md
+.neon_api_key
+*.cf_api_token
+cf-apikey.md
+*api-key*
+*apikey*
