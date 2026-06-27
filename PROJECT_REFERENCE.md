@@ -207,7 +207,7 @@ GET  /health
 **Default credentials** (change in production via env vars):
 ```
 Username: admin
-Password: ***REMOVED-SECRET***
+Password: <REDACTED-ROTATE-ADMIN-PW>
 ```
 
 **Backend routes:**
@@ -418,12 +418,12 @@ firebase appdistribution:distribute workers_portal_app/build/app/outputs/flutter
 | `DATABASE_URL` | Railway PostgreSQL (or omit for SQLite) |
 | `JWT_SECRET` | secret string (min 32 chars) |
 | `ENCRYPTION_KEY` | secret string (min 32 chars) for vault encryption |
-| `ADMIN_SECRET` | `***REMOVED-SECRET***` |
+| `ADMIN_SECRET` | `<REDACTED-ROTATE-ADMIN-SECRET>` |
 | `CORS_ORIGIN` | comma-separated list of allowed origins |
 | `SMTP_HOST` | `smtp.gmail.com` |
 | `SMTP_PORT` | `587` |
 | `SMTP_USER` | `hareeshkp2000@gmail.com` |
-| `SMTP_PASS` | `***REMOVED-SECRET***` (Gmail App Password) |
+| `SMTP_PASS` | `<REDACTED-ROTATE-GMAIL-APP-PW>` (Gmail App Password) |
 | `SMTP_FROM` | `Smart Workers noreply@smartworkers.in` |
 | `FAST2SMS_API_KEY` | (optional) Fast2SMS key — needs ₹100 recharge to activate |
 | `CUSTOM_SMS_GATEWAY_URL` | (optional) Android SMS gateway URL |
@@ -433,15 +433,15 @@ firebase appdistribution:distribute workers_portal_app/build/app/outputs/flutter
 | Variable | Value / Notes |
 |---|---|
 | `ADMIN_USERNAME` | `admin` |
-| `ADMIN_PASSWORD` | `***REMOVED-SECRET***` |
+| `ADMIN_PASSWORD` | `<REDACTED-ROTATE-ADMIN-PW>` |
 | `JWT_SECRET` | admin JWT secret |
 | `CUSTOMER_BACKEND_URL` | `https://smart-workers-backend-production.up.railway.app/api/v1` |
-| `CUSTOMER_BACKEND_ADMIN_SECRET` | `***REMOVED-SECRET***` |
+| `CUSTOMER_BACKEND_ADMIN_SECRET` | `<REDACTED-ROTATE-ADMIN-SECRET>` |
 | `WORKER_BACKEND_URL` | `https://worker-portal-backend-production.up.railway.app/api` |
 | `SMTP_HOST` | `smtp.gmail.com` |
 | `SMTP_PORT` | `587` |
 | `SMTP_USER` | `hareeshkp2000@gmail.com` |
-| `SMTP_PASS` | `***REMOVED-SECRET***` |
+| `SMTP_PASS` | `<REDACTED-ROTATE-GMAIL-APP-PW>` |
 
 ### Worker Registration Backend (`worker-portal-backend`) — Railway
 | Variable | Value / Notes |
@@ -449,7 +449,7 @@ firebase appdistribution:distribute workers_portal_app/build/app/outputs/flutter
 | `SMTP_HOST` | `smtp.gmail.com` |
 | `SMTP_PORT` | `587` |
 | `SMTP_USER` | `hareeshkp2000@gmail.com` |
-| `SMTP_PASS` | `***REMOVED-SECRET***` |
+| `SMTP_PASS` | `<REDACTED-ROTATE-GMAIL-APP-PW>` |
 
 ---
 
@@ -457,7 +457,7 @@ firebase appdistribution:distribute workers_portal_app/build/app/outputs/flutter
 
 ### Email (Gmail SMTP)
 - **Account:** hareeshkp2000@gmail.com  
-- **App Password:** `***REMOVED-SECRET***` (generated in Google Account → Security → App Passwords)
+- **App Password:** `<REDACTED-ROTATE-GMAIL-APP-PW>` (generated in Google Account → Security → App Passwords)
 - **Used by:** All three Railway backends (Node.js + both Python)
 
 **Triggered emails:**

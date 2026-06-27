@@ -30,11 +30,15 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB:       ${POSTGRES_DB:-smartworkers}
-      POSTGRES_USER:     ${POSTGRES_USER:-smartworkers}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB:        ${POSTGRES_DB:-smartworkers}
+      POSTGRES_USER:      ${POSTGRES_USER:-smartworkers}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      # Consumed by ops/postgres-init/01-init.sh on first boot.
+      SMSGW_DB_PASSWORD:  ${SMSGW_DB_PASSWORD:?Set SMSGW_DB_PASSWORD in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # Runs once on first boot (empty data dir) to create the sms_gateway DB + role.
+      - ./ops/postgres-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-smartworkers}"]
       interval: 10s
@@ -43,6 +47,77 @@ services:
     ports:
       # Exposed only to localhost for debugging. Remove once stable.
       - "127.0.0.1:5432:5432"
+
+  # ── Redis (BullMQ queues + HMAC nonce cache for sms-gateway) ─────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ── Customer-facing API (Node.js / Express + SQLite) ─────────────────────────
+  # SINGLE replica only: SQLite is single-writer and the vault metadata lives on
+  # the node_data volume. Do not scale this service horizontally.
+  node_backend:
+    build:
+      context: ./workers-portal-backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env.node
+    volumes:
+      - node_data:/data            # SQLite DB persistence (until PG migration)
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ── SMS Gateway API (HMAC-authed, /metrics) ──────────────────────────────────
+  sms_gateway_api:
+    build:
+      context: ./sms-gateway
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: ./sms-gateway/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - "3100"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3100/health/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ── SMS Gateway queue worker + scheduler ─────────────────────────────────────
+  # The scheduler runs inside this process → keep replicas = 1 (do not scale).
+  sms_gateway_worker:
+    build:
+      context: ./sms-gateway
+      dockerfile: Dockerfile.worker
+    restart: unless-stopped
+    env_file: ./sms-gateway/.env
+    depends_on:
+      sms_gateway_api:
+        condition: service_started
+      redis:
+        condition: service_healthy
 
   # ── Worker Registration backend (FastAPI) ───────────────────────────────────
   worker_backend:
@@ -57,6 +132,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      sms_gateway_api:
+        condition: service_started
     expose:
       - "8000"
     healthcheck:
@@ -84,6 +161,40 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
+
+  # ── sync_drain: drains worker_backend → node_backend failed syncs ────────────
+  # SINGLE instance only (a duplicate would double-POST syncs). Reuses the
+  # worker_backend image; loops the drain job every 5 minutes.
+  sync_drain:
+    build:
+      context: ./worker_website/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env.worker
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["while true; do python -m workers.sync_drain || true; sleep 300; done"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      node_backend:
+        condition: service_started
+
+  # ── Caddy reverse proxy (auto-TLS, the ONLY public-facing service) ───────────
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - node_backend
+      - worker_backend
+      - admin_backend
 
   # ── Worker Website frontend (nginx + React) ─────────────────────────────────
   worker_frontend:
@@ -113,3 +224,7 @@ volumes:
   postgres_data:
   worker_uploads:
   worker_data:
+  redis_data:
+  node_data:
+  caddy_data:
+  caddy_config:

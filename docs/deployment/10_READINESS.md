@@ -7,7 +7,7 @@
 
 ## A. Code / data blockers (from analysis)
 
-- [ ] 🔴 **Rotate & purge committed secrets** — Gmail app password `***REMOVED-SECRET***`, `***REMOVED-SECRET***`, `ADMIN_SECRET` live in `PROJECT_REFERENCE.md`. Rotate all; `git filter-repo` to scrub history **before** GitHub push.
+- [ ] 🔴 **Rotate & purge committed secrets** — Gmail app password `<REDACTED-ROTATE-GMAIL-APP-PW>`, `<REDACTED-ROTATE-ADMIN-PW>`, `ADMIN_SECRET` live in `PROJECT_REFERENCE.md`. Rotate all; `git filter-repo` to scrub history **before** GitHub push.
 - [ ] 🔴 **node_backend vault durability** — currently an in-memory `Map` `[vault.controller.js:5]`; all worker documents vanish on restart. Move to PG/R2 (encrypted) before storing real docs.
 - [ ] 🔴 **node_backend persistence** — SQLite on a **persistent volume** (not ephemeral PaaS FS), backed up nightly. Or complete SQLite→Postgres migration (`04_DATABASE.md §6`).
 - [ ] 🔴 **node_backend uploads path** — `env.supabaseUrl` is undefined `[vault.controller.js:16]`; wire to R2 or disable the feature.

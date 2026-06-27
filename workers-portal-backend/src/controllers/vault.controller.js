@@ -1,50 +1,40 @@
-import crypto from 'node:crypto';
-import { env } from '../config/env.js';
+// ─────────────────────────────────────────────────────────────────────────────
+// Digital Vault — DISABLED for v1.
+//
+// This feature was never functional end-to-end:
+//   • Document records were held in an in-memory Map → wiped on every restart.
+//   • `env.supabaseUrl` (referenced for the upload URL) does not exist in env.js,
+//     so the upload URL always fell back to a dev stub — file bytes went nowhere.
+//   • The worker portal app's VaultRepository.requestUploadUrl() is itself a stub
+//     that never calls these endpoints.
+//
+// Storing real documents here would silently lose customer data, so the routes
+// are gated off until the feature is built properly:
+//   1. Persist document metadata in a DB table (SQLite now / Postgres post-Neon).
+//   2. Store file bytes in Cloudflare R2 via presigned PUT/GET (same bucket the
+//      worker_backend already uses).
+//   3. Update the Flutter VaultRepository to actually upload + list.
+//
+// The real worker-document path (registration uploads → worker_backend → R2) is
+// unaffected; this only concerns the customer/worker-portal "digital vault".
+// ─────────────────────────────────────────────────────────────────────────────
 
-// In-memory document store — replace with Supabase + DB when configured
-const vaultStore = new Map(); // userId → Document[]
+const NOT_IMPLEMENTED = {
+  message: 'The document vault is not available yet.',
+  code: 'VAULT_DISABLED',
+};
 
-async function requestUploadUrl(request, response) {
-  const { fileName, fileType } = request.body;
-  if (!fileName || !fileType) {
-    return response.status(400).json({ message: 'fileName and fileType are required.' });
-  }
-  const docId = crypto.randomUUID();
-  const userId = request.user.userId;
-
-  let uploadUrl;
-  if (env.supabaseUrl) {
-    uploadUrl = `${env.supabaseUrl}/storage/v1/object/vault/${userId}/${docId}-${encodeURIComponent(fileName)}`;
-  } else {
-    // Dev stub — the Flutter app will upload nothing but can still record the document
-    uploadUrl = `http://localhost:${env.port}/dev-upload/${docId}`;
-  }
-
-  response.json({ uploadUrl, docId });
+async function requestUploadUrl(_request, response) {
+  return response.status(501).json(NOT_IMPLEMENTED);
 }
 
-async function saveDocument(request, response) {
-  const { docId, fileName, fileType, url } = request.body;
-  if (!fileName) {
-    return response.status(400).json({ message: 'fileName is required.' });
-  }
-  const userId = request.user.userId;
-  const docs = vaultStore.get(userId) ?? [];
-  const doc = {
-    id: docId ?? crypto.randomUUID(),
-    fileName,
-    fileType: fileType ?? 'unknown',
-    url: url ?? '',
-    uploadedAt: new Date().toISOString()
-  };
-  docs.unshift(doc);
-  vaultStore.set(userId, docs);
-  response.json({ document: doc });
+async function saveDocument(_request, response) {
+  return response.status(501).json(NOT_IMPLEMENTED);
 }
 
-async function listDocuments(request, response) {
-  const docs = vaultStore.get(request.user.userId) ?? [];
-  response.json({ documents: docs });
+async function listDocuments(_request, response) {
+  // Empty list keeps any client that polls this from erroring out.
+  return response.status(200).json({ documents: [] });
 }
 
 export { requestUploadUrl, saveDocument, listDocuments };

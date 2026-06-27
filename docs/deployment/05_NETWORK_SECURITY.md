@@ -81,7 +81,7 @@ Enforced end-to-end: Cloudflare edge + Caddy origin, **HSTS preload already set*
 ### B2. Secrets management
 
 **Current state is the biggest security problem:**
-- 🔴 **Live secrets committed to git** in `PROJECT_REFERENCE.md`: Gmail app password `***REMOVED-SECRET***`, `***REMOVED-SECRET***`, `ADMIN_SECRET` value. **Rotate all of them and purge from history** (`git filter-repo`), or the repo is compromised the moment it's pushed.
+- 🔴 **Live secrets committed to git** in `PROJECT_REFERENCE.md`: Gmail app password `<REDACTED-ROTATE-GMAIL-APP-PW>`, `<REDACTED-ROTATE-ADMIN-PW>`, `ADMIN_SECRET` value. **Rotate all of them and purge from history** (`git filter-repo`), or the repo is compromised the moment it's pushed.
 - Env files are correctly gitignored `[.gitignore]` — good.
 - **Action:** move secrets to a manager (Docker secrets / SOPS+age / Cloudflare/Vault). At minimum, keep `.env.*` off git (already so) and store an encrypted backup copy in a private vault.
 - Cross-service shared secrets that **must match**: `ADMIN_SECRET` (worker_backend ↔ node_backend) and `CUSTOMER_BACKEND_ADMIN_SECRET` (admin_backend ↔ node_backend) and the sms-gateway `HMAC_SECRET` (worker_backend ↔ gateway). Rotate these **in lockstep** or sync/OTP starts 403'ing.

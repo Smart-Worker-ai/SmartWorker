@@ -24,6 +24,22 @@ const envSchema = z.object({
   CUSTOM_SMS_GATEWAY_SECRET: z.string().optional(),
   // Firebase — required for customer phone OTP verification
   FIREBASE_PROJECT_ID: z.string().optional(),
+}).superRefine((data, ctx) => {
+  // Hard production guard: the customer API is the system-of-record, so the
+  // secrets protecting it (and the encrypted vault) must be real and strong.
+  // Without this, ADMIN_SECRET silently falls back to a known dev default.
+  if (data.NODE_ENV !== 'production') return;
+  const required = ['JWT_SECRET', 'ENCRYPTION_KEY', 'ADMIN_SECRET'];
+  for (const key of required) {
+    const value = data[key];
+    if (!value || value.length < 32) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [key],
+        message: `must be set and at least 32 characters in production`,
+      });
+    }
+  }
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
@@ -43,7 +59,9 @@ const env = {
   databaseUrl: parsedEnv.data.DATABASE_URL,
   jwtSecret: parsedEnv.data.JWT_SECRET,
   encryptionKey: parsedEnv.data.ENCRYPTION_KEY,
-  adminSecret: parsedEnv.data.ADMIN_SECRET ?? 'admin-dev-secret-change-me',
+  // Dev fallback only outside production; production is guarded above.
+  adminSecret: parsedEnv.data.ADMIN_SECRET
+    ?? (parsedEnv.data.NODE_ENV === 'production' ? undefined : 'admin-dev-secret-change-me'),
   smtpHost: parsedEnv.data.SMTP_HOST,
   smtpPort: parsedEnv.data.SMTP_PORT,
   smtpUser: parsedEnv.data.SMTP_USER,

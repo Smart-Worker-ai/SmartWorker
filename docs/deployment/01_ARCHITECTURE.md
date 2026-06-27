@@ -149,7 +149,7 @@ These come straight from the code and **must** be resolved before real daily use
 1. **`node_backend` SQLite → Postgres.** `pg` is already a dependency; the DB layer must be ported to use `DATABASE_URL`. Until then the customer API is single-host and the Railway FS loses data on redeploy.
 2. **Vault in-memory `Map` → durable encrypted store.** Today every restart deletes all workers' uploaded documents.
 3. **node_backend uploads/Supabase path is undefined** (`env.supabaseUrl` missing) — wire to the same R2 bucket the worker_backend uses, or remove the feature.
-4. **Rotate & purge committed secrets** (Gmail app password `***REMOVED-SECRET***`, `***REMOVED-SECRET***`, `ADMIN_SECRET`).
+4. **Rotate & purge committed secrets** (Gmail app password `<REDACTED-ROTATE-GMAIL-APP-PW>`, `<REDACTED-ROTATE-ADMIN-PW>`, `ADMIN_SECRET`).
 5. **Decide the SMS story**: either wire `node_backend` to the `sms-gateway` (consistent, observable, multi-provider failover) or keep inline Fast2SMS and treat sms-gateway as worker-only. Don't ship both half-wired.
 6. **Reconcile `docker-compose.yml` with the real service set** (add node_backend, sms-gateway, redis, caddy) — see `04_DEPLOYMENT.md`.
 
