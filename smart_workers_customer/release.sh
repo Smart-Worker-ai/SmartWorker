@@ -54,7 +54,7 @@ fi
 TESTERS="${TESTERS:-davidbec968@gmail.com}"
 RELEASE_NOTES="${RELEASE_NOTES:-v1.3.0 build 3 — dark/light themes, smoother UI, deduped widgets, OTP error handling improved}"
 
-echo "── Smart Workers — Customer App Release ──────────────────────────"
+echo "── Crewzo — Customer App Release ──────────────────────────"
 echo "  App ID:   $APP_ID"
 echo "  Testers:  $TESTERS"
 echo "  Notes:    $RELEASE_NOTES"

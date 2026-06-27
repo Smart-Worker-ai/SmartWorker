@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Smart Workers main Node.js backend (customer-facing API)
+# Crewzo main Node.js backend (customer-facing API)
 #
 # STUB. The source for this service is not yet committed to this repo. Once
 # you push the Express/Node sources here, the build below should work

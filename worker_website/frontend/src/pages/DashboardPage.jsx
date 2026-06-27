@@ -52,8 +52,8 @@ function ReferralSection({ worker, isDark }) {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Join Smart Workers',
-          text: 'Download the Smart Workers customer app using my referral link!',
+          title: 'Join Crewzo',
+          text: 'Download the Crewzo customer app using my referral link!',
           url: referral.referral_link,
         });
       } catch { /* user cancelled */ }
@@ -229,7 +229,7 @@ export default function DashboardPage() {
     <div className={`min-h-screen transition-colors duration-300 ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
       <nav className={`border-b px-6 h-14 flex items-center justify-between transition-colors duration-300
         ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
-        <span className={`font-black ${isDark ? 'text-white' : 'text-brand-900'}`}>{t('Smart Workers')}</span>
+        <span className={`font-black ${isDark ? 'text-white' : 'text-brand-900'}`}>{t('Crewzo')}</span>
         <button onClick={logout} className={`flex items-center gap-1.5 text-sm transition-colors
           ${isDark ? 'text-gray-400 hover:text-red-400' : 'text-gray-500 hover:text-red-500'}`}>
           <LogOut className="w-4 h-4" /> {t('Logout')}

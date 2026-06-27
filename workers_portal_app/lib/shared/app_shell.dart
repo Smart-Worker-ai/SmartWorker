@@ -62,7 +62,7 @@ class _AppShellState extends State<AppShell> with TickerProviderStateMixin {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Smart Workers',
+          'Crewzo',
           style: GoogleFonts.inter(fontWeight: FontWeight.w700),
         ),
         actions: [

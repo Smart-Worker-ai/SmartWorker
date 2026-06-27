@@ -24,9 +24,9 @@ The `*_BACKEND_URL` envs already use docker-internal hostnames (`http://node_bac
 
 ### A2. Public endpoints (the only things internet-reachable)
 
-- `api.smartworkers.in` → node_backend (Flutter apps)
-- `workers-api.smartworkers.in` → worker_backend (worker website)
-- `admin-api.smartworkers.in` → admin_backend (admin panel)
+- `api.crewzo.in` → node_backend (Flutter apps)
+- `workers-api.crewzo.in` → worker_backend (worker website)
+- `admin-api.crewzo.in` → admin_backend (admin panel)
 - `workers.` / `admin.` SPAs (Vercel/Pages CDN)
 
 ### A3. Private services (never publicly routable)

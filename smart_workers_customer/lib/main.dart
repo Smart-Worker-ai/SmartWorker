@@ -84,7 +84,7 @@ class CustomerApp extends ConsumerWidget {
       systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
     ));
     return MaterialApp(
-      title: 'SmartWorkers',
+      title: 'Crewzo',
       debugShowCheckedModeBanner: false,
       theme: buildLightTheme(),
       darkTheme: buildDarkTheme(),

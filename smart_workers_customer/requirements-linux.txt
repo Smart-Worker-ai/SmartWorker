@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Smart Workers — Customer App (Flutter)  ·  Linux setup
+# Crewzo — Customer App (Flutter)  ·  Linux setup
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # This file lists everything needed to build the Customer App on Linux.

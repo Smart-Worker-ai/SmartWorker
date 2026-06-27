@@ -118,7 +118,7 @@ SMTP_HOST: str = _optional("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT: int = int(_optional("SMTP_PORT", "587"))
 SMTP_USER: Optional[str] = os.getenv("SMTP_USER")
 SMTP_PASS: Optional[str] = os.getenv("SMTP_PASS")
-SMTP_FROM: str = _optional("SMTP_FROM", SMTP_USER or "noreply@smartworkers.in")
+SMTP_FROM: str = _optional("SMTP_FROM", SMTP_USER or "noreply@crewzo.in")
 
 # ── Session token TTL (worker portal sessions) ──────────────────────────────
 SESSION_TTL_HOURS: int = int(_optional("SESSION_TTL_HOURS", "24"))

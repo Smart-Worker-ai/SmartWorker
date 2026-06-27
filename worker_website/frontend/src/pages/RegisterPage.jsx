@@ -252,7 +252,7 @@ export default function RegisterPage() {
               <User className="w-5 h-5" />
             </div>
             <div>
-              <p className="font-black text-base">{t('Smart Workers')}</p>
+              <p className="font-black text-base">{t('Crewzo')}</p>
               <p className="text-xs text-white/50">{t('Worker Registration')}</p>
             </div>
           </div>

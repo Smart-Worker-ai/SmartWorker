@@ -5,6 +5,6 @@ import 'package:workers_portal_app/main.dart';
 void main() {
   testWidgets('app boots', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: WorkersPortalApp()));
-    expect(find.text('Smart Workers'), findsOneWidget);
+    expect(find.text('Crewzo'), findsOneWidget);
   });
 }

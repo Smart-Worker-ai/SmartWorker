@@ -72,7 +72,7 @@ function Sidebar({ onClose, onBell, unreadCount = 0 }) {
           <Wrench className="w-4 h-4 text-white" />
         </div>
         <div className="flex-1">
-          <div className="font-black text-sm text-white">Smart Workers</div>
+          <div className="font-black text-sm text-white">Crewzo</div>
           <div className="text-xs text-gray-500">Admin Portal v1.0</div>
         </div>
         {/* Desktop notification bell */}
@@ -202,7 +202,7 @@ export default function Layout() {
             <div className="w-7 h-7 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
               <Wrench className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className={`font-bold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>Smart Workers Admin</span>
+            <span className={`font-bold text-sm ${isDark ? 'text-white' : 'text-gray-900'}`}>Crewzo Admin</span>
           </div>
           {/* Notifications bell — mobile */}
           <div className="ml-auto">

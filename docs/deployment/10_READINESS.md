@@ -15,7 +15,7 @@
 - [ ] 🟠 **SMS path decision** — wire node_backend → sms-gateway, or keep inline Fast2SMS; remove the half-wired ambiguity.
 - [ ] 🟠 **node_backend audit log** — add for admin approve/reject/block/delete (worker_backend & sms-gateway already have audit tables).
 - [ ] 🟠 **node_backend OTP rate limit** — add per-IP limiter on `/auth/send-otp` (SMS-cost abuse).
-- [ ] 🟠 **Flutter base URLs** — `api_constants.dart` still points at Railway; switch to `https://api.smartworkers.in` before release; add cert pinning.
+- [ ] 🟠 **Flutter base URLs** — `api_constants.dart` still points at Railway; switch to `https://api.crewzo.in` before release; add cert pinning.
 
 ## B. Infrastructure
 

@@ -1,4 +1,4 @@
-# Smart Workers — Monorepo
+# Crewzo — Monorepo
 
 **GitHub:** https://github.com/d-r-o-g-o/SmartWorker
 

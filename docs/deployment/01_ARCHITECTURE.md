@@ -1,4 +1,4 @@
-# Smart Workers — Production Architecture Report
+# Crewzo — Production Architecture Report
 
 > Derived from the actual codebase (2026-06-26), not generic templates. Every
 > recommendation below is justified by a concrete implementation fact, with the

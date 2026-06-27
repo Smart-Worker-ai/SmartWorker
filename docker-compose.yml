@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Smart Workers — local Docker composition
+# Crewzo — local Docker composition
 #
 # Brings up:
 #   • postgres         — shared DB (worker_backend uses it)
@@ -25,16 +25,21 @@ name: smartworkers
 
 services:
 
-  # ── Postgres ────────────────────────────────────────────────────────────────
+  # ── Postgres (LOCAL DEV ONLY) ────────────────────────────────────────────────
+  # Production uses Neon (managed Postgres) for worker_backend + sms-gateway — set
+  # their connection strings in the env files and DO NOT start this service.
+  # For local development run:  docker compose --profile localdb up
   postgres:
     image: postgres:16-alpine
+    profiles: ["localdb"]
     restart: unless-stopped
     environment:
       POSTGRES_DB:        ${POSTGRES_DB:-smartworkers}
       POSTGRES_USER:      ${POSTGRES_USER:-smartworkers}
-      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      # Local-dev defaults (this service is dev-only; prod uses Neon).
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:-localdevpw}
       # Consumed by ops/postgres-init/01-init.sh on first boot.
-      SMSGW_DB_PASSWORD:  ${SMSGW_DB_PASSWORD:?Set SMSGW_DB_PASSWORD in .env}
+      SMSGW_DB_PASSWORD:  ${SMSGW_DB_PASSWORD:-localdevpw}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # Runs once on first boot (empty data dir) to create the sms_gateway DB + role.
@@ -72,9 +77,6 @@ services:
     env_file: .env.node
     volumes:
       - node_data:/data            # SQLite DB persistence (until PG migration)
-    depends_on:
-      postgres:
-        condition: service_healthy
     expose:
       - "3000"
     healthcheck:
@@ -91,9 +93,8 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file: ./sms-gateway/.env
+    # DB_* points at Neon (sms_gateway database). Only redis is local.
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     expose:
@@ -129,9 +130,8 @@ services:
     volumes:
       - worker_uploads:/app/uploads
       - worker_data:/app/data
+    # DATABASE_URL points at Neon. Alembic runs at boot; restarts until Neon reachable.
     depends_on:
-      postgres:
-        condition: service_healthy
       sms_gateway_api:
         condition: service_started
     expose:
@@ -174,8 +174,6 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command: ["while true; do python -m workers.sync_drain || true; sleep 300; done"]
     depends_on:
-      postgres:
-        condition: service_healthy
       node_backend:
         condition: service_started
 

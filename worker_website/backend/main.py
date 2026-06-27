@@ -36,7 +36,7 @@ structlog.configure(
 log = structlog.get_logger("worker_backend")
 
 
-app = FastAPI(title="Smart Workers — Worker Portal", version="1.1.0")
+app = FastAPI(title="Crewzo — Worker Portal", version="1.1.0")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 

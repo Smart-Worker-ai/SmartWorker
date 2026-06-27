@@ -47,7 +47,7 @@ export default function LandingPage() {
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
               <Wrench className="w-4 h-4 text-white" />
             </div>
-            <span className={`font-black text-lg ${isDark ? 'text-white' : 'text-brand-900'}`}>{t('Smart Workers')}</span>
+            <span className={`font-black text-lg ${isDark ? 'text-white' : 'text-brand-900'}`}>{t('Crewzo')}</span>
           </div>
           <button
             onClick={() => navigate('/register')}
@@ -188,7 +188,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10 sm:mb-12">
             <h2 className={`text-3xl sm:text-4xl font-black mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {t('Why Smart Workers?')}
+              {t('Why Crewzo?')}
             </h2>
           </div>
           <div className="grid sm:grid-cols-3 gap-5 sm:gap-8">
@@ -219,7 +219,7 @@ export default function LandingPage() {
             viewport={{ once: true }}
           >
             <h2 className="text-3xl sm:text-4xl font-black text-white mb-4">{t('Ready to start earning?')}</h2>
-            <p className="text-white/80 text-base sm:text-lg mb-8">{t('Join Smart Workers today. Registration takes less than 5 minutes.')}</p>
+            <p className="text-white/80 text-base sm:text-lg mb-8">{t('Join Crewzo today. Registration takes less than 5 minutes.')}</p>
             <motion.button
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.97 }}
@@ -234,14 +234,14 @@ export default function LandingPage() {
 
       {/* ── Footer ── */}
       <footer className="bg-brand-900 text-white/60 py-8 text-center text-sm">
-        <p>{t('© 2026 Smart Workers. All rights reserved. | Kerala, India')}</p>
+        <p>{t('© 2026 Crewzo. All rights reserved. | Kerala, India')}</p>
         <p className="mt-2">
           <button onClick={() => navigate('/terms')} className="hover:text-white underline transition-colors">
             {t('Terms & Conditions')}
           </button>
           {' · '}
-          <a href="mailto:support@smartworkers.in" className="hover:text-white transition-colors">
-            support@smartworkers.in
+          <a href="mailto:support@crewzo.in" className="hover:text-white transition-colors">
+            support@crewzo.in
           </a>
         </p>
       </footer>

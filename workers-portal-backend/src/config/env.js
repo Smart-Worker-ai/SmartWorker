@@ -16,7 +16,7 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
-  SMTP_FROM: z.string().default('Smart Workers <noreply@smartworkers.in>'),
+  SMTP_FROM: z.string().default('Crewzo <noreply@crewzo.in>'),
   // SMS — Fast2SMS (https://www.fast2sms.com)
   FAST2SMS_API_KEY: z.string().optional(),
   // Custom self-hosted SMS gateway (Android device running SMS Gateway app)

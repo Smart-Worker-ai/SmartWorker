@@ -10,7 +10,7 @@
 | Check | How | Pass condition |
 |---|---|---|
 | Service health | `docker compose ps` | all `Up (healthy)` |
-| External health | `for h in api workers-api admin-api; do curl -fsS https://$h.smartworkers.in/health; done` | 200 ×3 |
+| External health | `for h in api workers-api admin-api; do curl -fsS https://$h.crewzo.in/health; done` | 200 ×3 |
 | Gateway readiness | `curl -fsS https://<internal>/health/ready` or exec `wget -qO- localhost:3100/health/ready` | 200 |
 | Error spike | Sentry dashboard | no new critical |
 | Queue/DLQ | Grafana `queue_depth`, `dlq_size` | depth low, DLQ = 0 |

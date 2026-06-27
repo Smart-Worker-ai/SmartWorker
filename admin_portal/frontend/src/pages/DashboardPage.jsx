@@ -52,7 +52,7 @@ export default function DashboardPage() {
     <div className="p-4 md:p-8 space-y-6 md:space-y-8">
       <div>
         <h1 className="text-xl md:text-2xl font-black text-white">Dashboard</h1>
-        <p className="text-gray-400 text-sm mt-1">Smart Workers analytics overview</p>
+        <p className="text-gray-400 text-sm mt-1">Crewzo analytics overview</p>
       </div>
 
       {/* Stat cards */}

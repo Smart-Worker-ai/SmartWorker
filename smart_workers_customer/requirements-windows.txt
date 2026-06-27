@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Smart Workers — Customer App (Flutter)  ·  Windows setup
+# Crewzo — Customer App (Flutter)  ·  Windows setup
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # This file lists everything needed to build the Customer App on Windows.

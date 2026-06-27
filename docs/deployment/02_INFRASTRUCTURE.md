@@ -76,10 +76,10 @@ Internet
 Cloudflare (TLS edge, WAF, CDN, DDoS)
   │  443 (origin)
 Caddy reverse proxy  ── only 80/443 open on the VM
-  ├── api.smartworkers.in        → node_backend:3000
-  ├── workers-api.smartworkers.in→ worker_backend:8000
-  ├── admin-api.smartworkers.in  → admin_backend:8001
-  └── sms.smartworkers.in (internal-only, optional) → sms-gateway:3100
+  ├── api.crewzo.in        → node_backend:3000
+  ├── workers-api.crewzo.in→ worker_backend:8000
+  ├── admin-api.crewzo.in  → admin_backend:8001
+  └── sms.crewzo.in (internal-only, optional) → sms-gateway:3100
         │
    docker bridge network (private, not published)
         ├── node_backend:3000

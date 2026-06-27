@@ -1,4 +1,4 @@
-# Smart Workers — Full Project Reference
+# Crewzo — Full Project Reference
 
 > Last updated: 2026-04-23  
 > Maintained by: hareesh-tech (hareeshkp2000@gmail.com)  
@@ -10,7 +10,7 @@
 
 1. [Project Overview](#1-project-overview)
 2. [Monorepo Structure](#2-monorepo-structure)
-3. [Product 1 — Smart Workers Customer App (Flutter)](#3-product-1--smart-workers-customer-app-flutter)
+3. [Product 1 — Crewzo Customer App (Flutter)](#3-product-1--smart-workers-customer-app-flutter)
 4. [Product 2 — Workers Portal (Flutter App + Node.js Backend)](#4-product-2--workers-portal-flutter-app--nodejs-backend)
 5. [Product 3 — Worker Registration Website + Admin Portal](#5-product-3--worker-registration-website--admin-portal)
 6. [How All Products Communicate](#6-how-all-products-communicate)
@@ -26,7 +26,7 @@
 
 ## 1. Project Overview
 
-**Smart Workers** is a three-product platform connecting customers needing home services (electricians, plumbers, carpenters, etc.) with verified local workers across Kerala, India.
+**Crewzo** is a three-product platform connecting customers needing home services (electricians, plumbers, carpenters, etc.) with verified local workers across Kerala, India.
 
 | Product | Who Uses It | Technology |
 |---|---|---|
@@ -59,7 +59,7 @@ E:\AJPRO\
 
 ---
 
-## 3. Product 1 — Smart Workers Customer App (Flutter)
+## 3. Product 1 — Crewzo Customer App (Flutter)
 
 ### What it does
 Allows homeowners to:
@@ -424,7 +424,7 @@ firebase appdistribution:distribute workers_portal_app/build/app/outputs/flutter
 | `SMTP_PORT` | `587` |
 | `SMTP_USER` | `hareeshkp2000@gmail.com` |
 | `SMTP_PASS` | `<REDACTED-ROTATE-GMAIL-APP-PW>` (Gmail App Password) |
-| `SMTP_FROM` | `Smart Workers noreply@smartworkers.in` |
+| `SMTP_FROM` | `Crewzo noreply@crewzo.in` |
 | `FAST2SMS_API_KEY` | (optional) Fast2SMS key — needs ₹100 recharge to activate |
 | `CUSTOM_SMS_GATEWAY_URL` | (optional) Android SMS gateway URL |
 | `CUSTOM_SMS_GATEWAY_SECRET` | (optional) Bearer token for Android gateway |

@@ -212,7 +212,7 @@ export default function LoginPage() {
                 transition={{ delay: 0.4 }}
                 className="text-white/50 mt-1.5 text-sm"
               >
-                Smart Workers — Restricted Access
+                Crewzo — Restricted Access
               </motion.p>
             </div>
 
@@ -304,7 +304,7 @@ export default function LoginPage() {
               transition={{ delay: 0.7 }}
               className="text-center text-white/25 text-xs mt-6"
             >
-              © 2026 Smart Workers. Authorized access only.
+              © 2026 Crewzo. Authorized access only.
             </motion.p>
           </div>
         </motion.div>

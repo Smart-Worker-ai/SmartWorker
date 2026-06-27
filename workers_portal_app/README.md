@@ -7,7 +7,7 @@ Flutter feature-first scaffold for the Workers Portal MVP.
 - Custom theme baseline
 - Dio API client with JWT interceptor pattern
 - Secure storage wrapper for auth tokens
-- Welcome screen placeholder for the Smart Workers login experience
+- Welcome screen placeholder for the Crewzo login experience
 
 ## Next Steps
 

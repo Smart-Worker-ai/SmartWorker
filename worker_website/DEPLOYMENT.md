@@ -1,4 +1,4 @@
-# Deployment Guide — Smart Workers Worker Portal
+# Deployment Guide — Crewzo Worker Portal
 
 This document describes how to deploy and operate the Worker Portal
 (`worker_website`) for long-term, day-to-day production use, exposed publicly

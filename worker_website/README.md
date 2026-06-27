@@ -1,6 +1,6 @@
-# Smart Workers — Worker Portal
+# Crewzo — Worker Portal
 
-Worker registration and authentication portal for the Smart Workers platform.
+Worker registration and authentication portal for the Crewzo platform.
 
 - **Backend**: FastAPI (Python) with async SQLAlchemy, PostgreSQL
 - **Frontend**: React 18 + Vite with TailwindCSS
@@ -246,4 +246,4 @@ See docker-compose.yml for full setup.
 
 ## License
 
-Proprietary — Smart Workers Platform
+Proprietary — Crewzo Platform

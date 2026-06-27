@@ -48,7 +48,7 @@ class _TermsScreenState extends State<TermsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Smart Workers — Terms & Conditions',
+                  Text('Crewzo — Terms & Conditions',
                       style: theme.textTheme.titleLarge
                           ?.copyWith(fontWeight: FontWeight.w800)),
                   const SizedBox(height: 4),
@@ -144,9 +144,9 @@ class _Section extends StatelessWidget {
 
 const _sections = [
   ('1. Acceptance of Terms',
-   'By registering or using the Smart Workers platform ("Service"), you agree to be bound by these Terms & Conditions. If you do not agree, please do not use the Service.'),
+   'By registering or using the Crewzo platform ("Service"), you agree to be bound by these Terms & Conditions. If you do not agree, please do not use the Service.'),
   ('2. Description of Service',
-   'Smart Workers connects customers with skilled tradespeople ("Workers") for home and commercial services in Kerala. We act as a platform intermediary and do not directly employ Workers.'),
+   'Crewzo connects customers with skilled tradespeople ("Workers") for home and commercial services in Kerala. We act as a platform intermediary and do not directly employ Workers.'),
   ('3. User Eligibility',
    'You must be at least 18 years of age to use this Service. By registering, you confirm that all information you provide is accurate and up-to-date.'),
   ('4. Bookings & Payments',
@@ -156,7 +156,7 @@ const _sections = [
   ('6. Grievances',
    'If you have a complaint regarding a Worker or service, you may submit a grievance through the app. Our team will review it within 48 hours and take appropriate action.'),
   ('7. Limitation of Liability',
-   'Smart Workers is a marketplace platform. We are not liable for the quality of services provided by Workers, property damage caused by Workers, or any indirect or consequential damages arising from use of the platform.'),
+   'Crewzo is a marketplace platform. We are not liable for the quality of services provided by Workers, property damage caused by Workers, or any indirect or consequential damages arising from use of the platform.'),
   ('8. Privacy',
    'Your personal data (name, phone number, email, booking history) is stored securely and used solely to facilitate the Service. We do not sell your data to third parties. Phone numbers are verified via Firebase Authentication.'),
   ('9. Modifications',
@@ -164,5 +164,5 @@ const _sections = [
   ('10. Governing Law',
    'These Terms are governed by the laws of India. Any disputes shall be subject to the jurisdiction of courts in Kerala, India.'),
   ('11. Contact',
-   'For questions or concerns, contact us at support@smartworkers.in.'),
+   'For questions or concerns, contact us at support@crewzo.in.'),
 ];

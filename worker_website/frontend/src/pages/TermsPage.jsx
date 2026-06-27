@@ -7,7 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 // Both English source and Malayalam translation live in the ThemeContext dictionary.
 const SECTIONS = [
   ['1. Acceptance',
-    'By registering on Smart Workers, you agree to these Terms & Conditions. If you do not agree, do not register.'],
+    'By registering on Crewzo, you agree to these Terms & Conditions. If you do not agree, do not register.'],
   ['2. Eligibility',
     'You must be at least 18 years of age and a resident of India. You must possess the skills you claim to offer.'],
   ['3. Document Verification',
@@ -15,7 +15,7 @@ const SECTIONS = [
   ['4. Code of Conduct',
     'Workers must maintain professional conduct at all times. Harassment, fraud, or unprofessional behavior will result in permanent account suspension.'],
   ['5. Payments & Rates',
-    'Smart Workers facilitates connections. Customers pay based on your listed daily rate. Smart Workers does not deduct any commission — you keep 100% of the agreed amount.'],
+    'Crewzo facilitates connections. Customers pay based on your listed daily rate. Crewzo does not deduct any commission — you keep 100% of the agreed amount.'],
   ['6. Availability',
     'You are responsible for keeping your availability accurate. Repeated no-shows to confirmed bookings will result in account suspension.'],
   ['7. Facilities & Requests',
@@ -23,7 +23,7 @@ const SECTIONS = [
   ['8. Privacy',
     'Your Aadhaar and passbook documents are stored securely and used only for identity verification. They are not shared with third parties or customers.'],
   ['9. Account Suspension',
-    'Smart Workers reserves the right to suspend or permanently block accounts for violations of these terms, fraudulent activity, or upon receiving substantiated complaints.'],
+    'Crewzo reserves the right to suspend or permanently block accounts for violations of these terms, fraudulent activity, or upon receiving substantiated complaints.'],
   ['10. Governing Law',
     'These Terms are governed by Indian law. Disputes shall be resolved in courts in Kerala, India.'],
 ];
@@ -46,7 +46,7 @@ export default function TermsPage() {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-6 py-10">
           <h1 className={`text-3xl font-black mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            {t('Smart Workers Worker Terms')}
+            {t('Crewzo Worker Terms')}
           </h1>
           <p className={`text-sm mb-10 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{t('Last updated: April 2026')}</p>
 

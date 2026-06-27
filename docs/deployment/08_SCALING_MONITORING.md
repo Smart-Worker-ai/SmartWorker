@@ -90,7 +90,7 @@ Use `/health/ready` (not `/health`) for the gateway in load-balancer/uptime chec
 
 ### B5. Uptime monitoring
 
-UptimeRobot / Better Stack hitting all four health endpoints from outside Cloudflare every 1–5 min. Public `status.smartworkers.in` page optional. Alert on 2 consecutive failures.
+UptimeRobot / Better Stack hitting all four health endpoints from outside Cloudflare every 1–5 min. Public `status.crewzo.in` page optional. Alert on 2 consecutive failures.
 
 ### B6. Performance monitoring
 

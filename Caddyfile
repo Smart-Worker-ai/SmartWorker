@@ -1,7 +1,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Caddy reverse proxy with auto-HTTPS (Let's Encrypt).
 #
-# Replace `smartworkers.in` with your real domain. DNS A records for the four
+# Replace `crewzo.in` with your real domain. DNS A records for the four
 # subdomains below must point at this server's public IP. Cloudflare proxy
 # (orange cloud) is fine — Caddy uses the HTTP-01 challenge by default which
 # works through Cloudflare proxy as long as port 80 is reachable.
@@ -9,7 +9,7 @@
 
 {
     # Global options
-    email ops@smartworkers.in
+    email ops@crewzo.in
     # Uncomment for staging certs while testing:
     # acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
     servers {
@@ -18,7 +18,7 @@
 }
 
 # ── Customer-facing API (Node.js) ───────────────────────────────────────────
-api.smartworkers.in {
+api.crewzo.in {
     encode gzip zstd
     reverse_proxy node_backend:3000 {
         header_up X-Real-IP {remote_host}
@@ -39,7 +39,7 @@ api.smartworkers.in {
 }
 
 # ── Worker Registration API (FastAPI) ───────────────────────────────────────
-workers-api.smartworkers.in {
+workers-api.crewzo.in {
     encode gzip zstd
     reverse_proxy worker_backend:8000 {
         header_up X-Real-IP {remote_host}
@@ -60,7 +60,7 @@ workers-api.smartworkers.in {
 }
 
 # ── Admin Portal API (FastAPI) ──────────────────────────────────────────────
-admin-api.smartworkers.in {
+admin-api.crewzo.in {
     encode gzip zstd
     reverse_proxy admin_backend:8001 {
         header_up X-Real-IP {remote_host}
@@ -81,6 +81,6 @@ admin-api.smartworkers.in {
 }
 
 # ── Root domain redirect (optional) ─────────────────────────────────────────
-smartworkers.in, www.smartworkers.in {
-    redir https://workers.smartworkers.in{uri} permanent
+crewzo.in, www.crewzo.in {
+    redir https://workers.crewzo.in{uri} permanent
 }

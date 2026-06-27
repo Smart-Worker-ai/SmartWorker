@@ -1,4 +1,4 @@
-# Smart Workers — Production Deployment
+# Crewzo — Production Deployment
 
 End-to-end runbook for shipping the three backends (Node.js + 2× FastAPI) to
 a single VPS behind Caddy with Postgres and Cloudflare R2.
@@ -15,7 +15,7 @@ Customer App APK ships through Firebase App Distribution — see
 
 | Thing | Where |
 |---|---|
-| Domain (e.g. `smartworkers.in`) | Namecheap / Cloudflare Registrar (~$8/yr `.in`) |
+| Domain (e.g. `crewzo.in`) | Namecheap / Cloudflare Registrar (~$8/yr `.in`) |
 | DNS provider | **Cloudflare** (free, mandatory — also fronts DDoS, CDN, WAF) |
 | VPS | Hetzner CX22 (€4.50/mo, 2 vCPU, 4 GB) — Ubuntu 24.04 LTS |
 | Postgres | Neon free tier (0.5 GB) OR the postgres container in compose |
@@ -27,17 +27,17 @@ Customer App APK ships through Firebase App Distribution — see
 
 ### 2.1 Domain → Cloudflare
 
-1. Add `smartworkers.in` to Cloudflare. Update registrar nameservers.
+1. Add `crewzo.in` to Cloudflare. Update registrar nameservers.
 2. In Cloudflare DNS, create these A records pointing at the VPS public IP:
-   - `api.smartworkers.in`
-   - `workers-api.smartworkers.in`
-   - `admin-api.smartworkers.in`
+   - `api.crewzo.in`
+   - `workers-api.crewzo.in`
+   - `admin-api.crewzo.in`
 3. Proxy status: **DNS only** (grey cloud) at first so Let's Encrypt can issue
    certs. After Caddy reports certs ready, flip them to **Proxied** (orange
    cloud).
 4. Vercel CNAMEs for the frontends:
-   - `workers.smartworkers.in` → `cname.vercel-dns.com` (worker website project)
-   - `admin.smartworkers.in`   → `cname.vercel-dns.com` (admin portal project)
+   - `workers.crewzo.in` → `cname.vercel-dns.com` (worker website project)
+   - `admin.crewzo.in`   → `cname.vercel-dns.com` (admin portal project)
 
 ### 2.2 R2 bucket
 
@@ -111,9 +111,9 @@ Watch for:
 
 Verify externally:
 ```bash
-curl -I https://workers-api.smartworkers.in/health
-curl -I https://admin-api.smartworkers.in/health
-curl -I https://api.smartworkers.in/health
+curl -I https://workers-api.crewzo.in/health
+curl -I https://admin-api.crewzo.in/health
+curl -I https://api.crewzo.in/health
 ```
 
 Once all three return 200, flip Cloudflare DNS to **Proxied** (orange cloud).

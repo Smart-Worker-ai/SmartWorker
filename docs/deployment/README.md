@@ -1,4 +1,4 @@
-# Smart Workers — Production Deployment Documentation
+# Crewzo — Production Deployment Documentation
 
 Complete, codebase-derived production architecture & operations set. Every claim
 is traced to a source file. Read in order; `01` establishes the facts the rest

@@ -1,4 +1,4 @@
-# Smart Workers — Production Deployment Guide
+# Crewzo — Production Deployment Guide
 
 > Complete, end-to-end runbook for the **whole** system. This supersedes the
 > partial root `docker-compose.yml` (which omits `node_backend`, `sms-gateway`,
@@ -33,7 +33,7 @@
 
 ## 1. Prerequisites
 
-- Domain (e.g. `smartworkers.in`) on Cloudflare DNS.
+- Domain (e.g. `crewzo.in`) on Cloudflare DNS.
 - A VPS (CX32) running Ubuntu 24.04.
 - Cloudflare R2 bucket + API token (Object Read&Write).
 - SMTP provider creds (Resend).
@@ -100,18 +100,30 @@ For sms-gateway set: `HMAC_SECRET`, `DB_*` (point at the `sms_gateway` DB), `RED
 
 ---
 
-## 5. Postgres bootstrap (two databases + roles)
+## 5. Database — Neon (managed Postgres)
 
-Populate the currently-empty `ops/postgres-init/` so the Postgres container creates both DBs on first run:
+Production uses **Neon**. The local `postgres` service in `docker-compose.yml` is
+behind the `localdb` profile (dev only) and is **not** started in production.
 
-```sql
--- ops/postgres-init/01-init.sql
-CREATE DATABASE smartworkers;
-CREATE DATABASE sms_gateway;
-CREATE ROLE smsgw LOGIN PASSWORD :'smsgw_pw';
-GRANT ALL PRIVILEGES ON DATABASE sms_gateway TO smsgw;
-```
-(`worker_backend` runs its own Alembic migrations on boot; sms-gateway creates its tables on boot.)
+In the Neon console:
+
+1. Create a project (region nearest your users).
+2. Create **two databases**: `smartworkers` (worker_backend) and `sms_gateway`
+   (sms-gateway). Neon's default DB can be one of them; add the second.
+3. Copy each connection string into the env files:
+   - `smartworkers` → `DATABASE_URL` in `.env.worker`
+   - `sms_gateway` → `DB_HOST/DB_NAME/DB_USER/DB_PASSWORD` (with `DB_SSL=true`) in `sms-gateway/.env`
+4. Keep **SSL on** (Neon requires it).
+
+`worker_backend` runs `alembic upgrade head` on boot; `sms-gateway` creates its
+tables on boot — no manual schema step.
+
+> `node_backend` stays on **SQLite** on the `node_data` volume for v1 (single
+> replica, nightly backups). Migrate it to Neon post-launch (`docs/deployment/04_DATABASE.md §6`).
+
+**Local dev only** — to run a throwaway Postgres instead of Neon:
+`docker compose --profile localdb up`. The `ops/postgres-init/01-init.sh` script
+then creates the `sms_gateway` DB + `smsgw` role automatically.
 
 ---
 
@@ -177,7 +189,7 @@ volumes:
 1. In Cloudflare DNS add A records `api`, `workers-api`, `admin-api` → VPS IP, **grey cloud** initially.
 2. CNAME `workers`, `admin` → Vercel/Pages.
 3. `docker compose up -d caddy` → Caddy gets Let's Encrypt certs (HTTP-01).
-4. Verify: `curl -I https://api.smartworkers.in/health` (and the other two) → 200.
+4. Verify: `curl -I https://api.crewzo.in/health` (and the other two) → 200.
 5. Flip the three A records to **orange (Proxied)**; set Cloudflare SSL = **Full (strict)**.
 
 (Full DNS table in `docs/deployment/03_DNS.md`.)
@@ -207,7 +219,7 @@ Watch for: Caddy "certificate obtained" ×3; worker_backend `alembic ... done`; 
 
 **Smoke test (do every deploy):**
 ```bash
-for h in api workers-api admin-api; do curl -fsS https://$h.smartworkers.in/health && echo " $h OK"; done
+for h in api workers-api admin-api; do curl -fsS https://$h.crewzo.in/health && echo " $h OK"; done
 # functional: request OTP, register a worker, approve in admin → confirm it
 # appears in node_backend /workers (the x-admin-secret sync path).
 ```
@@ -222,7 +234,7 @@ Deploy/start order (shared secrets + dependencies): postgres+redis → node_back
 cd worker_website/frontend && npm ci && npm run build   # dist/ → Vercel
 cd admin_portal/frontend  && npm ci && npm run build    # dist/ → Vercel
 ```
-`vercel.json` already rewrites `/api/*` to the backend hosts. Set the production rewrite targets to `https://workers-api.smartworkers.in` and `https://admin-api.smartworkers.in` (not the old Railway URLs).
+`vercel.json` already rewrites `/api/*` to the backend hosts. Set the production rewrite targets to `https://workers-api.crewzo.in` and `https://admin-api.crewzo.in` (not the old Railway URLs).
 
 ## 11. Mobile apps
 
@@ -231,7 +243,7 @@ cd admin_portal/frontend  && npm ci && npm run build    # dist/ → Vercel
 flutter build apk --release
 firebase appdistribution:distribute build/app/outputs/flutter-apk/app-release.apk --app <APP_ID> --testers <emails>
 ```
-Customer app: same, plus ensure `api_constants.dart` `baseUrl` points at `https://api.smartworkers.in/api/v1` (currently the Railway URL — update before release).
+Customer app: same, plus ensure `api_constants.dart` `baseUrl` points at `https://api.crewzo.in/api/v1` (currently the Railway URL — update before release).
 
 ---
 
