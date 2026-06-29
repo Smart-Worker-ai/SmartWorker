@@ -231,10 +231,18 @@ Deploy/start order (shared secrets + dependencies): postgres+redis → node_back
 ## 10. Frontends (SPAs)
 
 ```bash
-cd worker_website/frontend && npm ci && npm run build   # dist/ → Vercel
-cd admin_portal/frontend  && npm ci && npm run build    # dist/ → Vercel
+cd customer_website/frontend && npm ci && npm run build  # customer site (talks to node_backend)
+cd worker_website/frontend   && npm ci && npm run build  # dist/ → Vercel
+cd admin_portal/frontend     && npm ci && npm run build  # dist/ → Vercel
 ```
-`vercel.json` already rewrites `/api/*` to the backend hosts. Set the production rewrite targets to `https://workers-api.crewzo.in` and `https://admin-api.crewzo.in` (not the old Railway URLs).
+Each `vercel.json` already rewrites `/api/*` to the right backend host:
+customer → `https://api.crewzo.in`, worker → `https://workers-api.crewzo.in`,
+admin → `https://admin-api.crewzo.in`.
+
+The **customer website** is also built into the Docker stack (`customer_frontend`
+service) and served by Caddy at the **root domain** (`crewzo.in`) — pick one
+hosting path (Docker+Caddy *or* Vercel) and point DNS accordingly. It is the main
+customer entry point; the Flutter customer app is shelved for now.
 
 ## 11. Mobile apps
 

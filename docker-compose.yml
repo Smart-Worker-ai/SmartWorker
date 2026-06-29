@@ -80,7 +80,7 @@ services:
     expose:
       - "3000"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -193,6 +193,21 @@ services:
       - node_backend
       - worker_backend
       - admin_backend
+      - customer_frontend
+
+  # ── Customer Website frontend (nginx + React) ───────────────────────────────
+  # Customer-facing SPA; proxies /api to node_backend. The main customer entry
+  # point (the Flutter customer app is shelved for now).
+  customer_frontend:
+    build:
+      context: ./customer_website/frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      node_backend:
+        condition: service_started
 
   # ── Worker Website frontend (nginx + React) ─────────────────────────────────
   worker_frontend:

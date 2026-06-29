@@ -80,7 +80,26 @@ admin-api.crewzo.in {
     }
 }
 
-# ── Root domain redirect (optional) ─────────────────────────────────────────
+# ── Customer Website (root domain — main customer entry point) ───────────────
+# If you instead host the SPA on Vercel/Pages, point the DNS there and delete
+# this block. Served here from the customer_frontend nginx container, which
+# proxies /api to node_backend.
 crewzo.in, www.crewzo.in {
-    redir https://workers.crewzo.in{uri} permanent
+    encode gzip zstd
+    reverse_proxy customer_frontend:80 {
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+    log {
+        output stdout
+        format json
+    }
 }
