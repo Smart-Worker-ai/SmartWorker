@@ -53,9 +53,37 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
-      <footer className="border-t border-slate-200 bg-white py-6 text-center text-sm text-slate-400">
-        © {new Date().getFullYear()} Crewzo — trusted local workers in Kerala.
+      <footer className="mt-12 border-t border-slate-200 bg-white">
+        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-8 px-4 py-10 sm:grid-cols-4">
+          <div className="col-span-2 sm:col-span-1">
+            <span className="text-xl font-extrabold text-brand-600">Crewzo</span>
+            <p className="mt-2 text-sm text-slate-500">
+              Trusted, verified local workers across Kerala — booked in minutes.
+            </p>
+          </div>
+          <FooterCol title="Services" items={['Plumber', 'Electrician', 'Cleaner', 'Carpenter']} />
+          <FooterCol title="Company" items={['About', 'How it works', 'Careers', 'Contact']} />
+          <FooterCol title="Support" items={['Help centre', 'Raise a complaint', 'Terms', 'Privacy']} />
+        </div>
+        <div className="border-t border-slate-100 py-4 text-center text-sm text-slate-400">
+          © {new Date().getFullYear()} Crewzo. All rights reserved.
+        </div>
       </footer>
+    </div>
+  );
+}
+
+function FooterCol({ title, items }) {
+  return (
+    <div>
+      <h4 className="mb-3 text-sm font-semibold text-ink">{title}</h4>
+      <ul className="space-y-2 text-sm text-slate-500">
+        {items.map((i) => (
+          <li key={i} className="cursor-pointer transition hover:text-brand-600">
+            {i}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

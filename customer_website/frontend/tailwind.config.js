@@ -4,13 +4,23 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Brand cyan (from the Crewzo logo).
         brand: {
-          50: '#eef6ff',
-          100: '#d9eaff',
-          500: '#2f7df6',
-          600: '#1f6ae0',
-          700: '#1a55b3',
+          50: '#ecfbff',
+          100: '#d2f4fd',
+          200: '#a8e9fb',
+          300: '#6fd9f7',
+          400: '#2fc4ef',
+          500: '#12b3e3',
+          600: '#0a93c2',
+          700: '#0c759c',
+          800: '#11627f',
+          900: '#14536b',
         },
+        ink: '#0b2330',
+      },
+      fontFamily: {
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
     },
   },
