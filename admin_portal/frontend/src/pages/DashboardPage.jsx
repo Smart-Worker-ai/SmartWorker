@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line, CartesianGrid } from 'recharts';
-import { Users, HardHat, BookOpen, CheckCircle, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Users, HardHat, BookOpen, CheckCircle, AlertTriangle, TrendingUp, Trophy } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import api from '../api';
 
