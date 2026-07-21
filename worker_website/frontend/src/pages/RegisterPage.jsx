@@ -52,11 +52,11 @@ function FileDropzone({ label, hint, accept, maxSizeMb, file, onFile, onError })
     },
   });
   const idle = isDark
-    ? 'border-gray-700 hover:border-indigo-400 hover:bg-gray-800/60 bg-gray-900'
-    : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50 bg-white';
+    ? 'border-gray-700 hover:border-brand-400 hover:bg-gray-800/60 bg-gray-900'
+    : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50 bg-white';
   const drag = isDark
-    ? 'border-indigo-400 bg-indigo-950/40 scale-[1.01]'
-    : 'border-indigo-400 bg-indigo-50 scale-[1.01]';
+    ? 'border-brand-400 bg-brand-950/40 scale-[1.01]'
+    : 'border-brand-400 bg-brand-50 scale-[1.01]';
   const filled = isDark
     ? 'border-emerald-500 bg-emerald-950/30'
     : 'border-emerald-400 bg-emerald-50';
@@ -115,7 +115,7 @@ function InputField({ label, error, children }) {
 }
 
 const inputCls = (isDark) => `w-full border rounded-xl px-4 py-3.5 text-sm
-  focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+  focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent
   transition-all duration-150 ${isDark
     ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:bg-gray-800'
     : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:bg-white'}`;
@@ -242,13 +242,13 @@ export default function RegisterPage() {
     <div className={`min-h-screen flex flex-col md:flex-row ${isDark ? 'bg-gray-950' : 'bg-slate-50'}`}>
 
       {/* ── Sidebar (desktop) ── */}
-      <aside className="hidden md:flex md:w-72 lg:w-80 bg-gradient-to-b from-slate-900 to-indigo-950 text-white flex-col shrink-0 sticky top-0 h-screen">
+      <aside className="hidden md:flex md:w-72 lg:w-80 bg-gradient-to-b from-brand-900 to-brand-950 text-white flex-col shrink-0 sticky top-0 h-screen">
         <div className="p-8 border-b border-white/10">
           <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-8 text-sm">
             <ArrowLeft className="w-4 h-4" /> {t('Back')}
           </button>
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center">
               <User className="w-5 h-5" />
             </div>
             <div>
@@ -265,7 +265,7 @@ export default function RegisterPage() {
             const active = i === step;
             return (
               <div key={s.key} className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200
-                ${active ? 'bg-indigo-600 shadow-lg shadow-indigo-900/40' : done ? 'bg-white/5' : 'opacity-40'}`}>
+                ${active ? 'bg-brand-600 shadow-lg shadow-brand-800/40' : done ? 'bg-white/5' : 'opacity-40'}`}>
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
                   ${active ? 'bg-white/20' : done ? 'bg-emerald-500' : 'bg-white/10'}`}>
                   {done ? <CheckCircle className="w-4 h-4 text-white" /> : <Icon className="w-4 h-4 text-white" />}
@@ -274,7 +274,7 @@ export default function RegisterPage() {
                   <p className={`text-sm font-semibold ${active ? 'text-white' : 'text-white/70'}`}>{t(s.key)}</p>
                   <p className="text-xs text-white/40">{t(s.descKey)}</p>
                 </div>
-                {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-300" />}
+                {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-300" />}
               </div>
             );
           })}
@@ -305,7 +305,7 @@ export default function RegisterPage() {
           </button>
           <span className={`font-bold flex-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>{t('Worker Registration')}</span>
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full
-            ${isDark ? 'text-indigo-300 bg-indigo-900/40' : 'text-indigo-600 bg-indigo-50'}`}>
+            ${isDark ? 'text-brand-300 bg-brand-800/40' : 'text-brand-600 bg-brand-50'}`}>
             {step + 1}/{STEPS.length}
           </span>
         </header>
@@ -316,10 +316,10 @@ export default function RegisterPage() {
           <div className="flex items-center gap-2 mb-2">
             {STEPS.map((s, i) => (
               <div key={i} className={`flex-1 h-1.5 rounded-full transition-all duration-300
-                ${i < step ? 'bg-emerald-500' : i === step ? 'bg-indigo-600' : (isDark ? 'bg-gray-800' : 'bg-slate-100')}`} />
+                ${i < step ? 'bg-emerald-500' : i === step ? 'bg-brand-600' : (isDark ? 'bg-gray-800' : 'bg-slate-100')}`} />
             ))}
           </div>
-          <p className={`text-xs font-semibold ${isDark ? 'text-indigo-300' : 'text-indigo-700'}`}>
+          <p className={`text-xs font-semibold ${isDark ? 'text-brand-300' : 'text-brand-700'}`}>
             {t(STEPS[step].key)} — {t(STEPS[step].descKey)}
           </p>
         </div>
@@ -328,7 +328,7 @@ export default function RegisterPage() {
         <div className="flex-1 px-4 sm:px-8 py-6 sm:py-10 max-w-2xl w-full mx-auto">
 
           <div className="flex items-center gap-4 mb-8">
-            <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
+            <div className="w-12 h-12 bg-brand-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-200">
               <StepIcon className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -400,7 +400,7 @@ export default function RegisterPage() {
                             },
                           })}
                           onInput={(e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10); }}
-                          className={`flex-1 px-4 py-3.5 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                          className={`flex-1 px-4 py-3.5 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500
                             ${isDark ? 'bg-gray-800 text-white' : 'bg-slate-50 text-slate-900'}`}
                           placeholder="9876543210"
                         />
@@ -422,9 +422,9 @@ export default function RegisterPage() {
                       })} className={inputCls(isDark)} rows={2} placeholder={t('House No., Street, City, District')} />
                     </InputField>
                     <div className={`border rounded-xl p-4 flex gap-3 items-center transition-colors
-                      ${isDark ? 'bg-indigo-950/40 border-indigo-900/60' : 'bg-indigo-50 border-indigo-100'}`}>
-                      <ShieldCheck className={`w-5 h-5 shrink-0 ${isDark ? 'text-indigo-400' : 'text-indigo-500'}`} />
-                      <p className={`text-xs font-medium ${isDark ? 'text-indigo-300' : 'text-indigo-700'}`}>
+                      ${isDark ? 'bg-brand-950/40 border-brand-800/60' : 'bg-brand-50 border-brand-100'}`}>
+                      <ShieldCheck className={`w-5 h-5 shrink-0 ${isDark ? 'text-brand-400' : 'text-brand-500'}`} />
+                      <p className={`text-xs font-medium ${isDark ? 'text-brand-300' : 'text-brand-700'}`}>
                         {t('Your details are private and will never be shared.')}
                       </p>
                     </div>
@@ -562,14 +562,14 @@ export default function RegisterPage() {
                           type="checkbox"
                           checked={termsAccepted}
                           onChange={(e) => setTermsAccepted(e.target.checked)}
-                          className="mt-0.5 w-5 h-5 accent-indigo-600 shrink-0"
+                          className="mt-0.5 w-5 h-5 accent-brand-600 shrink-0"
                         />
                         <span className={`text-sm leading-relaxed ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>
                           {t('I have read and agree to the')}{' '}
                           <button
                             type="button"
                             onClick={() => window.open('/terms', '_blank', 'noopener,noreferrer')}
-                            className="text-indigo-600 hover:text-indigo-700 underline font-semibold"
+                            className="text-brand-600 hover:text-brand-700 underline font-semibold"
                           >
                             {t('Terms & Conditions')}
                           </button>
@@ -592,7 +592,7 @@ export default function RegisterPage() {
               )}
               {step < STEPS.length - 1 ? (
                 <button type="button" onClick={nextStep}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-200 text-sm">
+                  className="flex-1 bg-brand-600 hover:bg-brand-700 active:scale-[0.99] text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand-200 text-sm">
                   {t('Continue')} <ArrowRight className="w-4 h-4" />
                 </button>
               ) : (
@@ -600,10 +600,10 @@ export default function RegisterPage() {
                   type="submit"
                   disabled={loading || !termsAccepted}
                   title={!termsAccepted ? 'Accept the Terms & Conditions to enable submit' : ''}
-                  className={`flex-1 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-200 text-sm
+                  className={`flex-1 font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand-200 text-sm
                     ${isDark
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-700 disabled:to-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white'
-                      : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white'
+                      ? 'bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-700 hover:to-purple-700 disabled:from-gray-700 disabled:to-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white'
+                      : 'bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-700 hover:to-purple-700 disabled:from-slate-200 disabled:to-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white'
                     }`}>
                   {loading ? (
                     <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> {t('Submitting…')}</>

@@ -6,6 +6,7 @@ import RegisterPage from './pages/RegisterPage';
 import TermsPage from './pages/TermsPage';
 import SuccessPage from './pages/SuccessPage';
 import DashboardPage from './pages/DashboardPage';
+import AdminPortal from './pages/AdminPortal';
 import { useTheme } from './context/ThemeContext';
 
 function FloatingSettings() {
@@ -29,7 +30,7 @@ function FloatingSettings() {
               isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'
             }`}
           >
-            {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-500" />}
+            {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-brand-500" />}
             {isDark ? t('Light Mode') : t('Dark Mode')}
           </button>
           <button
@@ -45,7 +46,7 @@ function FloatingSettings() {
       )}
       <button
         onClick={() => setOpen(!open)}
-        className="w-12 h-12 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/30 flex items-center justify-center transition-all active:scale-95"
+        className="w-12 h-12 rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-lg shadow-brand-500/30 flex items-center justify-center transition-all active:scale-95"
         aria-label={t('Settings')}
         title={t('Settings')}
       >
@@ -64,6 +65,7 @@ export default function App() {
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/success" element={<SuccessPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/admin" element={<AdminPortal />} />
       </Routes>
       <FloatingSettings />
     </>
