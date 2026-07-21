@@ -23,7 +23,8 @@ const ML = {
 
 export function ThemeProvider({ children }) {
   const [isDark, setIsDark] = useState(() => {
-    return localStorage.getItem('sw_theme') === 'dark';
+    const stored = localStorage.getItem('sw_theme');
+    return stored ? stored === 'dark' : false; // Default to light mode
   });
   const [lang, setLang] = useState(() => {
     return localStorage.getItem('sw_lang') || 'en';
