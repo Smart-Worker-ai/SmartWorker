@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Wrench, ShieldCheck, TrendingUp, MapPin, Star, Users, ArrowRight, Zap } from 'lucide-react';
+import { Wrench, ShieldCheck, TrendingUp, MapPin, Star, Users, ArrowRight, Zap, Lightbulb, Droplets, Hammer, Wind, Paintbrush, Layers, Flame, Plus } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
 export default function LandingPage() {
@@ -15,14 +15,14 @@ export default function LandingPage() {
   ];
 
   const SERVICES = [
-    { name: t('Electrician'),   emoji: '⚡', color: 'from-yellow-400 to-orange-500' },
-    { name: t('Plumber'),       emoji: '🔧', color: 'from-blue-400 to-cyan-500' },
-    { name: t('Carpenter'),     emoji: '🪚', color: 'from-amber-400 to-yellow-500' },
-    { name: t('AC Technician'), emoji: '❄️', color: 'from-sky-400 to-blue-500' },
-    { name: t('Painter'),       emoji: '🎨', color: 'from-pink-400 to-rose-500' },
-    { name: t('Mason'),         emoji: '🧱', color: 'from-orange-400 to-red-500' },
-    { name: t('Welder'),        emoji: '🔥', color: 'from-red-400 to-orange-500' },
-    { name: t('More...'),       emoji: '➕', color: 'from-purple-400 to-indigo-500' },
+    { name: t('Electrician'),   Icon: Lightbulb, color: 'from-yellow-400 to-orange-500' },
+    { name: t('Plumber'),       Icon: Droplets, color: 'from-blue-400 to-cyan-500' },
+    { name: t('Carpenter'),     Icon: Hammer, color: 'from-amber-400 to-yellow-500' },
+    { name: t('AC Technician'), Icon: Wind, color: 'from-sky-400 to-blue-500' },
+    { name: t('Painter'),       Icon: Paintbrush, color: 'from-pink-400 to-rose-500' },
+    { name: t('Mason'),         Icon: Layers, color: 'from-orange-400 to-red-500' },
+    { name: t('Welder'),        Icon: Flame, color: 'from-red-400 to-orange-500' },
+    { name: t('More...'),       Icon: Plus, color: 'from-purple-400 to-indigo-500' },
   ];
 
   const HOW = [
@@ -147,7 +147,7 @@ export default function LandingPage() {
                 whileHover={{ scale: 1.05, y: -4 }}
                 className={`bg-gradient-to-br ${s.color} p-6 rounded-2xl text-center text-white cursor-pointer shadow-md`}
               >
-                <div className="text-4xl mb-2">{s.emoji}</div>
+                <s.Icon className="w-10 h-10 mx-auto mb-3 text-white" strokeWidth={1.5} />
                 <div className="font-bold text-sm">{s.name}</div>
               </motion.div>
             ))}
