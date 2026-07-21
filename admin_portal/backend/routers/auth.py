@@ -12,8 +12,6 @@ Backward compat: returns `token` in body too so any old caller that still
 reads it keeps working during the transition. Frontend should ignore it.
 """
 
-from __future__ import annotations
-
 import secrets
 from datetime import datetime, timedelta, timezone
 
