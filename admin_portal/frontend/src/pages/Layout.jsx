@@ -10,11 +10,11 @@ import { useTheme } from '../context/ThemeContext';
 import NotificationsPanel, { useNotificationsBadge } from './NotificationsPanel';
 
 const NAV = [
-  { to: '/',           icon: LayoutDashboard,      label: 'Dashboard',  mlLabel: 'ഡാഷ്‌ബോർഡ്',  color: 'from-blue-500 to-indigo-600' },
-  { to: '/customers',  icon: Users,                label: 'Customers',  mlLabel: 'ഉപഭോക്താക്കൾ', color: 'from-emerald-500 to-teal-600' },
-  { to: '/workers',    icon: HardHat,              label: 'Workers',    mlLabel: 'തൊഴിലാളികൾ',  color: 'from-violet-500 to-purple-600' },
-  { to: '/bookings',   icon: BookOpen,             label: 'Bookings',   mlLabel: 'ബുക്കിംഗ്',    color: 'from-amber-500 to-orange-600' },
-  { to: '/grievances', icon: MessageSquareWarning, label: 'Grievances', mlLabel: 'പരാതികൾ',     color: 'from-rose-500 to-pink-600' },
+  { to: '/',           icon: LayoutDashboard,      label: 'Dashboard',  mlLabel: 'ഡാഷ്‌ബോർഡ്',  color: 'from-brand-500 to-brand-600' },
+  { to: '/customers',  icon: Users,                label: 'Customers',  mlLabel: 'ഉപഭോക്താക്കൾ', color: 'from-brand-400 to-brand-500' },
+  { to: '/workers',    icon: HardHat,              label: 'Workers',    mlLabel: 'തൊഴിലാളികൾ',  color: 'from-brand-600 to-brand-700' },
+  { to: '/bookings',   icon: BookOpen,             label: 'Bookings',   mlLabel: 'ബുക്കിംഗ്',    color: 'from-brand-500 to-brand-600' },
+  { to: '/grievances', icon: MessageSquareWarning, label: 'Grievances', mlLabel: 'പരാതികൾ',     color: 'from-brand-600 to-brand-700' },
 ];
 
 function NavItem({ to, icon: Icon, label, mlLabel, color, onClick }) {
@@ -68,7 +68,7 @@ function Sidebar({ onClose, onBell, unreadCount = 0 }) {
     <aside className="w-64 shrink-0 bg-gray-950 border-r border-gray-800/50 flex flex-col h-full">
       {/* Logo + notification bell */}
       <div className="h-16 flex items-center gap-3 px-5 border-b border-gray-800/50 shrink-0">
-        <div className="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
+        <div className="w-9 h-9 bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/25">
           <Wrench className="w-4 h-4 text-white" />
         </div>
         <div className="flex-1">
@@ -85,7 +85,7 @@ function Sidebar({ onClose, onBell, unreadCount = 0 }) {
           >
             <Bell className="w-4 h-4" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-indigo-600 text-white text-xs rounded-full flex items-center justify-center font-bold px-1">
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-brand-600 text-white text-xs rounded-full flex items-center justify-center font-bold px-1">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
