@@ -17,8 +17,27 @@ const ML = {
   search: 'തിരയുക',
   settings: 'ക്രമീകരണം',
   darkMode: 'ഡാർക്ക് മോഡ്',
+  lightMode: 'ലൈറ്റ് മോഡ്',
   language: 'ഭാഷ',
   adminPortal: 'അഡ്മിൻ പോർട്ടൽ',
+  activityFeed: 'പ്രവർത്തന ഫീഡ്',
+  english: 'ഇംഗ്ലീഷ്',
+  malayalam: 'മലയാളം',
+  // Dashboard
+  dashboardTitle: 'ഡാഷ്‌ബോർഡ്',
+  analyticsOverview: 'SmartWorkers വിശകലനം ആപ്ലിവ്യൂ',
+  totalCustomers: 'മൊത്തം ഉപഭോക്താക്കൾ',
+  totalWorkers: 'മൊത്തം തൊഴിലാളികൾ',
+  totalBookings: 'മൊത്തം ബുക്കിംഗുകൾ',
+  completedJobs: 'പൂർത്തീകൃത ജോലികൾ',
+  openGrievances: 'തുറന്ന പരാതികൾ',
+  totalGrievances: 'മൊത്തം പരാതികൾ',
+  bookingsTrend: 'ബുക്കിംഗ് ട്രെൻഡ്',
+  topServices: 'ടോപ് സേവനങ്ങൾ',
+  topCustomers: 'ടോപ് ഉപഭോക്താക്കൾ',
+  topWorkers: 'ടോപ് തൊഴിലാളികൾ',
+  bookings: 'ബുക്കിംഗുകൾ',
+  jobs: 'ജോലികൾ',
 };
 
 export function ThemeProvider({ children }) {

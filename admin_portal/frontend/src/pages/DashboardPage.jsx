@@ -27,7 +27,7 @@ function StatCard({ icon: Icon, label, value, color, delay }) {
 }
 
 export default function DashboardPage() {
-  const { isDark } = useTheme();
+  const { isDark, t } = useTheme();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -44,19 +44,19 @@ export default function DashboardPage() {
   );
 
   const cards = [
-    { icon: Users,         label: 'Total Customers',   value: stats?.totalCustomers,  color: 'bg-brand-600', delay: 0 },
-    { icon: HardHat,       label: 'Total Workers',     value: stats?.totalWorkers,    color: 'bg-blue-500', delay: 0.05 },
-    { icon: BookOpen,      label: 'Total Bookings',    value: stats?.totalBookings,   color: 'bg-amber-500', delay: 0.1 },
-    { icon: CheckCircle,   label: 'Completed Jobs',    value: stats?.completedJobs,   color: 'bg-green-500', delay: 0.15 },
-    { icon: AlertTriangle, label: 'Open Grievances',   value: stats?.openGrievances,  color: 'bg-red-500', delay: 0.2 },
-    { icon: TrendingUp,    label: 'Total Grievances',  value: stats?.totalGrievances, color: 'bg-purple-500', delay: 0.25 },
+    { icon: Users,         label: t('totalCustomers'),   value: stats?.totalCustomers,  color: 'bg-brand-600', delay: 0 },
+    { icon: HardHat,       label: t('totalWorkers'),     value: stats?.totalWorkers,    color: 'bg-blue-500', delay: 0.05 },
+    { icon: BookOpen,      label: t('totalBookings'),    value: stats?.totalBookings,   color: 'bg-amber-500', delay: 0.1 },
+    { icon: CheckCircle,   label: t('completedJobs'),    value: stats?.completedJobs,   color: 'bg-green-500', delay: 0.15 },
+    { icon: AlertTriangle, label: t('openGrievances'),   value: stats?.openGrievances,  color: 'bg-red-500', delay: 0.2 },
+    { icon: TrendingUp,    label: t('totalGrievances'),  value: stats?.totalGrievances, color: 'bg-purple-500', delay: 0.25 },
   ];
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Dashboard</h1>
-        <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>SmartWorkers analytics overview</p>
+        <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{t('dashboardTitle')}</h1>
+        <p className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{t('analyticsOverview')}</p>
       </div>
 
       {/* Stat cards */}
@@ -71,7 +71,7 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
           className={`rounded-xl border-2 p-6 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100 shadow-sm'}`}
         >
-          <h3 className={`font-bold mb-5 ${isDark ? 'text-white' : 'text-gray-900'}`}>Bookings Trend</h3>
+          <h3 className={`font-bold mb-5 ${isDark ? 'text-white' : 'text-gray-900'}`}>{t('bookingsTrend')}</h3>
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={stats?.topServices ?? []}>
               <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#e5e7eb'} />
@@ -88,7 +88,7 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
           className={`rounded-xl border-2 p-6 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100 shadow-sm'}`}
         >
-          <h3 className={`font-bold mb-5 ${isDark ? 'text-white' : 'text-gray-900'}`}>Top Services</h3>
+          <h3 className={`font-bold mb-5 ${isDark ? 'text-white' : 'text-gray-900'}`}>{t('topServices')}</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={stats?.topServices ?? []}>
               <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#374151' : '#e5e7eb'} />
@@ -110,7 +110,7 @@ export default function DashboardPage() {
         >
           <div className="flex items-center gap-2 mb-5">
             <Trophy className={`w-5 h-5 ${isDark ? 'text-yellow-400' : 'text-yellow-500'}`} />
-            <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Top Customers</h3>
+            <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{t('topCustomers')}</h3>
           </div>
           <div className="space-y-3">
             {(stats?.topCustomers ?? []).slice(0, 5).map((c, i) => (
@@ -123,7 +123,7 @@ export default function DashboardPage() {
                   <p className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{c.name || 'Unknown'}</p>
                   <p className={`text-xs truncate ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{c.email || c.phone || ''}</p>
                 </div>
-                <span className={`text-sm font-bold ${isDark ? 'text-brand-400' : 'text-brand-600'}`}>{c.bookingCount} bookings</span>
+                <span className={`text-sm font-bold ${isDark ? 'text-brand-400' : 'text-brand-600'}`}>{c.bookingCount} {t('bookings')}</span>
               </div>
             ))}
           </div>
@@ -136,7 +136,7 @@ export default function DashboardPage() {
         >
           <div className="flex items-center gap-2 mb-5">
             <Trophy className={`w-5 h-5 ${isDark ? 'text-emerald-400' : 'text-emerald-500'}`} />
-            <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Top Workers</h3>
+            <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{t('topWorkers')}</h3>
           </div>
           <div className="space-y-3">
             {(stats?.topWorkers ?? []).slice(0, 5).map((w, i) => (
@@ -149,7 +149,7 @@ export default function DashboardPage() {
                   <p className={`text-sm font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}>{w.name}</p>
                   <p className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{w.job_type} · {w.district}</p>
                 </div>
-                <span className={`text-sm font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>{w.bookingCount} jobs</span>
+                <span className={`text-sm font-bold ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>{w.bookingCount} {t('jobs')}</span>
               </div>
             ))}
           </div>

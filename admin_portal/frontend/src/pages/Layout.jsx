@@ -63,7 +63,7 @@ function Sidebar({ onClose, onBell, unreadCount = 0 }) {
         </div>
         <div className="flex-1">
           <div className={`font-bold text-base ${isDark ? 'text-white' : 'text-gray-900'}`}>SmartWorkers</div>
-          <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>Admin Portal</div>
+          <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>{lang === 'ml' ? 'അഡ്മിൻ പോർട്ടൽ' : 'Admin Portal'}</div>
         </div>
         {onClose && (
           <button onClick={onClose} className={`md:hidden rounded-lg p-1 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}>
