@@ -59,6 +59,12 @@ const ML = {
   'Work Nearby': 'അടുത്തുള്ള ജോലികൾ',
   'Choose which districts and towns you want to work in. No long commutes.':
     'നിങ്ങൾക്ക് ജോലി ചെയ്യാൻ താൽപ്പര്യമുള്ള ജില്ലകളും പട്ടണങ്ങളും തിരഞ്ഞെടുക്കുക. ദീർഘദൂര യാത്രകളില്ല.',
+  'Choose towns across Kozhikode district where you want to work. No long commutes.':
+    'കോഴിക്കോട് ജില്ലയിലെ നിങ്ങൾക്ക് ജോലി ചെയ്യാൻ താൽപ്പര്യമുള്ള പട്ടണങ്ങൾ തിരഞ്ഞെടുക്കുക. ദീർഘദൂര യാത്രകളില്ല.',
+  'Service area': 'സേവന മേഖല',
+  'Select town...': 'പട്ടണം തിരഞ്ഞെടുക്കുക...',
+  'Select towns in Kozhikode where you are willing to work.':
+    'നിങ്ങൾക്ക് ജോലി ചെയ്യാൻ താൽപ്പര്യമുള്ള കോഴിക്കോടിലെ പട്ടണങ്ങൾ തിരഞ്ഞെടുക്കുക.',
   'Ready to start earning?': 'സമ്പാദിക്കാൻ തയ്യാറാണോ?',
   'Join Crewzo today. Registration takes less than 5 minutes.':
     'ഇന്നുതന്നെ സ്മാർട്ട് വർക്കേഴ്സിൽ ചേരുക. രജിസ്ട്രേഷൻ 5 മിനിറ്റിൽ താഴെ മാത്രമേ എടുക്കൂ.',

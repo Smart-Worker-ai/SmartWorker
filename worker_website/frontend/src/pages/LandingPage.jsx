@@ -10,7 +10,7 @@ export default function LandingPage() {
   const STATS = [
     { label: t('Registered Workers'), value: '500+', icon: Users },
     { label: t('Services Completed'), value: '2,000+', icon: Zap },
-    { label: t('Districts Covered'),  value: '14',    icon: MapPin },
+    { label: t('Districts Covered'),  value: '1',     icon: MapPin },
     { label: t('Avg. Rating'),        value: '4.7★',  icon: Star },
   ];
 
@@ -34,7 +34,7 @@ export default function LandingPage() {
   const BENEFITS = [
     { icon: TrendingUp, title: t('Earn More'),         desc: t('Set your own daily rate. No middlemen. Keep 100% of what you earn.'), color: 'text-green-500' },
     { icon: ShieldCheck, title: t('Verified Profile'), desc: t('Once verified, customers trust you. A badge that builds your reputation.'), color: 'text-blue-500' },
-    { icon: MapPin,      title: t('Work Nearby'),       desc: t('Choose which districts and towns you want to work in. No long commutes.'), color: 'text-purple-500' },
+    { icon: MapPin,      title: t('Work Nearby'),       desc: t('Choose towns across Kozhikode district where you want to work. No long commutes.'), color: 'text-purple-500' },
   ];
 
   return (

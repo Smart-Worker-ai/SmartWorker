@@ -51,6 +51,9 @@ class Worker(Base):
     is_blocked:     Mapped[bool]  = mapped_column(Boolean, default=False)
     is_verified:    Mapped[bool]  = mapped_column(Boolean, default=False)
 
+    registration_type: Mapped[str] = mapped_column(String(20), default="worker", index=True)
+    num_workers:    Mapped[Optional[int]] = mapped_column(Integer)
+
     daily_rate:     Mapped[float] = mapped_column(Float, default=800.0)
     rating:         Mapped[float] = mapped_column(Float, default=0.0)
     rating_sum:     Mapped[float] = mapped_column(Float, default=0.0)

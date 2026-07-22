@@ -144,3 +144,32 @@ if IS_PROD and not (SMS_GATEWAY_URL and SMS_GATEWAY_HMAC_SECRET):
 RATELIMIT_REGISTRATION: str = _optional("RATELIMIT_REGISTRATION", "3/hour")
 RATELIMIT_OTP_REQUEST:  str = _optional("RATELIMIT_OTP_REQUEST",  "5/hour")
 RATELIMIT_OTP_VERIFY:   str = _optional("RATELIMIT_OTP_VERIFY",   "10/hour")
+
+# ── Job Types ────────────────────────────────────────────────────────────────
+JOB_TYPES: list[str] = [
+    "Electrician",
+    "Plumber",
+    "Carpenter",
+    "AC Technician",
+    "Painter",
+    "Mason",
+    "Welder",
+    "Cook",
+    "Cleaner",
+    "Gardener",
+    "Driver",
+    "Helper",
+]
+
+# ── Service area (preferred work locations) ──────────────────────────────────
+# Launch is limited to a single district; expand this list when covering more.
+SERVICE_DISTRICT: str = _optional("SERVICE_DISTRICT", "Kozhikode")
+SERVICE_TOWNS: list[str] = _list(
+    "SERVICE_TOWNS",
+    default=[
+        "Kozhikode City", "Vatakara", "Koyilandy", "Feroke", "Ramanattukara",
+        "Mukkam", "Kunnamangalam", "Balussery", "Thamarassery", "Perambra",
+        "Nadapuram", "Payyoli", "Beypore", "Elathur", "Koduvally",
+        "Mavoor", "Pantheerankavu", "West Hill", "Kallai", "Meenchanda",
+    ],
+)

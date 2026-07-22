@@ -10,13 +10,19 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 
+// Current residence can be anywhere in Kerala; work area is Kozhikode-only for now.
 const DISTRICTS = [
   'Ernakulam','Thiruvananthapuram','Thrissur','Kozhikode','Kottayam',
   'Palakkad','Malappuram','Kollam','Kannur','Alappuzha','Idukki','Kasaragod','Pathanamthitta','Wayanad',
 ];
-const JOB_TYPES = [
-  'Electrician','Plumber','Carpenter','AC Technician','Painter',
-  'Mason','Welder','Cleaner','Driver','Cook','Other',
+
+const SERVICE_DISTRICT = 'Kozhikode';
+
+const KOZHIKODE_TOWNS = [
+  'Kozhikode City', 'Vatakara', 'Koyilandy', 'Feroke', 'Ramanattukara',
+  'Mukkam', 'Kunnamangalam', 'Balussery', 'Thamarassery', 'Perambra',
+  'Nadapuram', 'Payyoli', 'Beypore', 'Elathur', 'Koduvally',
+  'Mavoor', 'Pantheerankavu', 'West Hill', 'Kallai', 'Meenchanda',
 ];
 
 const MAX_DOC_SIZE_MB   = 5;
@@ -53,7 +59,7 @@ function FileDropzone({ label, hint, accept, maxSizeMb, file, onFile, onError })
   });
   const idle = isDark
     ? 'border-gray-700 hover:border-brand-400 hover:bg-gray-800/60 bg-gray-900'
-    : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50 bg-white';
+    : 'border-gray-300 hover:border-brand-400 hover:bg-gray-100 bg-white';
   const drag = isDark
     ? 'border-brand-400 bg-brand-950/40 scale-[1.01]'
     : 'border-brand-400 bg-brand-50 scale-[1.01]';
@@ -62,7 +68,7 @@ function FileDropzone({ label, hint, accept, maxSizeMb, file, onFile, onError })
     : 'border-emerald-400 bg-emerald-50';
   return (
     <div>
-      <label className={`block text-xs font-semibold uppercase tracking-widest mb-2 ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{label}</label>
+      <label className={`block text-xs font-semibold uppercase tracking-widest mb-2 ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>{label}</label>
       <div
         {...getRootProps()}
         className={`relative border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all duration-200
@@ -103,10 +109,10 @@ function InputField({ label, error, children }) {
   const { isDark } = useTheme();
   return (
     <div>
-      <label className={`block text-xs font-semibold uppercase tracking-widest mb-2 ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{label}</label>
+      <label className={`block text-xs font-semibold uppercase tracking-widest mb-2 ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>{label}</label>
       {children}
       {error && (
-        <p className="text-rose-500 text-xs mt-1.5 flex items-center gap-1">
+        <p className="text-red-600 text-xs mt-1.5 flex items-center gap-1">
           <AlertCircle className="w-3.5 h-3.5" />{error}
         </p>
       )}
@@ -118,7 +124,7 @@ const inputCls = (isDark) => `w-full border rounded-xl px-4 py-3.5 text-sm
   focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent
   transition-all duration-150 ${isDark
     ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:bg-gray-800'
-    : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:bg-white'}`;
+    : 'bg-gray-50 border-gray-300 text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:ring-brand-100'}`;
 
 export default function RegisterPage() {
   const navigate = useNavigate();
@@ -134,8 +140,18 @@ export default function RegisterPage() {
   const [aadharFile, setAadharFile] = useState(null);
   const [photoFile, setPhotoFile] = useState(null);
 
+  const [registrationType, setRegistrationType] = useState('worker');
+  const [jobTypes, setJobTypes] = useState([]);
+
   const { register, handleSubmit, formState: { errors }, trigger, getValues } = useForm({
-    defaultValues: { gender: 'Male', dailyRate: 800, experienceYears: 0 },
+    defaultValues: {
+      gender: 'Male',
+      dailyRate: 800,
+      experienceYears: 0,
+      numWorkers: 1,
+      district: SERVICE_DISTRICT,
+      interestedLocations: [],
+    },
   });
 
   // Intercept browser back to step backwards inside the form
@@ -153,9 +169,23 @@ export default function RegisterPage() {
     return () => window.removeEventListener('popstate', handlePop);
   }, []);
 
+  // Fetch job types on mount
+  useEffect(() => {
+    const fetchJobTypes = async () => {
+      try {
+        const response = await axios.get('/api/workers/job-types');
+        setJobTypes(response.data || []);
+      } catch (e) {
+        console.error('Failed to fetch job types:', e);
+        setJobTypes([]);
+      }
+    };
+    fetchJobTypes();
+  }, []);
+
   const STEP_FIELDS = [
     ['name', 'age', 'gender', 'mobile', 'email', 'address'],
-    ['jobType', 'currentLocation', 'district', 'town', 'interestedLocations', 'dailyRate', 'experienceYears'],
+    ['jobType', 'currentLocation', 'district', 'town', 'interestedLocations', 'dailyRate', 'experienceYears', ...(registrationType === 'agent' ? ['numWorkers'] : [])],
     [], [],
   ];
 
@@ -184,23 +214,31 @@ export default function RegisterPage() {
       const mobile = `+91${String(data.mobile).replace(/\D/g, '').slice(-10)}`;
 
       const fd = new FormData();
-      Object.entries({
+      const formEntries = {
         name: data.name.trim(),
         age: data.age,
         gender: data.gender,
         mobile,
         email: data.email.trim().toLowerCase(),
         address: (data.address || '').trim(),
-        district: data.district,
+        district: SERVICE_DISTRICT,
         town: data.town.trim(),
         job_type: data.jobType,
         current_location: data.currentLocation,
-        interested_locations: data.interestedLocations.trim(),
+        interested_locations: (Array.isArray(data.interestedLocations)
+          ? data.interestedLocations
+          : [data.interestedLocations].filter(Boolean)
+        ).join(', '),
         facilities_requested: (data.facilitiesRequested || '').trim(),
         daily_rate: data.dailyRate,
         experience_years: data.experienceYears,
+        registration_type: registrationType,
         accepted_terms: 'true',
-      }).forEach(([k, v]) => fd.append(k, v));
+      };
+      if (registrationType === 'agent') {
+        formEntries.num_workers = data.numWorkers;
+      }
+      Object.entries(formEntries).forEach(([k, v]) => fd.append(k, v));
       fd.append('passbook_photo', passbookFile);
       fd.append('aadhar_photo',   aadharFile);
       fd.append('profile_photo',  photoFile);
@@ -242,18 +280,18 @@ export default function RegisterPage() {
     <div className={`min-h-screen flex flex-col md:flex-row ${isDark ? 'bg-gray-950' : 'bg-slate-50'}`}>
 
       {/* ── Sidebar (desktop) ── */}
-      <aside className="hidden md:flex md:w-72 lg:w-80 bg-gradient-to-b from-brand-900 to-brand-950 text-white flex-col shrink-0 sticky top-0 h-screen">
-        <div className="p-8 border-b border-white/10">
+      <aside className="hidden md:flex md:w-72 lg:w-80 bg-gradient-to-b from-brand-600 to-brand-700 text-white flex-col shrink-0 sticky top-0 h-screen">
+        <div className="p-8 border-b border-white/20">
           <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-8 text-sm">
             <ArrowLeft className="w-4 h-4" /> {t('Back')}
           </button>
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 bg-brand-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
               <User className="w-5 h-5" />
             </div>
             <div>
-              <p className="font-black text-base">{t('Crewzo')}</p>
-              <p className="text-xs text-white/50">{t('Worker Registration')}</p>
+              <p className="font-bold text-lg text-white">{t('Crewzo')}</p>
+              <p className="text-xs text-brand-100">{t('Worker Registration')}</p>
             </div>
           </div>
         </div>
@@ -265,27 +303,27 @@ export default function RegisterPage() {
             const active = i === step;
             return (
               <div key={s.key} className={`flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all duration-200
-                ${active ? 'bg-brand-600 shadow-lg shadow-brand-800/40' : done ? 'bg-white/5' : 'opacity-40'}`}>
+                ${active ? 'bg-white/20' : done ? 'bg-transparent' : 'bg-transparent'} hover:bg-white/10`}>
                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
-                  ${active ? 'bg-white/20' : done ? 'bg-emerald-500' : 'bg-white/10'}`}>
-                  {done ? <CheckCircle className="w-4 h-4 text-white" /> : <Icon className="w-4 h-4 text-white" />}
+                  ${active ? 'bg-white text-brand-600' : done ? 'bg-emerald-500 text-white' : 'text-brand-100'}`}>
+                  {done ? <CheckCircle className="w-4 h-4" /> : <Icon className="w-4 h-4" />}
                 </div>
                 <div>
-                  <p className={`text-sm font-semibold ${active ? 'text-white' : 'text-white/70'}`}>{t(s.key)}</p>
-                  <p className="text-xs text-white/40">{t(s.descKey)}</p>
+                  <p className={`text-sm font-semibold ${active ? 'text-white font-bold' : 'text-brand-50'}`}>{t(s.key)}</p>
+                  <p className={`text-xs ${active ? 'text-brand-100 opacity-70' : 'text-brand-50 opacity-60'}`}>{t(s.descKey)}</p>
                 </div>
-                {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-300" />}
+                {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white" />}
               </div>
             );
           })}
         </nav>
 
-        <div className="p-6 space-y-3 border-t border-white/10">
+        <div className="p-6 space-y-3 border-t border-white/20">
           {[
             { icon: ShieldCheck, text: t('Your data is safe') },
             { icon: Star,        text: t('Rated 4.7★ by workers') },
           ].map(({ icon: I, text }) => (
-            <div key={text} className="flex items-center gap-3 text-white/50 text-xs">
+            <div key={text} className="flex items-center gap-3 text-brand-100 text-xs">
               <I className="w-4 h-4 shrink-0" />{text}
             </div>
           ))}
@@ -297,29 +335,29 @@ export default function RegisterPage() {
 
         {/* Mobile header */}
         <header className={`md:hidden sticky top-0 z-10 px-4 h-14 flex items-center gap-3 border-b transition-colors
-          ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-slate-100'}`}>
+          ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
           <button onClick={() => step > 0 ? setStep(s => s - 1) : navigate(-1)}
             className={`w-8 h-8 flex items-center justify-center rounded-lg transition-colors
-              ${isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-slate-100 text-slate-600'}`}>
+              ${isDark ? 'hover:bg-gray-800 text-gray-400' : 'hover:bg-gray-100 text-gray-700'}`}>
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <span className={`font-bold flex-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>{t('Worker Registration')}</span>
+          <span className={`font-bold flex-1 ${isDark ? 'text-white' : 'text-gray-900'}`}>{t('Worker Registration')}</span>
           <span className={`text-xs font-semibold px-2.5 py-1 rounded-full
-            ${isDark ? 'text-brand-300 bg-brand-800/40' : 'text-brand-600 bg-brand-50'}`}>
+            ${isDark ? 'text-brand-300 bg-brand-800/40' : 'text-brand-700 bg-brand-100'}`}>
             {step + 1}/{STEPS.length}
           </span>
         </header>
 
         {/* Mobile progress bar */}
         <div className={`md:hidden border-b px-4 py-3 transition-colors
-          ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-slate-100'}`}>
+          ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
           <div className="flex items-center gap-2 mb-2">
             {STEPS.map((s, i) => (
               <div key={i} className={`flex-1 h-1.5 rounded-full transition-all duration-300
-                ${i < step ? 'bg-emerald-500' : i === step ? 'bg-brand-600' : (isDark ? 'bg-gray-800' : 'bg-slate-100')}`} />
+                ${i < step ? 'bg-emerald-500' : i === step ? 'bg-brand-600' : (isDark ? 'bg-gray-800' : 'bg-gray-200')}`} />
             ))}
           </div>
-          <p className={`text-xs font-semibold ${isDark ? 'text-brand-300' : 'text-brand-700'}`}>
+          <p className={`text-xs font-semibold ${isDark ? 'text-brand-300' : 'text-brand-600'}`}>
             {t(STEPS[step].key)} — {t(STEPS[step].descKey)}
           </p>
         </div>
@@ -332,14 +370,44 @@ export default function RegisterPage() {
               <StepIcon className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className={`text-xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>{t(STEPS[step].key)}</h1>
-              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{t(STEPS[step].descKey)}</p>
+              <h1 className={`text-xl font-black ${isDark ? 'text-white' : 'text-gray-900'}`}>{t(STEPS[step].key)}</h1>
+              <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{t(STEPS[step].descKey)}</p>
             </div>
           </div>
 
           {error && (
-            <div className={`mb-6 border rounded-xl p-4 flex gap-3 text-sm ${isDark ? 'bg-rose-950/40 border-rose-800 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-700'}`}>
+            <div className={`mb-6 border rounded-xl p-4 flex gap-3 text-sm ${isDark ? 'bg-rose-950/40 border-rose-800 text-rose-300' : 'bg-red-50 border-red-200 text-red-600'}`}>
               <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />{error}
+            </div>
+          )}
+
+          {step === 0 && (
+            <div className="mb-8 pb-6 border-b">
+              <label className={`block text-xs font-semibold uppercase tracking-widest mb-4 ${isDark ? 'text-gray-400' : 'text-gray-700'}`}>
+                {t('Registration Type')} *
+              </label>
+              <div className="flex gap-3 sm:gap-4">
+                <button
+                  type="button"
+                  onClick={() => setRegistrationType('worker')}
+                  className={`flex-1 py-3.5 px-4 rounded-xl border-2 font-semibold transition-all text-sm flex items-center justify-center gap-2
+                    ${registrationType === 'worker'
+                      ? isDark ? 'bg-brand-600 border-brand-600 text-white shadow-lg shadow-brand-500/30' : 'bg-brand-600 border-brand-600 text-white shadow-lg shadow-brand-200'
+                      : isDark ? 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200'
+                    }`}>
+                  <User className="w-4 h-4" /> {t('Worker')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRegistrationType('agent')}
+                  className={`flex-1 py-3.5 px-4 rounded-xl border-2 font-semibold transition-all text-sm flex items-center justify-center gap-2
+                    ${registrationType === 'agent'
+                      ? isDark ? 'bg-brand-600 border-brand-600 text-white shadow-lg shadow-brand-500/30' : 'bg-brand-600 border-brand-600 text-white shadow-lg shadow-brand-200'
+                      : isDark ? 'bg-gray-800 border-gray-700 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200'
+                    }`}>
+                  <Briefcase className="w-4 h-4" /> {t('Agent')}
+                </button>
+              </div>
             </div>
           )}
 
@@ -385,8 +453,8 @@ export default function RegisterPage() {
 
                     {/* Mobile with fixed +91 prefix — eliminates the regex/placeholder mismatch */}
                     <InputField label={`${t('Mobile Number')} *`} error={errors.mobile?.message}>
-                      <div className={`flex items-stretch rounded-xl overflow-hidden border ${isDark ? 'border-gray-700 bg-gray-800' : 'border-slate-200 bg-slate-50'}`}>
-                        <span className={`px-4 flex items-center text-sm font-semibold border-r ${isDark ? 'border-gray-700 text-gray-300' : 'border-slate-200 text-slate-600'}`}>
+                      <div className={`flex items-stretch rounded-xl overflow-hidden border ${isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-300 bg-gray-50'}`}>
+                        <span className={`px-4 flex items-center text-sm font-semibold border-r ${isDark ? 'border-gray-700 text-gray-300' : 'border-gray-300 text-gray-700'}`}>
                           🇮🇳 +91
                         </span>
                         <input
@@ -400,8 +468,8 @@ export default function RegisterPage() {
                             },
                           })}
                           onInput={(e) => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10); }}
-                          className={`flex-1 px-4 py-3.5 text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500
-                            ${isDark ? 'bg-gray-800 text-white' : 'bg-slate-50 text-slate-900'}`}
+                          className={`flex-1 px-4 py-3.5 text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500
+                            ${isDark ? 'bg-gray-800 text-white' : 'bg-gray-50 text-gray-900'}`}
                           placeholder="9876543210"
                         />
                       </div>
@@ -422,9 +490,9 @@ export default function RegisterPage() {
                       })} className={inputCls(isDark)} rows={2} placeholder={t('House No., Street, City, District')} />
                     </InputField>
                     <div className={`border rounded-xl p-4 flex gap-3 items-center transition-colors
-                      ${isDark ? 'bg-brand-950/40 border-brand-800/60' : 'bg-brand-50 border-brand-100'}`}>
-                      <ShieldCheck className={`w-5 h-5 shrink-0 ${isDark ? 'text-brand-400' : 'text-brand-500'}`} />
-                      <p className={`text-xs font-medium ${isDark ? 'text-brand-300' : 'text-brand-700'}`}>
+                      ${isDark ? 'bg-brand-950/40 border-brand-800/60' : 'bg-blue-50 border-blue-200'}`}>
+                      <ShieldCheck className={`w-5 h-5 shrink-0 ${isDark ? 'text-brand-400' : 'text-blue-600'}`} />
+                      <p className={`text-xs font-medium ${isDark ? 'text-brand-300' : 'text-blue-700'}`}>
                         {t('Your details are private and will never be shared.')}
                       </p>
                     </div>
@@ -437,7 +505,7 @@ export default function RegisterPage() {
                     <InputField label={`${t('Job Type')} *`} error={errors.jobType?.message}>
                       <select {...register('jobType', { required: 'Please select your job type' })} className={inputCls(isDark)}>
                         <option value="">{t('Select your trade...')}</option>
-                        {JOB_TYPES.map(j => <option key={j} value={j}>{t(j)}</option>)}
+                        {jobTypes.map(j => <option key={j} value={j}>{t(j)}</option>)}
                       </select>
                     </InputField>
                     <div className="grid grid-cols-2 gap-4">
@@ -465,27 +533,62 @@ export default function RegisterPage() {
                       </select>
                     </InputField>
                     <div className="grid grid-cols-2 gap-4">
-                      <InputField label={`${t('Preferred District')} *`} error={errors.district?.message}>
-                        <select {...register('district', { required: 'Please select a preferred district' })} className={inputCls(isDark)}>
-                          <option value="">{t('Select...')}</option>
-                          {DISTRICTS.map(d => <option key={d} value={d}>{d}</option>)}
-                        </select>
+                      <InputField label={`${t('Preferred District')} *`}>
+                        <input type="hidden" {...register('district')} />
+                        <div className={`${inputCls(isDark)} flex items-center cursor-default opacity-90`}>
+                          {SERVICE_DISTRICT}
+                          <span className={`ml-auto text-[10px] font-semibold uppercase tracking-wide ${isDark ? 'text-brand-300' : 'text-brand-600'}`}>
+                            {t('Service area')}
+                          </span>
+                        </div>
                       </InputField>
                       <InputField label={`${t('Preferred Town')} *`} error={errors.town?.message}>
-                        <input {...register('town', {
-                          required: 'Town is required',
-                          minLength: { value: 2, message: 'Enter a valid town name' },
-                          maxLength: { value: 60, message: 'Town name is too long' },
-                        })} className={inputCls(isDark)} placeholder="e.g. Kochi" />
+                        <select {...register('town', { required: 'Please select a preferred town' })} className={inputCls(isDark)}>
+                          <option value="">{t('Select town...')}</option>
+                          {KOZHIKODE_TOWNS.map(town => (
+                            <option key={town} value={town}>{town}</option>
+                          ))}
+                        </select>
                       </InputField>
                     </div>
                     <InputField label={`${t('Interested Locations')} *`} error={errors.interestedLocations?.message}>
-                      <input {...register('interestedLocations', {
-                        required: 'Please list where you are willing to work',
-                        minLength: { value: 3, message: 'Enter at least one location' },
-                        maxLength: { value: 200, message: 'Too many characters (max 200)' },
-                      })} className={inputCls(isDark)} placeholder="e.g. Kochi, Ernakulam, Kakkanad" />
+                      <p className={`text-xs mb-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {t('Select towns in Kozhikode where you are willing to work.')}
+                      </p>
+                      <div className={`grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto rounded-xl border p-3 ${
+                        isDark ? 'border-gray-700 bg-gray-900/50' : 'border-gray-300 bg-gray-50'
+                      }`}>
+                        {KOZHIKODE_TOWNS.map(town => (
+                          <label
+                            key={town}
+                            className={`flex items-center gap-2 text-sm cursor-pointer rounded-lg px-2 py-1.5 transition-colors ${
+                              isDark ? 'hover:bg-gray-800 text-gray-200' : 'hover:bg-white text-gray-800'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              value={town}
+                              {...register('interestedLocations', {
+                                validate: (v) =>
+                                  (Array.isArray(v) ? v.length > 0 : !!v) || 'Select at least one location',
+                              })}
+                              className="rounded border-gray-400 text-brand-600 focus:ring-brand-500"
+                            />
+                            <span className="leading-tight">{town}</span>
+                          </label>
+                        ))}
+                      </div>
                     </InputField>
+                    {registrationType === 'agent' && (
+                      <InputField label={`${t('Number of Workers')} *`} error={errors.numWorkers?.message}>
+                        <input type="number" {...register('numWorkers', {
+                          required: 'Please specify number of workers',
+                          min: { value: 1, message: 'Must have at least 1 worker' },
+                          max: { value: 1000, message: 'Maximum 1000 workers' },
+                          valueAsNumber: true,
+                        })} className={inputCls(isDark)} placeholder="e.g. 5" />
+                      </InputField>
+                    )}
                     <InputField label={t('Additional Facilities (optional)')}>
                       <textarea {...register('facilitiesRequested', {
                         maxLength: { value: 200, message: 'Too many characters (max 200)' },
@@ -500,7 +603,7 @@ export default function RegisterPage() {
                     <div className={`border rounded-xl p-4 flex gap-3 items-center transition-colors
                       ${isDark ? 'bg-amber-950/30 border-amber-900/50' : 'bg-amber-50 border-amber-200'}`}>
                       <Lock className={`w-5 h-5 shrink-0 ${isDark ? 'text-amber-400' : 'text-amber-600'}`} />
-                      <p className={`text-xs font-medium ${isDark ? 'text-amber-300' : 'text-amber-800'}`}>
+                      <p className={`text-xs font-medium ${isDark ? 'text-amber-300' : 'text-amber-700'}`}>
                         {t('Your documents are safe and used only for verification.')}
                       </p>
                     </div>
@@ -519,12 +622,12 @@ export default function RegisterPage() {
                 {/* ── Step 3: Review + T&C + Submit ── */}
                 {step === 3 && (
                   <>
-                    <div className={`border rounded-2xl overflow-hidden shadow-sm ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-slate-200'}`}>
-                      <div className={`px-6 py-4 border-b ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-slate-50 border-slate-100'}`}>
-                        <h3 className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{t('Application Summary')}</h3>
-                        <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{t('Please review before submitting')}</p>
+                    <div className={`border rounded-2xl overflow-hidden shadow-sm ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+                      <div className={`px-6 py-4 border-b ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                        <h3 className={`font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{t('Application Summary')}</h3>
+                        <p className={`text-xs mt-0.5 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{t('Please review before submitting')}</p>
                       </div>
-                      <div className={`divide-y ${isDark ? 'divide-gray-800' : 'divide-slate-50'}`}>
+                      <div className={`divide-y ${isDark ? 'divide-gray-800' : 'divide-gray-100'}`}>
                         {[
                           [t('Full Name'), values.name],
                           [t('Age'), values.age],
@@ -532,23 +635,27 @@ export default function RegisterPage() {
                           [t('Mobile'), values.mobile ? `+91 ${values.mobile}` : '—'],
                           [t('Email'), values.email],
                           [t('Address'), values.address],
+                          [t('Registration Type'), registrationType === 'worker' ? t('Worker') : t('Agent')],
                           [t('Job Type'), t(values.jobType ?? '')],
                           [t('Daily Rate (₹)'), `₹${values.dailyRate}`],
                           [t('Experience'), `${values.experienceYears} ${t('year(s)')}`],
+                          ...(registrationType === 'agent' ? [[t('Number of Workers'), values.numWorkers]] : []),
                           [t('Current Location'), values.currentLocation],
-                          [t('Preferred District'), values.district],
+                          [t('Preferred District'), values.district || SERVICE_DISTRICT],
                           [t('Preferred Town'), values.town],
-                          [t('Interested Locations'), values.interestedLocations],
+                          [t('Interested Locations'), Array.isArray(values.interestedLocations)
+                            ? values.interestedLocations.join(', ')
+                            : values.interestedLocations],
                           [t('Facilities Requested'), values.facilitiesRequested || t('— None specified —')],
                         ].map(([k, v]) => (
                           <div key={k} className="flex justify-between items-center px-6 py-3 text-sm">
-                            <span className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{k}</span>
-                            <span className={`font-semibold text-right max-w-[55%] ${isDark ? 'text-white' : 'text-slate-900'}`}>{v}</span>
+                            <span className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{k}</span>
+                            <span className={`font-semibold text-right max-w-[55%] ${isDark ? 'text-white' : 'text-gray-900'}`}>{v}</span>
                           </div>
                         ))}
                         <div className="flex justify-between items-center px-6 py-3 text-sm">
-                          <span className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-slate-500'}`}>{t('Documents')}</span>
-                          <span className="text-emerald-600 font-bold flex items-center gap-1.5">
+                          <span className={`text-xs font-semibold uppercase tracking-wide ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{t('Documents')}</span>
+                          <span className={`font-bold flex items-center gap-1.5 ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}>
                             <CheckCircle className="w-4 h-4" /> 3 {t('Uploaded')}
                           </span>
                         </div>
@@ -556,7 +663,7 @@ export default function RegisterPage() {
                     </div>
 
                     {/* ── T&C: explicit checkbox just before submit ── */}
-                    <div className={`mt-2 rounded-2xl border p-5 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-slate-200'}`}>
+                    <div className={`mt-2 rounded-2xl border p-5 ${isDark ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
                       <label className="flex items-start gap-3 cursor-pointer select-none">
                         <input
                           type="checkbox"
@@ -564,7 +671,7 @@ export default function RegisterPage() {
                           onChange={(e) => setTermsAccepted(e.target.checked)}
                           className="mt-0.5 w-5 h-5 accent-brand-600 shrink-0"
                         />
-                        <span className={`text-sm leading-relaxed ${isDark ? 'text-gray-300' : 'text-slate-700'}`}>
+                        <span className={`text-sm leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
                           {t('I have read and agree to the')}{' '}
                           <button
                             type="button"
@@ -586,7 +693,7 @@ export default function RegisterPage() {
             <div className="mt-8 flex gap-3">
               {step > 0 && (
                 <button type="button" onClick={() => setStep(s => s - 1)}
-                  className={`flex items-center gap-2 px-6 py-3.5 border font-semibold rounded-xl transition-colors text-sm ${isDark ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-slate-200 text-slate-700 hover:bg-slate-50'}`}>
+                  className={`flex items-center gap-2 px-6 py-3.5 border font-semibold rounded-xl transition-colors text-sm ${isDark ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}>
                   <ArrowLeft className="w-4 h-4" /> {t('Back')}
                 </button>
               )}

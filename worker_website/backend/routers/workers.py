@@ -195,6 +195,11 @@ async def _log_event(
 
 
 # ── Registration ──────────────────────────────────────────────────────────────
+@router.get("/job-types")
+async def get_job_types():
+    return {"job_types": config.JOB_TYPES}
+
+
 @router.post("/register")
 @limiter.limit(config.RATELIMIT_REGISTRATION)
 async def register_worker(
@@ -214,6 +219,8 @@ async def register_worker(
     daily_rate: float = Form(800),
     experience_years: int = Form(0),
     accepted_terms: bool = Form(...),
+    registration_type: str = Form("worker"),
+    num_workers: Optional[int] = Form(None),
     passbook_photo: UploadFile = File(...),
     aadhar_photo: UploadFile = File(...),
     profile_photo: UploadFile = File(...),
@@ -223,6 +230,29 @@ async def register_worker(
         raise HTTPException(status_code=400, detail="You must accept the Terms & Conditions.")
     if age < 18 or age > 70:
         raise HTTPException(status_code=400, detail="Age must be between 18 and 70.")
+
+    if district.strip().lower() != config.SERVICE_DISTRICT.lower():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Preferred district must be {config.SERVICE_DISTRICT}.",
+        )
+    town_clean = town.strip()
+    if config.SERVICE_TOWNS and town_clean not in config.SERVICE_TOWNS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Preferred town must be within {config.SERVICE_DISTRICT} district.",
+        )
+    interested_clean = interested_locations.strip()
+    if not interested_clean:
+        raise HTTPException(status_code=400, detail="Select at least one interested location.")
+    if config.SERVICE_TOWNS:
+        locs = [s.strip() for s in interested_clean.split(",") if s.strip()]
+        invalid = [loc for loc in locs if loc not in config.SERVICE_TOWNS]
+        if invalid:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Interested locations must be within {config.SERVICE_DISTRICT} district.",
+            )
 
     digits = "".join(c for c in mobile if c.isdigit())
     if len(digits) >= 12 and digits.startswith("91"):
@@ -263,13 +293,15 @@ async def register_worker(
     worker = Worker(
         name=name.strip(), age=age, gender=gender,
         mobile=normalized_mobile, email=email,
-        address=address.strip(), district=district.strip(), town=town.strip(),
+        address=address.strip(), district=config.SERVICE_DISTRICT, town=town_clean,
         job_type=job_type.strip(), current_location=current_location.strip(),
-        interested_locations=interested_locations.strip(),
+        interested_locations=interested_clean,
         facilities_requested=facilities_requested.strip(),
         passbook_photo=passbook_url, aadhar_photo=aadhar_url, profile_photo=photo_url,
         accepted_terms=True, daily_rate=daily_rate, experience_years=experience_years,
         worker_uid=worker_uid,
+        registration_type=registration_type.lower(),
+        num_workers=num_workers if registration_type.lower() == "agent" else None,
     )
     session.add(worker)
     await session.flush()

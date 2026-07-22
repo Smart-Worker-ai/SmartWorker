@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import api from '../api';
+import { useTheme } from '../context/ThemeContext';
 
 export default function GrievancesPage() {
+  const { isDark, t } = useTheme();
   const [grievances, setGrievances] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -33,22 +35,22 @@ export default function GrievancesPage() {
   );
 
   return (
-    <div className="p-4 md:p-8">
-      <h1 className="text-xl md:text-2xl font-black text-white mb-2">Grievances</h1>
-      <p className="text-gray-400 text-sm mb-6">{grievances.length} total grievances</p>
+    <div className={`p-4 md:p-8 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      <h1 className={`text-xl md:text-2xl font-black mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{t('grievances')}</h1>
+      <p className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{grievances.length} {t('totalGrievances')}</p>
 
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-500" />
+          <Search className={`absolute left-3.5 top-3.5 w-4 h-4 ${isDark ? 'text-gray-500' : 'text-gray-400'}`} />
           <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search by subject or description…"
-            className="w-full bg-gray-900 border border-gray-700 text-white rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+            placeholder={t('searchBySubjectDescription')}
+            className={`w-full border rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm ${isDark ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'}`} />
         </div>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-          className="bg-gray-900 border border-gray-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-          <option value="">All</option>
-          <option value="open">Open</option>
-          <option value="closed">Closed</option>
+          className={`border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${isDark ? 'bg-gray-900 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'}`}>
+          <option value="">{t('all')}</option>
+          <option value="open">{t('open')}</option>
+          <option value="closed">{t('closed')}</option>
         </select>
       </div>
 
@@ -58,19 +60,19 @@ export default function GrievancesPage() {
         <div className="space-y-3">
           {filtered.map((g, i) => (
             <motion.div key={g.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}
-              className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
-              <button className="w-full px-6 py-4 flex items-center gap-4 text-left hover:bg-gray-800/50 transition-colors"
+              className={`border rounded-2xl overflow-hidden ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-200'}`}>
+              <button className={`w-full px-6 py-4 flex items-center gap-4 text-left transition-colors ${isDark ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'}`}
                 onClick={() => setExpanded(expanded === g.id ? null : g.id)}>
                 <div className="flex-1">
                   <div className="flex items-center gap-3">
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${g.status === 'open' ? 'bg-red-900/40 text-red-400' : 'bg-green-900/40 text-green-400'}`}>
-                      {g.status.toUpperCase()}
+                      {t(g.status)}
                     </span>
-                    <span className="font-semibold text-white">{g.subject}</span>
+                    <span className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>{g.subject}</span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">{g.created_at?.split('T')[0]}</p>
+                  <p className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>{g.created_at?.split('T')[0]}</p>
                 </div>
-                {expanded === g.id ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                {expanded === g.id ? <ChevronUp className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} /> : <ChevronDown className={`w-4 h-4 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} />}
               </button>
 
               <AnimatePresence>
@@ -82,13 +84,13 @@ export default function GrievancesPage() {
                     transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
-                    <div className="px-6 pb-5 space-y-4 border-t border-gray-800">
-                      <p className="text-gray-300 text-sm pt-4 leading-relaxed">{g.description}</p>
+                    <div className={`px-6 pb-5 space-y-4 border-t ${isDark ? 'border-gray-800' : 'border-gray-200'}`}>
+                      <p className={`text-sm pt-4 leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{g.description}</p>
 
                       {g.admin_note && (
-                        <div className="bg-blue-900/20 border border-blue-800 rounded-xl p-4">
-                          <p className="text-xs font-semibold text-blue-400 mb-1">Admin Response</p>
-                          <p className="text-sm text-blue-300">{g.admin_note}</p>
+                        <div className={`border rounded-xl p-4 ${isDark ? 'bg-blue-900/20 border-blue-800' : 'bg-blue-50 border-blue-200'}`}>
+                          <p className={`text-xs font-semibold mb-1 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>{t('adminResponse')}</p>
+                          <p className={`text-sm ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>{g.admin_note}</p>
                         </div>
                       )}
 
@@ -96,23 +98,23 @@ export default function GrievancesPage() {
                         resolveId === g.id ? (
                           <div className="space-y-3">
                             <textarea value={adminNote} onChange={e => setAdminNote(e.target.value)}
-                              className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                              rows={3} placeholder="Add a response note for the customer (optional)…" />
+                              className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${isDark ? 'bg-gray-800 border-gray-700 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+                              rows={3} placeholder={t('addResponseNote')} />
                             <div className="flex gap-3">
                               <button onClick={() => resolve(g.id)} disabled={resolving}
                                 className="flex items-center gap-2 bg-green-700 hover:bg-green-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors">
-                                <Check className="w-4 h-4" /> {resolving ? 'Resolving…' : 'Mark Resolved'}
+                                <Check className="w-4 h-4" /> {resolving ? t('resolving') : t('markResolved')}
                               </button>
                               <button onClick={() => { setResolveId(null); setAdminNote(''); }}
-                                className="text-gray-400 hover:text-white px-4 py-2 text-sm transition-colors">
-                                Cancel
+                                className={`px-4 py-2 text-sm transition-colors ${isDark ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}>
+                                {t('cancel')}
                               </button>
                             </div>
                           </div>
                         ) : (
                           <button onClick={() => setResolveId(g.id)}
                             className="bg-indigo-700 hover:bg-indigo-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-colors">
-                            Resolve Grievance
+                            {t('resolveGrievance')}
                           </button>
                         )
                       )}
@@ -122,7 +124,7 @@ export default function GrievancesPage() {
               </AnimatePresence>
             </motion.div>
           ))}
-          {filtered.length === 0 && <p className="text-center text-gray-500 py-12">No grievances found.</p>}
+          {filtered.length === 0 && <p className={`text-center py-12 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{t('noGrievancesFound')}</p>}
         </div>
       )}
     </div>

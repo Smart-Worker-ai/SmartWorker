@@ -7,10 +7,12 @@ structured logging, and the admin routers.
 
 from __future__ import annotations
 
+import os
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -106,11 +108,18 @@ app.include_router(bookings.router,   prefix="/api/bookings",   tags=["bookings"
 app.include_router(grievances.router, prefix="/api/grievances", tags=["grievances"])
 
 
-@app.get("/")
-def root():
-    return {"service": "smart-workers-admin", "status": "ok"}
-
-
 @app.get("/health")
 def health():
     return {"status": "healthy"}
+
+
+# Serve frontend static files + SPA fallback
+dist_path = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+if os.path.exists(dist_path):
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        file_path = os.path.join(dist_path, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        # SPA fallback: serve index.html for all non-file paths
+        return FileResponse(os.path.join(dist_path, "index.html"))

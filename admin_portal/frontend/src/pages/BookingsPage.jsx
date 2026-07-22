@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Search } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 import api from '../api';
 
 const STATUS_COLORS = {
@@ -11,6 +12,7 @@ const STATUS_COLORS = {
 };
 
 export default function BookingsPage() {
+  const { isDark, t } = useTheme();
   const [bookings, setBookings] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -27,65 +29,65 @@ export default function BookingsPage() {
   );
 
   return (
-    <div className="p-4 md:p-8">
-      <h1 className="text-xl md:text-2xl font-black text-white mb-2">Bookings</h1>
-      <p className="text-gray-400 text-sm mb-6">{bookings.length} bookings</p>
+    <div className={`p-4 md:p-8 transition-colors ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
+      <h1 className={`text-xl md:text-2xl font-black mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{t('bookings')}</h1>
+      <p className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{bookings.length} {t('bookings')}</p>
 
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-gray-500" />
           <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search by worker, job type, location…"
-            className="w-full bg-gray-900 border border-gray-700 text-white rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm" />
+            placeholder={t('search')}
+            className={`w-full rounded-xl pl-10 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm transition-colors ${isDark ? 'bg-gray-800 border border-gray-700 text-white' : 'bg-white border border-gray-200 text-gray-900'}`} />
         </div>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-          className="bg-gray-900 border border-gray-700 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-          <option value="">All Status</option>
-          <option value="pending">Pending</option>
-          <option value="confirmed">Confirmed</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
+          className={`rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition-colors ${isDark ? 'bg-gray-800 border border-gray-700 text-white' : 'bg-white border border-gray-200 text-gray-900'}`}>
+          <option value="">{t('allStatus')}</option>
+          <option value="pending">{t('pending')}</option>
+          <option value="confirmed">{t('confirmed')}</option>
+          <option value="completed">{t('completed')}</option>
+          <option value="cancelled">{t('cancelled')}</option>
         </select>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-20"><div className="animate-spin w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full" /></div>
+        <div className="flex justify-center py-20"><div className="animate-spin w-8 h-8 border-4 border-brand-600 border-t-transparent rounded-full" /></div>
       ) : (
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+        <div className={`rounded-2xl overflow-hidden border-2 transition-colors ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-100 shadow-sm'}`}>
           <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[640px]">
-            <thead className="bg-gray-800 text-gray-400">
+          <table className={`w-full text-sm min-w-[640px] ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            <thead className={`transition-colors ${isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-600'}`}>
               <tr>
-                {['Worker', 'Location', 'Date', 'Days / Price', 'Status', 'Created'].map(h => (
+                {[t('worker'), t('location'), t('date'), t('daysPrice'), t('status'), t('created')].map(h => (
                   <th key={h} className="text-left px-4 py-3 font-semibold">{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-800">
+            <tbody className={`divide-y ${isDark ? 'divide-gray-700' : 'divide-gray-100'}`}>
               {filtered.map((b, i) => (
                 <motion.tr key={b.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}
-                  className="hover:bg-gray-800/50 transition-colors">
+                  className={`transition-colors ${isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-50'}`}>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-white">{b.worker_name}</div>
-                    <div className="text-xs text-gray-400">{b.job_type}</div>
+                    <div className={`font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>{b.worker_name}</div>
+                    <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{b.job_type}</div>
                   </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{b.district}<br />{b.town}</td>
-                  <td className="px-4 py-3 text-gray-300 text-xs">{b.date?.split('T')[0]}</td>
+                  <td className={`px-4 py-3 text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{b.district}<br />{b.town}</td>
+                  <td className={`px-4 py-3 text-xs ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>{b.date?.split('T')[0]}</td>
                   <td className="px-4 py-3">
-                    <div className="text-white font-semibold">₹{b.total_price?.toLocaleString()}</div>
-                    <div className="text-xs text-gray-400">{b.number_of_days} day(s)</div>
+                    <div className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>₹{b.total_price?.toLocaleString()}</div>
+                    <div className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{b.number_of_days} {t('days')}</div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[b.status] ?? 'bg-gray-800 text-gray-400'}`}>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[b.status] ?? (isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-200 text-gray-600')}`}>
                       {b.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{b.created_at?.split('T')[0]}</td>
+                  <td className={`px-4 py-3 text-xs ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>{b.created_at?.split('T')[0]}</td>
                 </motion.tr>
               ))}
             </tbody>
           </table>
-          {filtered.length === 0 && <p className="text-center text-gray-500 py-12">No bookings found.</p>}
+          {filtered.length === 0 && <p className={`text-center py-12 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{t('noBookingsFound')}</p>}
           </div>
         </div>
       )}
