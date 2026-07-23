@@ -109,3 +109,9 @@ if IS_PROD and "*" in CORS_ORIGINS:
 
 # ── Rate limits ──────────────────────────────────────────────────────────────
 RATELIMIT_LOGIN: str = _optional("RATELIMIT_LOGIN", "10/minute")
+
+# ── Redis + SMS Queue ────────────────────────────────────────────────────────
+REDIS_HOST: str = _optional("REDIS_HOST", "localhost")
+REDIS_PORT: int = int(_optional("REDIS_PORT", "6379"))
+SMS_GATEWAY_URL: str = _optional("SMS_GATEWAY_URL", "http://localhost:3100")
+SMS_GATEWAY_HMAC_SECRET: str = _optional("SMS_GATEWAY_HMAC_SECRET", "dev-gateway-secret")

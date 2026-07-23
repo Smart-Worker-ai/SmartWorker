@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, Query
 from typing import Optional
 from deps import require_admin
 from config import CUSTOMER_BACKEND_URL, CUSTOMER_BACKEND_ADMIN_SECRET, WORKER_BACKEND_URL
+from sms_queue import enqueue_sms
 
 log = structlog.get_logger("admin.workers")
 
@@ -127,9 +128,12 @@ async def approve_portal_worker(worker_id: str, _=Depends(require_admin)):
             detail_r = await c.get(f"{WORKER_BACKEND_URL}/workers/admin/{worker_id}", headers=HW)
             if detail_r.status_code == 200:
                 worker = detail_r.json().get("worker") or detail_r.json()
+                phone = worker.get("mobile") or worker.get("phone", "")
+                name = worker.get("name") or worker.get("full_name", "")
+
                 sync_payload = {
-                    "name":             worker.get("name") or worker.get("full_name", ""),
-                    "phone":            worker.get("mobile") or worker.get("phone", ""),
+                    "name":             name,
+                    "phone":            phone,
                     "job_type":         worker.get("trade_type") or worker.get("job_type", ""),
                     "district":         worker.get("district", ""),
                     "town":             worker.get("town") or worker.get("city", ""),
@@ -140,6 +144,12 @@ async def approve_portal_worker(worker_id: str, _=Depends(require_admin)):
                     "worker_uid":       worker.get("worker_uid"),
                 }
                 await c.post(f"{CUSTOMER_BACKEND_URL}/admin/workers", headers=H, json=sync_payload)
+
+                # 3. Send SMS notification
+                try:
+                    enqueue_sms(phone=phone, action="approved", worker_name=name)
+                except Exception as sms_err:
+                    log.warning("sms_enqueue_failed", worker_id=worker_id, error=str(sms_err))
         except Exception as sync_err:
             log.error("worker_sync_failed", worker_id=worker_id, error=str(sync_err))
 
@@ -149,20 +159,61 @@ async def approve_portal_worker(worker_id: str, _=Depends(require_admin)):
 @router.post("/{worker_id}/reject")
 async def reject_portal_worker(worker_id: str, _=Depends(require_admin)):
     async with httpx.AsyncClient(timeout=10) as c:
+        # Fetch worker details before rejecting (to get phone + name)
+        try:
+            detail_r = await c.get(f"{WORKER_BACKEND_URL}/workers/admin/{worker_id}", headers=HW)
+            worker = detail_r.json().get("worker") or detail_r.json() if detail_r.status_code == 200 else {}
+            phone = worker.get("mobile") or worker.get("phone", "")
+            name = worker.get("name") or worker.get("full_name", "")
+        except Exception:
+            phone = name = None
+
+        # Reject in backend
         r = await c.post(f"{WORKER_BACKEND_URL}/workers/admin/{worker_id}/reject", headers=HW)
         r.raise_for_status()
-        return r.json()
+        result = r.json()
+
+        # Send SMS notification
+        if phone and name:
+            try:
+                enqueue_sms(phone=phone, action="rejected", worker_name=name)
+            except Exception as sms_err:
+                log.warning("sms_enqueue_failed", worker_id=worker_id, error=str(sms_err))
+
+        return result
 
 
 @router.post("/{worker_id}/block")
 async def block_worker(worker_id: str, source: str = "main", _=Depends(require_admin)):
     async with httpx.AsyncClient(timeout=10) as c:
+        # Fetch worker details before blocking (to get phone + name)
+        try:
+            if source == "portal":
+                detail_r = await c.get(f"{WORKER_BACKEND_URL}/workers/admin/{worker_id}", headers=HW)
+            else:
+                detail_r = await c.get(f"{CUSTOMER_BACKEND_URL}/admin/workers/{worker_id}", headers=H)
+            worker = detail_r.json().get("worker") or detail_r.json() if detail_r.status_code == 200 else {}
+            phone = worker.get("mobile") or worker.get("phone", "")
+            name = worker.get("name") or worker.get("full_name", "")
+        except Exception:
+            phone = name = None
+
+        # Block in backend
         if source == "portal":
             r = await c.post(f"{WORKER_BACKEND_URL}/workers/admin/{worker_id}/block", headers=HW)
         else:
             r = await c.post(f"{CUSTOMER_BACKEND_URL}/admin/workers/{worker_id}/block", headers=H)
         r.raise_for_status()
-        return r.json()
+        result = r.json()
+
+        # Send SMS notification
+        if phone and name:
+            try:
+                enqueue_sms(phone=phone, action="blocked", worker_name=name)
+            except Exception as sms_err:
+                log.warning("sms_enqueue_failed", worker_id=worker_id, error=str(sms_err))
+
+        return result
 
 
 @router.post("/{worker_id}/unblock")
