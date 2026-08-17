@@ -78,9 +78,12 @@ export default function LandingPage() {
         </div>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center relative z-10">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
-            <span className="inline-block bg-white/20 text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 rounded-full mb-5 sm:mb-6 backdrop-blur">
+            <span className="inline-block bg-white/20 text-white text-xs sm:text-sm font-semibold px-3 sm:px-4 py-1.5 rounded-full mb-3 backdrop-blur">
               {t("Kerala's #1 Skilled Worker Platform")}
             </span>
+            <p className="text-white/70 text-sm sm:text-base font-medium mb-4 sm:mb-5">
+              {t('Get your workers with your fingertips')}
+            </p>
             <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-white leading-tight mb-5 sm:mb-6">
               {t('Your Skills,')}<br />
               <span className="text-yellow-300">{t('Your Income')}</span>

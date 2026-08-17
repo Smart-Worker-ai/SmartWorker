@@ -27,6 +27,7 @@ const ML = {
 
   // ── Landing page ──
   "Kerala's #1 Skilled Worker Platform": "കേരളത്തിലെ #1 വൈദഗ്ധ്യമുള്ള തൊഴിലാളി പ്ലാറ്റ്ഫോം",
+  'Get your workers with your fingertips': 'നിങ്ങളുടെ വിരൽത്തുമ്പിൽ തൊഴിലാളികളെ ലഭ്യമാക്കൂ',
   'Your Skills,': 'നിങ്ങളുടെ വൈദഗ്ധ്യം,',
   'Your Income': 'നിങ്ങളുടെ വരുമാനം',
   'Join thousands of skilled tradespeople across Kerala earning more by connecting directly with customers who need your expertise.':

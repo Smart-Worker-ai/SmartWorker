@@ -56,7 +56,7 @@ export default function App() {
       <footer className="mt-12 border-t border-slate-200 bg-white">
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-8 px-4 py-10 sm:grid-cols-4">
           <div className="col-span-2 sm:col-span-1">
-            <span className="text-xl font-extrabold text-brand-600">Crewzo</span>
+            <span className="text-xl font-extrabold text-brand-600">HAYAKU</span>
             <p className="mt-2 text-sm text-slate-500">
               Trusted, verified local workers across Kerala — booked in minutes.
             </p>
@@ -66,7 +66,7 @@ export default function App() {
           <FooterCol title="Support" items={['Help centre', 'Raise a complaint', 'Terms', 'Privacy']} />
         </div>
         <div className="border-t border-slate-100 py-4 text-center text-sm text-slate-400">
-          © {new Date().getFullYear()} Crewzo. All rights reserved.
+          © {new Date().getFullYear()} HAYAKU. All rights reserved.
         </div>
       </footer>
     </div>

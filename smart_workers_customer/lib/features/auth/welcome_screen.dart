@@ -36,7 +36,7 @@ class WelcomeScreen extends StatelessWidget {
                           color: Colors.white, size: 22),
                     ),
                     const SizedBox(width: 10),
-                    Text('Crewzo',
+                    Text('HAYAKU',
                         style: GoogleFonts.inter(
                             color: c.text,
                             fontWeight: FontWeight.w800,

@@ -19,7 +19,7 @@ export PATH="$FLUTTER_SDK/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HO
 
 echo ""
 echo "════════════════════════════════════════════════════════"
-echo "  Crewzo Customer — Flutter Build Setup"
+echo "  HAYAKU Customer — Flutter Build Setup"
 echo "════════════════════════════════════════════════════════"
 echo "  Flutter SDK : $FLUTTER_SDK"
 echo "  Android SDK : $ANDROID_HOME"

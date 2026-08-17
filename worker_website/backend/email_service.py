@@ -22,7 +22,7 @@ SMTP_HOST = os.getenv("SMTP_HOST", "")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")
 SMTP_PASS = os.getenv("SMTP_PASS", "")
-SMTP_FROM = os.getenv("SMTP_FROM", "Crewzo <noreply@crewzo.in>")
+SMTP_FROM = os.getenv("SMTP_FROM", "HAYAKU <noreply@crewzo.in>")
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +102,7 @@ def _table(rows: list) -> str:
 
 def send_registration_email(email: str, name: str) -> bool:
     html = f"""<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
-      <h2 style="color:#4338ca;margin:0 0 8px">Crewzo</h2>
+      <h2 style="color:#4338ca;margin:0 0 8px">HAYAKU</h2>
       <h3 style="color:#065f46;margin:0 0 16px">✅ Registration Submitted!</h3>
       <p style="color:#374151">Hello <b>{name}</b>, your registration has been received.</p>
       <p style="color:#374151">Our team will review your documents and verify your profile within
@@ -112,38 +112,38 @@ def send_registration_email(email: str, name: str) -> bool:
           Once verified, customers in your area can find and book your services.
         </p>
       </div>
-      <p style="color:#9ca3af;font-size:13px">Thank you for joining Crewzo!</p>
+      <p style="color:#9ca3af;font-size:13px">Thank you for joining HAYAKU!</p>
     </div>"""
-    return _send_email(email, "Registration Received — Crewzo", html)
+    return _send_email(email, "Registration Received — HAYAKU", html)
 
 
 def send_registration_sms(mobile: str, name: str) -> bool:
     return _send_sms(mobile,
-        f"Crewzo: Hi {name}! Your registration is received. Our team will verify your profile within 24-48 hrs. Thank you!")
+        f"HAYAKU: Hi {name}! Your registration is received. Our team will verify your profile within 24-48 hrs. Thank you!")
 
 
 # ── Worker Approval ───────────────────────────────────────────────────────────
 
 def send_approval_email(email: str, name: str) -> bool:
     html = f"""<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
-      <h2 style="color:#4338ca;margin:0 0 8px">Crewzo</h2>
+      <h2 style="color:#4338ca;margin:0 0 8px">HAYAKU</h2>
       <h3 style="color:#1d4ed8;margin:0 0 16px">🎉 Profile Approved!</h3>
       <p style="color:#374151">Hello <b>{name}</b>, congratulations!</p>
       <p style="color:#374151">Your profile has been <b>verified and approved</b>. You are now visible
          to customers searching for workers in your area.</p>
       <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;margin:20px 0">
         <p style="color:#1e40af;font-size:13px;margin:0">
-          Log in to the Crewzo app to manage your bookings and profile.
+          Log in to the HAYAKU app to manage your bookings and profile.
         </p>
       </div>
-      <p style="color:#9ca3af;font-size:13px">Welcome to the Crewzo family!</p>
+      <p style="color:#9ca3af;font-size:13px">Welcome to the HAYAKU family!</p>
     </div>"""
-    return _send_email(email, "Profile Approved — Crewzo", html)
+    return _send_email(email, "Profile Approved — HAYAKU", html)
 
 
 def send_approval_sms(mobile: str, name: str) -> bool:
     return _send_sms(mobile,
-        f"Crewzo: Congratulations {name}! Your profile is approved. Customers can now find and book you. Welcome!")
+        f"HAYAKU: Congratulations {name}! Your profile is approved. Customers can now find and book you. Welcome!")
 
 
 # ── Booking Notification to Worker ────────────────────────────────────────────
@@ -161,7 +161,7 @@ def send_worker_booking_alert(email: str, mobile: str, worker_name: str, custome
     ]
     if email:
         html = f"""<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:32px">
-          <h2 style="color:#4338ca;margin:0 0 8px">Crewzo</h2>
+          <h2 style="color:#4338ca;margin:0 0 8px">HAYAKU</h2>
           <h3 style="color:#1d4ed8;margin:0 0 16px">📋 New Service Booking!</h3>
           <p style="color:#374151;margin:0 0 16px">Hello <b>{worker_name}</b>, you have a new booking:</p>
           {_table(rows)}
@@ -169,7 +169,7 @@ def send_worker_booking_alert(email: str, mobile: str, worker_name: str, custome
             Please ensure you are available on the booked date.
           </p>
         </div>"""
-        _send_email(email, f"New Booking from {customer_name} — Crewzo", html)
+        _send_email(email, f"New Booking from {customer_name} — HAYAKU", html)
     if mobile:
         _send_sms(mobile,
-            f"Crewzo: New booking! {customer_name} booked you for {job_type} on {date}. Address: {address or 'to be shared'}. Amount: Rs.{amount}")
+            f"HAYAKU: New booking! {customer_name} booked you for {job_type} on {date}. Address: {address or 'to be shared'}. Amount: Rs.{amount}")

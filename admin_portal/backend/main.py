@@ -36,7 +36,7 @@ structlog.configure(
 log = structlog.get_logger("admin_backend")
 
 
-app = FastAPI(title="Crewzo — Admin Portal", version="1.1.0")
+app = FastAPI(title="HAYAKU — Admin Portal", version="1.1.0")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 

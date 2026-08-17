@@ -15,7 +15,7 @@
         android:maxSdkVersion="28"/>
 
     <application
-        android:label="Crewzo"
+        android:label="HAYAKU"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"

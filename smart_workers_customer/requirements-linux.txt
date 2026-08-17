@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Crewzo — Customer App (Flutter)  ·  Linux setup
+# HAYAKU — Customer App (Flutter)  ·  Linux setup
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # This file lists everything needed to build the Customer App on Linux.

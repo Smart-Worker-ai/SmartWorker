@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Crewzo – Firebase App Distribution deployment script
+# HAYAKU – Firebase App Distribution deployment script
 # Run after: firebase login
 
 set -e
@@ -7,7 +7,7 @@ set -e
 APK="e:/AJPRO/smart_workers_customer/build/app/outputs/flutter-apk/app-release.apk"
 APP_ID="$1"          # Pass Firebase Android App ID as first arg
 TESTERS="$2"         # Pass tester emails (comma-separated) as second arg
-RELEASE_NOTES="Crewzo Customer App v1.0 – Kerala edition. Features: Dashboard, Location search with searchable picker, Worker booking, Payment summary, Feedback."
+RELEASE_NOTES="HAYAKU Customer App v1.0 – Kerala edition. Features: Dashboard, Location search with searchable picker, Worker booking, Payment summary, Feedback."
 
 if [ -z "$APP_ID" ]; then
   echo "Usage: bash deploy.sh <FIREBASE_APP_ID> <tester@email.com>"

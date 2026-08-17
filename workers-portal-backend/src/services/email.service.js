@@ -93,7 +93,7 @@ async function _sendSms(phone, message) {
 }
 
 async function _sendOtpSms(phone, otp) {
-  const message = `Your Crewzo OTP is ${otp}. Valid for 10 minutes. Do not share with anyone.`;
+  const message = `Your HAYAKU OTP is ${otp}. Valid for 10 minutes. Do not share with anyone.`;
 
   // 1. Try custom self-hosted gateway first (free, no third-party)
   if (await _sendViaCustomGateway(phone, message)) return true;
@@ -149,9 +149,9 @@ function _table(rows) {
 async function sendOtpEmail(email, otp) {
   return _sendEmail({
     to: email,
-    subject: 'Crewzo — Your OTP',
+    subject: 'HAYAKU — Your OTP',
     html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
-      <h2 style="color:#4338ca;margin:0 0 12px">Crewzo</h2>
+      <h2 style="color:#4338ca;margin:0 0 12px">HAYAKU</h2>
       <p style="color:#374151;margin:0 0 8px">Your one-time password:</p>
       <div style="font-size:42px;font-weight:900;letter-spacing:14px;color:#1e1b4b;background:#eef2ff;border-radius:16px;text-align:center;padding:28px 0;margin:20px 0">${otp}</div>
       <p style="color:#9ca3af;font-size:13px;margin:0">Valid for <b>10 minutes</b>. Never share this code with anyone.</p>
@@ -183,17 +183,17 @@ async function sendBookingConfirmation(customerEmail, customerPhone, booking, wo
       to: customerEmail,
       subject: `Booking Confirmed — ${workerName}`,
       html: `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:32px">
-        <h2 style="color:#4338ca;margin:0 0 4px">Crewzo</h2>
+        <h2 style="color:#4338ca;margin:0 0 4px">HAYAKU</h2>
         <h3 style="color:#065f46;margin:0 0 20px">✅ Booking Confirmed!</h3>
         ${_table(rows)}
-        <p style="color:#9ca3af;font-size:13px;margin-top:20px">Thank you for choosing Crewzo!</p>
+        <p style="color:#9ca3af;font-size:13px;margin-top:20px">Thank you for choosing HAYAKU!</p>
       </div>`,
     }).catch(() => {});
   }
 
   if (customerPhone) {
     _sendSms(customerPhone,
-      `Crewzo: Booking confirmed! ${workerName} (${booking.job_type}) on ${dateStr}. Total: Rs.${booking.total_price}. Address: ${booking.address || 'provided'}`
+      `HAYAKU: Booking confirmed! ${workerName} (${booking.job_type}) on ${dateStr}. Total: Rs.${booking.total_price}. Address: ${booking.address || 'provided'}`
     ).catch(() => {});
   }
 }
@@ -218,7 +218,7 @@ async function sendWorkerBookingAlert(workerEmail, workerPhone, workerName, book
       to: workerEmail,
       subject: `New Booking from ${customerName}`,
       html: `<div style="font-family:sans-serif;max-width:500px;margin:0 auto;padding:32px">
-        <h2 style="color:#4338ca;margin:0 0 4px">Crewzo</h2>
+        <h2 style="color:#4338ca;margin:0 0 4px">HAYAKU</h2>
         <h3 style="color:#1d4ed8;margin:0 0 20px">📋 New Service Booking!</h3>
         <p style="color:#374151;margin:0 0 16px">Hello <b>${workerName}</b>, you have a new booking:</p>
         ${_table(rows)}
@@ -229,7 +229,7 @@ async function sendWorkerBookingAlert(workerEmail, workerPhone, workerName, book
 
   if (workerPhone) {
     _sendSms(workerPhone,
-      `Crewzo: New booking! ${customerName} booked you for ${booking.job_type} on ${dateStr}. Address: ${booking.address || 'to be shared'}. Amount: Rs.${booking.total_price}`
+      `HAYAKU: New booking! ${customerName} booked you for ${booking.job_type} on ${dateStr}. Address: ${booking.address || 'to be shared'}. Amount: Rs.${booking.total_price}`
     ).catch(() => {});
   }
 }

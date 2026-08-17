@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Crewzo — Customer App (Flutter)  ·  Windows setup
+# HAYAKU — Customer App (Flutter)  ·  Windows setup
 # ─────────────────────────────────────────────────────────────────────────────
 #
 # This file lists everything needed to build the Customer App on Windows.

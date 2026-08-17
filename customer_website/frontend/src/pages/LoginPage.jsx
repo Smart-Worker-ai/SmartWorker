@@ -22,7 +22,7 @@ export default function LoginPage() {
   return (
     <div className="mx-auto max-w-md">
       <div className="card">
-        <h1 className="text-xl font-bold text-slate-900">Sign in to Crewzo</h1>
+        <h1 className="text-xl font-bold text-slate-900">Sign in to HAYAKU</h1>
         <p className="mt-1 text-sm text-slate-500">Book and manage your workers.</p>
 
         <div className="mt-5 flex rounded-lg bg-slate-100 p-1 text-sm font-medium">

@@ -230,9 +230,9 @@ Write-Ok "APK built: $ApkPath ($([math]::Round((Get-Item $ApkPath).Length / 1MB,
 if (-not $ReleaseNotes) {
     $verLine = (Get-Content (Join-Path $ScriptDir "pubspec.yaml") | Where-Object { $_ -match '^version:' } | Select-Object -First 1)
     if ($verLine -match 'version:\s*(.+)$') {
-        $ReleaseNotes = "Crewzo Customer App — release " + $matches[1].Trim()
+        $ReleaseNotes = "HAYAKU Customer App — release " + $matches[1].Trim()
     } else {
-        $ReleaseNotes = "Crewzo Customer App — release"
+        $ReleaseNotes = "HAYAKU Customer App — release"
     }
 }
 

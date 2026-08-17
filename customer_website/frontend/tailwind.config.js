@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Brand cyan (from the Crewzo logo).
+        // Brand cyan (from the HAYAKU logo).
         brand: {
           50: '#ecfbff',
           100: '#d2f4fd',

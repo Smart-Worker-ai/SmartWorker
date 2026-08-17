@@ -135,7 +135,7 @@ export default function HomePage() {
 
       {/* How it works */}
       <section className="mx-auto mt-14 max-w-6xl px-1">
-        <h2 className="mb-6 text-center text-lg font-bold text-ink">How Crewzo works</h2>
+        <h2 className="mb-6 text-center text-lg font-bold text-ink">How HAYAKU works</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {STEPS.map((s) => (
             <div key={s.n} className="card text-center">

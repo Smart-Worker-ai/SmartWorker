@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Crewzo — local Docker composition
+# HAYAKU — local Docker composition
 #
 # Brings up:
 #   • postgres         — shared DB (worker_backend uses it)

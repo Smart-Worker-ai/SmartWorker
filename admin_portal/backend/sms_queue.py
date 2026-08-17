@@ -67,7 +67,7 @@ def send_sms_via_gateway(phone: str, message: str, job_id: str = None) -> dict:
 def enqueue_sms(phone: str, action: str, worker_name: str, **context) -> str:
     """Enqueue SMS notification for background processing."""
     templates = {
-        "verified": f"Hi {worker_name}, your SmartWorkers profile has been verified. Start accepting jobs now!",
+        "verified": f"Hi {worker_name}, your HAYAKU profile has been verified. Start accepting jobs now!",
         "approved": f"Congratulations {worker_name}! Your profile is approved. Download the app to start earning.",
         "rejected": f"Hi {worker_name}, your application was not approved at this time. Contact support for details.",
         "blocked": f"Hi {worker_name}, your account has been suspended. Contact support: support@crewzo.in",
