@@ -50,11 +50,10 @@ COPY --from=builder /install /usr/local
 
 # Non-root user.
 RUN useradd -m -u 1000 -s /bin/bash app
+RUN mkdir -p /app/data /app/uploads && chown -R app:app /app
 USER app
 
 COPY --chown=app:app . .
-
-RUN mkdir -p /app/data /app/uploads
 
 EXPOSE 8000
 
