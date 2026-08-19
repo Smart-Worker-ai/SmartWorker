@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://admin-api.crewzo.in/api/:path*"
+      "destination": "https://admin-backend-production-219d.up.railway.app/api/:path*"
     },
     {
       "source": "/((?!api/).*)",
