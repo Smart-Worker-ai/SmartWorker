@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://workers-api.crewzo.in/api/:path*"
+      "destination": "https://smartworker-production.up.railway.app/api/:path*"
     },
     {
       "source": "/uploads/:path*",
-      "destination": "https://workers-api.crewzo.in/uploads/:path*"
+      "destination": "https://smartworker-production.up.railway.app/uploads/:path*"
     },
     {
       "source": "/((?!api/|uploads/).*)",
