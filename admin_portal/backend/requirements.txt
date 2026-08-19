@@ -17,4 +17,4 @@ alembic==1.14.0
 
 # SMS Queue System
 redis==5.0.0
-rq==1.17.0
+rq==1.16.2
