@@ -174,7 +174,7 @@ export default function RegisterPage() {
     const fetchJobTypes = async () => {
       try {
         const response = await axios.get('/api/workers/job-types');
-        setJobTypes(response.data || []);
+        setJobTypes(response.data?.job_types || []);
       } catch (e) {
         console.error('Failed to fetch job types:', e);
         setJobTypes([]);
