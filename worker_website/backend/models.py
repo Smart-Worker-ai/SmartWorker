@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import BigInteger, Boolean, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import BigInteger, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -68,6 +68,7 @@ class Worker(Base):
     total_referrals:  Mapped[int]           = mapped_column(Integer, default=0)
 
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
         server_default=func.now(),
         default=lambda: datetime.now(timezone.utc),
     )
@@ -94,6 +95,7 @@ class WorkerSession(Base):
         String(36), ForeignKey("workers.id", ondelete="CASCADE"), nullable=False, index=True
     )
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
         server_default=func.now(),
         default=lambda: datetime.now(timezone.utc),
     )
@@ -119,6 +121,7 @@ class SyncRetry(Base):
     attempts:    Mapped[int] = mapped_column(Integer, default=0)
     last_error:  Mapped[Optional[str]] = mapped_column(Text)
     created_at:  Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
         server_default=func.now(),
         default=lambda: datetime.now(timezone.utc),
     )
@@ -139,6 +142,7 @@ class WorkerEvent(Base):
     description: Mapped[Optional[str]] = mapped_column(Text)
     meta:        Mapped[Optional[str]] = mapped_column(Text)   # JSON blob for extra context
     created_at:  Mapped[datetime]     = mapped_column(
+        DateTime(timezone=True),
         server_default=func.now(),
         default=lambda: datetime.now(timezone.utc),
         index=True,
@@ -164,6 +168,7 @@ class ReferralDownload(Base):
     )
     device_hash:  Mapped[str]      = mapped_column(String(128), nullable=False)
     downloaded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
         server_default=func.now(),
         default=lambda: datetime.now(timezone.utc),
     )
@@ -185,6 +190,7 @@ class WorkerEarning(Base):
     amount:     Mapped[float]         = mapped_column(Float, nullable=False)
     period:     Mapped[Optional[str]] = mapped_column(String(20))   # YYYY-MM
     created_at: Mapped[datetime]      = mapped_column(
+        DateTime(timezone=True),
         server_default=func.now(),
         default=lambda: datetime.now(timezone.utc),
     )
