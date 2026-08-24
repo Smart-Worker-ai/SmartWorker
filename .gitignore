@@ -54,3 +54,9 @@ neon-apikey.md
 cf-apikey.md
 *api-key*
 *apikey*
+railway-token
+versel-token
+vercel-token
+.railway-secrets-note
+*-token
+*.token
