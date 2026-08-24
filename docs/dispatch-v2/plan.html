@@ -1,0 +1,627 @@
+<title>Crewzo Dispatch Layer</title>
+<style>
+  :root{
+    --bg:#F2F4F0; --surface:#FFFFFF; --surface-2:#E8ECE4; --surface-3:#DFE4D9;
+    --ink:#15201D; --ink-2:#3F4F4A; --muted:#6E7C77;
+    --rule:#D5DBD2; --rule-strong:#B6C0B5;
+    --accent:#9C540A; --accent-bright:#C77A18; --accent-wash:rgba(199,122,24,.10);
+    --ok:#1C6446; --ok-wash:rgba(28,100,70,.10);
+    --warn:#835D00; --warn-wash:rgba(131,93,0,.10);
+    --crit:#95291D; --crit-wash:rgba(149,41,29,.10);
+    --shadow:0 1px 0 rgba(21,32,29,.05), 0 8px 24px -18px rgba(21,32,29,.45);
+
+    --font-display:"Helvetica Neue",Helvetica,Arial,sans-serif;
+    --font-body:Georgia,"Iowan Old Style","Times New Roman",serif;
+    --font-data:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+
+    --col:min(74ch,100%);
+    --wide:min(1140px,100%);
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#0D1311; --surface:#141B18; --surface-2:#1A2320; --surface-3:#222C28;
+      --ink:#E3EAE5; --ink-2:#B3C0BA; --muted:#87958F;
+      --rule:#232D29; --rule-strong:#33403A;
+      --accent:#E5A143; --accent-bright:#F2BC72; --accent-wash:rgba(229,161,67,.13);
+      --ok:#4FC08D; --ok-wash:rgba(79,192,141,.13);
+      --warn:#D6A62E; --warn-wash:rgba(214,166,46,.13);
+      --crit:#E2705E; --crit-wash:rgba(226,112,94,.13);
+      --shadow:0 1px 0 rgba(0,0,0,.4), 0 10px 30px -20px rgba(0,0,0,.9);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0D1311; --surface:#141B18; --surface-2:#1A2320; --surface-3:#222C28;
+    --ink:#E3EAE5; --ink-2:#B3C0BA; --muted:#87958F;
+    --rule:#232D29; --rule-strong:#33403A;
+    --accent:#E5A143; --accent-bright:#F2BC72; --accent-wash:rgba(229,161,67,.13);
+    --ok:#4FC08D; --ok-wash:rgba(79,192,141,.13);
+    --warn:#D6A62E; --warn-wash:rgba(214,166,46,.13);
+    --crit:#E2705E; --crit-wash:rgba(226,112,94,.13);
+    --shadow:0 1px 0 rgba(0,0,0,.4), 0 10px 30px -20px rgba(0,0,0,.9);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:var(--font-body); font-size:17px; line-height:1.62;
+    margin:0; padding:0 24px 120px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .col{width:var(--col); margin-inline:auto}
+  .wide{width:var(--wide); margin-inline:auto}
+
+  h1,h2,h3,h4{font-family:var(--font-display); text-wrap:balance; margin:0}
+  h1{font-size:clamp(2.4rem,6vw,3.9rem); font-weight:800; letter-spacing:-.035em; line-height:.98}
+  h2{font-size:clamp(1.5rem,3vw,2rem); font-weight:800; letter-spacing:-.024em; line-height:1.1}
+  h3{font-size:1.13rem; font-weight:700; letter-spacing:-.012em; line-height:1.3}
+  h4{font-size:.95rem; font-weight:700; letter-spacing:-.005em}
+  p{margin:0}
+  a{color:var(--accent)}
+
+  .eyebrow{
+    font-family:var(--font-data); font-size:.68rem; text-transform:uppercase;
+    letter-spacing:.16em; color:var(--muted); font-weight:500;
+  }
+  code,.mono{font-family:var(--font-data); font-size:.86em}
+  code{background:var(--surface-2); padding:.1em .34em; border-radius:3px; color:var(--ink-2)}
+
+  /* ── masthead ─────────────────────────── */
+  header.mast{
+    border-bottom:2px solid var(--ink);
+    padding:56px 0 22px; margin-bottom:8px;
+  }
+  .mast .col{display:flex; flex-direction:column; gap:18px}
+  .mast-meta{
+    display:flex; flex-wrap:wrap; gap:8px 26px;
+    font-family:var(--font-data); font-size:.72rem; letter-spacing:.05em;
+    color:var(--muted); text-transform:uppercase;
+  }
+  .mast-meta b{color:var(--ink-2); font-weight:600}
+  .standfirst{font-size:1.16rem; color:var(--ink-2); line-height:1.55; max-width:60ch}
+
+  /* ── sections ─────────────────────────── */
+  section{padding:52px 0 0}
+  .sec-head{display:flex; flex-direction:column; gap:9px; margin-bottom:22px}
+  .sec-head .rule{height:1px; background:var(--rule-strong); margin-top:4px}
+  section > .col > p + p,
+  section > .col > p + ul,
+  section > .col > ul + p{margin-top:14px}
+  ul,ol{margin:0; padding-left:1.25em}
+  li{margin:7px 0}
+  li::marker{color:var(--muted)}
+  strong{font-weight:700; color:var(--ink)}
+
+  /* ── verdict ──────────────────────────── */
+  .verdict{
+    background:var(--surface); border:1px solid var(--rule);
+    border-left:4px solid var(--accent);
+    border-radius:2px; padding:24px 26px; box-shadow:var(--shadow);
+    display:flex; flex-direction:column; gap:14px;
+  }
+  .verdict h3{color:var(--accent)}
+
+  .note{
+    border:1px solid var(--rule); border-left:3px solid var(--warn);
+    background:var(--warn-wash); padding:14px 18px; border-radius:2px;
+    font-size:.96rem; color:var(--ink-2);
+  }
+  .note.crit{border-left-color:var(--crit); background:var(--crit-wash)}
+  .note b{color:var(--ink)}
+
+  /* ── tables ───────────────────────────── */
+  .tw{overflow-x:auto; border:1px solid var(--rule); border-radius:2px; background:var(--surface)}
+  table{border-collapse:collapse; width:100%; font-size:.9rem; font-family:var(--font-display)}
+  th,td{text-align:left; padding:11px 15px; border-bottom:1px solid var(--rule); vertical-align:top}
+  thead th{
+    font-family:var(--font-data); font-size:.66rem; text-transform:uppercase;
+    letter-spacing:.12em; color:var(--muted); font-weight:500;
+    background:var(--surface-2); border-bottom:1px solid var(--rule-strong); white-space:nowrap;
+  }
+  tbody tr:last-child td{border-bottom:0}
+  td.num{font-family:var(--font-data); font-variant-numeric:tabular-nums; white-space:nowrap}
+  tfoot td{font-weight:700; background:var(--surface-2); border-top:1px solid var(--rule-strong)}
+
+  .pill{
+    display:inline-block; font-family:var(--font-data); font-size:.66rem; font-weight:600;
+    letter-spacing:.07em; text-transform:uppercase; padding:2px 7px; border-radius:2px;
+    border:1px solid currentColor; white-space:nowrap;
+  }
+  .p-ok{color:var(--ok); background:var(--ok-wash)}
+  .p-warn{color:var(--warn); background:var(--warn-wash)}
+  .p-crit{color:var(--crit); background:var(--crit-wash)}
+  .p-new{color:var(--accent); background:var(--accent-wash)}
+
+  /* ── lifecycle rail ───────────────────── */
+  .rail{display:grid; grid-template-columns:auto 26px 1fr; gap:0 0; margin-top:6px}
+  .rail .actor{
+    font-family:var(--font-data); font-size:.63rem; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--muted); text-align:right; padding:16px 12px 0 0; white-space:nowrap;
+  }
+  .rail .spine{position:relative}
+  .rail .spine::before{
+    content:""; position:absolute; left:11px; top:0; bottom:0; width:1px; background:var(--rule-strong);
+  }
+  .rail .row:last-child .spine::before{bottom:auto; height:22px}
+  .rail .dot{
+    position:absolute; left:6px; top:17px; width:11px; height:11px; border-radius:50%;
+    background:var(--bg); border:2px solid var(--rule-strong);
+  }
+  .rail .row.gate .dot{border-color:var(--accent); background:var(--accent)}
+  .rail .row.term .dot{border-color:var(--ok); background:var(--ok)}
+  .rail .stage{
+    padding:12px 0 18px 4px; display:flex; flex-direction:column; gap:5px;
+  }
+  .rail .row{display:contents}
+  .stage .st-name{
+    font-family:var(--font-data); font-size:.79rem; font-weight:600; color:var(--ink);
+    letter-spacing:.01em;
+  }
+  .stage .st-desc{font-size:.93rem; color:var(--ink-2); line-height:1.5}
+  .rail .row.gate .st-name{color:var(--accent)}
+
+  /* ── grids ────────────────────────────── */
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; margin-top:18px}
+  .card{
+    background:var(--surface); border:1px solid var(--rule); border-radius:2px;
+    padding:17px 18px; display:flex; flex-direction:column; gap:7px;
+  }
+  .card .k{font-family:var(--font-data); font-size:.66rem; letter-spacing:.11em; text-transform:uppercase; color:var(--muted)}
+  .card .v{font-family:var(--font-display); font-size:1.5rem; font-weight:800; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+  .card .d{font-size:.9rem; color:var(--ink-2); line-height:1.45}
+
+  /* ── phases ───────────────────────────── */
+  .phases{display:flex; flex-direction:column; gap:0; margin-top:8px}
+  .phase{
+    display:grid; grid-template-columns:56px 1fr auto; gap:0 18px; align-items:start;
+    padding:20px 0; border-top:1px solid var(--rule);
+  }
+  .phase:last-child{border-bottom:1px solid var(--rule)}
+  .phase .n{
+    font-family:var(--font-data); font-size:1.5rem; font-weight:600;
+    color:var(--accent); line-height:1; padding-top:2px; font-variant-numeric:tabular-nums;
+  }
+  .phase .body{display:flex; flex-direction:column; gap:6px}
+  .phase .body p{font-size:.94rem; color:var(--ink-2); line-height:1.5}
+  .phase .wk{
+    font-family:var(--font-data); font-size:.74rem; color:var(--muted);
+    white-space:nowrap; padding-top:5px; letter-spacing:.03em;
+  }
+  @media(max-width:620px){
+    .phase{grid-template-columns:40px 1fr; }
+    .phase .wk{grid-column:2; padding-top:2px}
+  }
+
+  /* ── decisions ────────────────────────── */
+  .q{
+    border:1px solid var(--rule); border-radius:2px; background:var(--surface);
+    padding:16px 18px; display:flex; flex-direction:column; gap:6px;
+  }
+  .q .qn{font-family:var(--font-data); font-size:.66rem; letter-spacing:.11em; text-transform:uppercase; color:var(--accent)}
+  .q p{font-size:.94rem; color:var(--ink-2)}
+
+  footer{
+    margin-top:70px; padding-top:20px; border-top:1px solid var(--rule);
+    font-family:var(--font-data); font-size:.72rem; color:var(--muted); letter-spacing:.04em;
+  }
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  @media(prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+</style>
+
+<header class="mast">
+  <div class="col">
+    <div class="eyebrow">Crewzo · Build plan · v0.2 · Scope decisions locked</div>
+    <h1>Crewzo Dispatch Layer</h1>
+    <p class="standfirst">Turning the existing browse-and-book marketplace into an admin-controlled dispatch system: broadcast job offers, worker interest, geo-verified site arrival, and a two-OTP work handshake.</p>
+    <div class="mast-meta">
+      <span>Date <b>24 Aug 2026</b></span>
+      <span>Repo <b>SmartWorker</b></span>
+      <span>Status <b>Approved to detail</b></span>
+      <span>Author <b>Claude + Hareesh</b></span>
+    </div>
+  </div>
+</header>
+
+<section id="verdict">
+  <div class="col">
+    <div class="verdict">
+      <h3>The short version</h3>
+      <p>This is not a new set of software. Roughly <strong>65% of what you described already exists</strong> in this repo — two Flutter apps, three backends, an admin portal, an SMS gateway. What you are actually asking for is a <strong>dispatch layer</strong> bolted onto the existing booking system, plus push notifications (which do not exist yet at all).</p>
+      <p>Building it as a fresh product set would mean re-writing auth, worker profiles, the admin portal and both apps for no gain. My recommendation is to <strong>extend Crewzo</strong> and version it as v2. That is roughly <strong>9–11 weeks</strong> of build versus 6+ months greenfield.</p>
+      <p>Two things in your description will hurt you in production if built literally, and I have flagged both in <a href="#pushback">§13</a>: an admin gate on <em>every</em> booking, and broadcasting <em>every</em> job to <em>every</em> worker.</p>
+      <p>Four scope questions are now settled and folded in below — extend rather than rebuild, all three roles take work directly, filtered broadcast, and a flat service charge with wages left off-platform. That last one has consequences well beyond the payment screen; <a href="#revenue">§9</a> works them through.</p>
+    </div>
+  </div>
+</section>
+
+<section id="have">
+  <div class="col">
+    <div class="sec-head">
+      <div class="eyebrow">01 — Inventory</div>
+      <h2>What you already have</h2>
+      <div class="rule"></div>
+    </div>
+    <p>I read the repo before writing this. Current state, measured against what the new flow needs:</p>
+  </div>
+  <div class="wide" style="margin-top:18px">
+    <div class="tw">
+      <table>
+        <thead><tr><th>Component</th><th>Stack</th><th>Reusable for dispatch?</th></tr></thead>
+        <tbody>
+          <tr><td><code>workers-portal-backend</code></td><td>Node / Express</td><td><span class="pill p-ok">Keep</span> Auth, workers, bookings, feedback, grievances all land here. Becomes the dispatch engine.</td></tr>
+          <tr><td><code>admin_portal</code></td><td>FastAPI + React</td><td><span class="pill p-warn">Extend</span> Today it only <em>lists</em> bookings by proxy. Needs approve / assign / override screens — the biggest single piece of new UI.</td></tr>
+          <tr><td><code>smart_workers_customer</code></td><td>Flutter</td><td><span class="pill p-warn">Extend</span> Booking flow changes from "pick a worker" to "describe a job". Add OTP display + live job status.</td></tr>
+          <tr><td><code>workers_portal_app</code></td><td>Flutter</td><td><span class="pill p-warn">Extend</span> Already ships <code>flutter_map</code> + <code>latlong2</code>. Needs offers inbox, geofence check-in, OTP entry.</td></tr>
+          <tr><td><code>worker_website</code></td><td>FastAPI + React</td><td><span class="pill p-ok">Keep as-is</span> Registration and admin verification stay unchanged.</td></tr>
+          <tr><td><code>sms-gateway</code></td><td>Node</td><td><span class="pill p-ok">Keep</span> Becomes the fallback channel for workers with no data or no app.</td></tr>
+          <tr><td>Push notifications</td><td>—</td><td><span class="pill p-crit">Missing</span> No FCM in either <code>pubspec.yaml</code>. Everything you described hangs off this. Build first.</td></tr>
+          <tr><td>Roles beyond "worker"</td><td>—</td><td><span class="pill p-crit">Missing</span> No agent or supervisor concept anywhere in the schema.</td></tr>
+          <tr><td>Job geolocation</td><td>—</td><td><span class="pill p-crit">Missing</span> Bookings store <code>address</code> as free text. No lat/lng, so no geofence is possible today.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="shift">
+  <div class="col">
+    <div class="sec-head">
+      <div class="eyebrow">02 — The core change</div>
+      <h2>From marketplace to dispatch</h2>
+      <div class="rule"></div>
+    </div>
+    <p>Today the customer picks a specific worker and a booking row is created against that worker immediately. Your new flow inverts this: the customer describes a <em>need</em>, and the worker is decided later, by admin, out of a pool of volunteers.</p>
+    <p>Those are two genuinely different objects, and cramming both into the existing <code>bookings</code> table is where this design goes wrong. The fix:</p>
+    <ul>
+      <li><strong>A job request</strong> is what the customer creates. Trade, date, duration, address <em>with a map pin</em>, notes, budget. It has no worker.</li>
+      <li><strong>A job offer</strong> is one row per notified worker per request. This is the notification's audit trail — sent, seen, interested, declined, expired, admin-approved, admin-rejected.</li>
+      <li><strong>A booking</strong> is created only when admin assigns a worker. It stays the record everything downstream already points at, so feedback and grievances keep working untouched.</li>
+    </ul>
+    <p style="margin-top:14px">Keeping the old direct-booking path alive alongside this is also possible — a customer who already trusts a particular worker skips the broadcast and goes straight to admin review. Worth having; costs almost nothing once the state machine exists.</p>
+  </div>
+</section>
+
+<section id="model">
+  <div class="col">
+    <div class="sec-head">
+      <div class="eyebrow">03 — Data</div>
+      <h2>New tables</h2>
+      <div class="rule"></div>
+    </div>
+  </div>
+  <div class="wide" style="margin-top:8px">
+    <div class="tw">
+      <table>
+        <thead><tr><th>Table</th><th>Purpose</th><th>Notable columns</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">job_requests</td><td>Customer's stated need, pre-assignment</td><td class="mono">status, trade, lat, lng, geofence_m, scheduled_at, days, budget, admin_note, approved_by, approved_at</td></tr>
+          <tr><td class="mono">job_offers</td><td>One row per notified recipient. Drives the popup and the audit trail.</td><td class="mono">request_id, recipient_id, recipient_role, state, sent_at, seen_at, responded_at, expires_at, admin_decision</td></tr>
+          <tr><td class="mono">job_events</td><td>Append-only timeline. Never update in place — disputes are settled from this.</td><td class="mono">booking_id, actor_id, type, lat, lng, accuracy_m, is_mocked, payload, created_at</td></tr>
+          <tr><td class="mono">work_otps</td><td>Start + completion codes, hashed</td><td class="mono">booking_id, kind, code_hash, attempts, expires_at, consumed_at</td></tr>
+          <tr><td class="mono">devices</td><td>FCM tokens per user per device</td><td class="mono">user_id, role, fcm_token, platform, last_seen_at</td></tr>
+          <tr><td class="mono">user_roles</td><td>Worker / agent / supervisor. All three accept work directly, so this is a priority tier, not a delegation tree — which keeps the offer logic simple.</td><td class="mono">user_id, role, tier, districts, trades</td></tr>
+          <tr><td class="mono">service_charges</td><td>What Crewzo bills the customer per booking. Wages are not modelled here — see §9.</td><td class="mono">booking_id, tier, amount, gst, status, gateway_ref, charged_at, refunded_at</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col" style="margin-top:18px">
+    <div class="note"><b>Migrate to Postgres before this ships.</b> The Node backend still runs SQLite by default. Concurrent offer responses and the append-only event log both want real transactions and proper row locking. Railway Postgres is already provisioned — it is a <code>DATABASE_URL</code> away.</div>
+  </div>
+</section>
+
+<section id="lifecycle">
+  <div class="col">
+    <div class="sec-head">
+      <div class="eyebrow">04 — State machine</div>
+      <h2>The full job lifecycle</h2>
+      <div class="rule"></div>
+    </div>
+    <p>Amber markers are the two admin gates you asked for. Nothing crosses them without a human decision.</p>
+  </div>
+  <div class="wide" style="margin-top:26px">
+    <div class="rail">
+      <div class="row"><div class="actor">Customer</div><div class="spine"><span class="dot"></span></div><div class="stage"><span class="st-name">submitted</span><span class="st-desc">Customer describes the job, drops a map pin, picks date and duration. No worker involved yet.</span></div></div>
+      <div class="row gate"><div class="actor">Admin</div><div class="spine"><span class="dot"></span></div><div class="stage"><span class="st-name">admin_review &nbsp;— GATE 1</span><span class="st-desc">Admin approves, edits, or rejects. Only on approval does anything reach a worker. Rejection returns a reason to the customer.</span></div></div>
+      <div class="row"><div class="actor">System</div><div class="spine"><span class="dot"></span></div><div class="stage"><span class="st-name">broadcast</span><span class="st-desc">One <code>job_offer</code> row per <em>matched</em> worker, agent and supervisor — filtered by trade, district and availability, ordered by rating and distance. Each row fires a push notification and an in-app popup. Offers carry an expiry, and admin has a widen-the-broadcast button.</span></div></div>
+      <div class="row"><div class="actor">Workers</div><div class="spine"><span class="dot"></span></div><div class="stage"><span class="st-name">collecting_interest</span><span class="st-desc">Each recipient responds <code>interested</code> or <code>declined</code>. Silence becomes <code>expired</code>. Admin watches the count live.</span></div></div>
+      <div class="row gate"><div class="actor">Admin</div><div class="spine"><span class="dot"></span></div><div class="stage"><span class="st-name">assigning &nbsp;— GATE 2</span><span class="st-desc">Admin sees each interested worker beside their profile — trade, rating, past jobs, distance, documents — and approves exactly one. The rest are notified they were not selected.</span></div></div>
+      <div class="row"><div class="actor">System</div><div class="spine"><span class="dot"></span></div><div class="stage"><span class="st-name">assigned</span><span class="st-desc">Booking row created. <strong>Start OTP</strong> generated and shown in the customer app on that booking. Worker gets the address and the pin.</span></div></div>
+      <div class="row"><div class="actor">Worker</div><div class="spine"><span class="dot"></span></div><div class="stage"><span class="st-name">en_route</span><span class="st-desc">Optional. Worker taps "on my way"; customer sees an ETA. One location sample logged.</span></div></div>
+      <div class="row"><div class="actor">Worker</div><div class="spine"><span class="dot"></span></div><div class="stage"><span class="st-name">in_progress</span><span class="st-desc">Worker taps "start work". Server checks three things together: correct start OTP, device inside the geofence, and GPS accuracy good enough to trust. All three pass, or the start is refused with the specific reason.</span></div></div>
+      <div class="row"><div class="actor">Worker</div><div class="spine"><span class="dot"></span></div><div class="stage"><span class="st-name">worker_completed</span><span class="st-desc">Worker marks the work done, optionally with photos. <strong>Completion OTP</strong> is generated at this moment — not earlier — and appears in the customer app.</span></div></div>
+      <div class="row term"><div class="actor">Both</div><div class="spine"><span class="dot"></span></div><div class="stage"><span class="st-name">completed</span><span class="st-desc">Customer reads the completion OTP aloud, worker enters it. Location logged again. Job closes and payment settles.</span></div></div>
+      <div class="row term"><div class="actor">Both</div><div class="spine"><span class="dot"></span></div><div class="stage"><span class="st-name">feedback_window</span><span class="st-desc">Both sides rate each other. Ratings stay hidden until both submit or seven days pass — this is what stops retaliatory reviews.</span></div></div>
+    </div>
+  </div>
+  <div class="col" style="margin-top:26px">
+    <h3>Escape hatches you must build, not discover later</h3>
+    <ul>
+      <li><strong>Nobody shows interest.</strong> Offer window expires with zero takers → admin is alerted, can widen the broadcast or call the customer. Without this, requests silently rot.</li>
+      <li><strong>Customer absent at completion.</strong> They cannot read out an OTP they are not there to see. Worker raises "customer unavailable" → admin verifies by phone and force-completes, logged as an override.</li>
+      <li><strong>Assigned worker no-shows.</strong> Admin un-assigns and re-opens the request to the remaining interested workers without a fresh broadcast.</li>
+      <li><strong>Mid-job cancellation.</strong> Both sides need it, with a reason, and it must not corrupt the ratings.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="notify">
+  <div class="col">
+    <div class="sec-head">
+      <div class="eyebrow">05 — Notifications</div>
+      <h2>Getting the popup in front of people</h2>
+      <div class="rule"></div>
+    </div>
+    <p>You need two delivery paths, because "popup" means different things depending on whether the app is open.</p>
+    <ul>
+      <li><strong>App in foreground</strong> — a WebSocket (or SSE) connection pushes the offer and the app renders a modal immediately. This is the real popup.</li>
+      <li><strong>App backgrounded or killed</strong> — Firebase Cloud Messaging delivers a high-priority data notification. Tapping it opens the same modal. FCM is free at any volume you will hit.</li>
+      <li><strong>No app, no data</strong> — the existing SMS gateway sends a short message. Kerala has coverage gaps, and older agents may not install anything.</li>
+    </ul>
+    <p style="margin-top:14px">One rule that matters more than the transport choice: <strong>a notification is a side effect of writing a <code>job_offer</code> row, never a standalone send.</strong> Push delivery is unreliable and duplicates happen. If the row is the truth and the push is only a nudge, a worker who missed the push still finds the offer waiting in their inbox, and you can prove afterwards who was told what and when.</p>
+    <div class="note" style="margin-top:18px"><b>Also notify on the admin decisions.</b> A worker who taps "interested" and hears nothing for two hours assumes the app is broken. Push on approve, on reject, and on offer expiry.</div>
+  </div>
+</section>
+
+<section id="geo">
+  <div class="col">
+    <div class="sec-head">
+      <div class="eyebrow">06 — Geolocation</div>
+      <h2>Proving the worker was on site</h2>
+      <div class="rule"></div>
+    </div>
+    <p>Three decisions carry this feature.</p>
+    <h3 style="margin-top:20px">Checkpoints, not continuous tracking</h3>
+    <p style="margin-top:8px">Sample location at four moments — offer accepted, en route, work start, work complete — plus a low-frequency heartbeat while a job is <code>in_progress</code> and the app is open. Continuous background tracking costs you battery complaints, a Play Store background-location review with a mandatory video demo, and a privacy exposure you do not need. Checkpoints answer the actual question: was he there when he said he was.</p>
+    <h3 style="margin-top:20px">The customer must drop a pin</h3>
+    <p style="margin-top:8px">A geofence needs coordinates. Today bookings hold a free-text address, which cannot be verified against anything. Adding a map pin step to the customer booking flow is a hard prerequisite — with <code>flutter_map</code> and OpenStreetMap it costs nothing in licensing. Suggested radius <strong>120 m</strong>, tunable per job, because phone GPS in a dense Kerala town realistically lands within 10–50 m.</p>
+    <h3 style="margin-top:20px">Treat GPS as evidence, not as a lock</h3>
+    <p style="margin-top:8px">Mock-location apps are trivial to install. Android exposes <code>Position.isMocked</code> — record it and flag the job to admin, but do not hard-block, because false positives will strand honest workers on real sites. Your genuinely strong control is the completion OTP: the customer physically has to hand it over. Geo catches sloppiness; the OTP catches fraud.</p>
+  </div>
+</section>
+
+<section id="otp">
+  <div class="col">
+    <div class="sec-head">
+      <div class="eyebrow">07 — OTP handshake</div>
+      <h2>Two codes, two different jobs</h2>
+      <div class="rule"></div>
+    </div>
+  </div>
+  <div class="wide" style="margin-top:8px">
+    <div class="tw">
+      <table>
+        <thead><tr><th>&nbsp;</th><th>Start OTP</th><th>Completion OTP</th></tr></thead>
+        <tbody>
+          <tr><td><b>Created</b></td><td>On assignment</td><td>Only when worker marks the work done</td></tr>
+          <tr><td><b>Shown to</b></td><td>Customer, on that booking screen</td><td>Customer, on that booking screen</td></tr>
+          <tr><td><b>Entered by</b></td><td>Worker, at the site</td><td>Worker, after the customer inspects</td></tr>
+          <tr><td><b>Proves</b></td><td>Worker actually arrived and met the customer</td><td>Customer saw the finished work and released it</td></tr>
+          <tr><td><b>Also checks</b></td><td>Inside geofence + GPS accuracy threshold</td><td>Location logged; no gate</td></tr>
+          <tr><td><b>Validity</b></td><td>Job window ± 2 h</td><td>30 min, regenerable by the customer</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col" style="margin-top:20px">
+    <p>Non-negotiables on both: 6 digits, stored as a hash, bound to one booking id, capped at 5 attempts then locked pending admin reset, and — critically — <strong>never delivered to the worker through any channel</strong>. No SMS, no push, no email. The moment a code reaches the worker's device by itself, both controls are worthless.</p>
+  </div>
+</section>
+
+<section id="feedback">
+  <div class="col">
+    <div class="sec-head">
+      <div class="eyebrow">08 — Feedback</div>
+      <h2>Two-way ratings</h2>
+      <div class="rule"></div>
+    </div>
+    <p>The <code>feedback</code> table already exists for customer→worker. Add the reverse direction, and make both blind until either both parties have submitted or seven days elapse.</p>
+    <p>Worker ratings should then feed back into the broadcast: when a request goes out, order and prioritise recipients by rating, completion rate, and distance. That is what stops the highest-rated workers from drowning in offers they never see, and it is the cheapest quality lever you have.</p>
+  </div>
+</section>
+
+<section id="revenue">
+  <div class="col">
+    <div class="sec-head">
+      <div class="eyebrow">09 — Revenue</div>
+      <h2>How Crewzo gets paid</h2>
+      <div class="rule"></div>
+    </div>
+    <p>Decision taken: the customer pays Crewzo a <strong>service charge for the booking</strong>. Wages are negotiated and settled <strong>directly between customer and worker</strong>, off-platform, and per-worker rates come off the product entirely.</p>
+    <p>That is a clean, defensible model — you are selling dispatch and trust, not labour arbitrage. It also has four consequences that reach much further into the build than a payments screen, and each one needs deciding now rather than in phase five.</p>
+  </div>
+  <div class="wide" style="margin-top:20px">
+    <div class="tw">
+      <table>
+        <thead><tr><th>Money</th><th>Who sets it</th><th>Where it flows</th><th>Does Crewzo see it?</th></tr></thead>
+        <tbody>
+          <tr><td><b>Service charge</b></td><td>Crewzo, by tier</td><td>Customer → Crewzo, on assignment</td><td><span class="pill p-ok">Yes — the revenue</span></td></tr>
+          <tr><td>Wages</td><td>Negotiated customer ↔ worker</td><td>Direct, cash or UPI</td><td><span class="pill p-crit">No</span></td></tr>
+          <tr><td>Materials, travel, overtime</td><td>Direct</td><td>Direct</td><td><span class="pill p-crit">No</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col" style="margin-top:28px">
+    <h3>1. A percentage is not available to you</h3>
+    <p style="margin-top:8px">If the wage never passes through your system, there is no number to take a cut of. Commission is off the table by construction. The service charge therefore has to be a <strong>flat fee, tiered</strong> — by trade, by number of days, possibly by district. Put those tiers in admin configuration, not in code, because you will tune them repeatedly in the first six months.</p>
+
+    <h3 style="margin-top:22px">2. Published wages have to come out of the product</h3>
+    <p style="margin-top:8px"><code>daily_rate</code> currently appears <strong>95 times across 26 files</strong> — worker cards, booking summary, the existing payment screen, admin profile modal, the worker registration form, both Flutter apps and the Python worker backend model. This is not a one-line change and it should not be scheduled as one.</p>
+    <p style="margin-top:12px">My recommendation is to <em>keep the column</em> and strip only the customer-facing surfaces. An indicative rate range is genuinely useful to admin when deciding which interested worker to assign, and to the worker as a profile field. Reword it in the registration form from "your daily rate" to "your indicative range", mark it admin-visible, and remove it from every customer view.</p>
+
+    <h3 style="margin-top:22px">3. Charge at assignment, not at submission</h3>
+    <p style="margin-top:8px">The customer should not pay before they know they actually have a worker. Billing the moment admin assigns removes almost every refund case you would otherwise have to build and staff: if nobody takes the job, nothing was ever charged. The remaining refund paths are narrow — assigned worker no-shows, or the customer cancels before start — and both can be admin-triggered.</p>
+    <p style="margin-top:12px">Practically: UPI through Razorpay is the right collection method for Kerala. UPI is typically zero-rated, cards and netbanking run around 2% plus GST — worth re-checking current rates before you commit, and worth nudging customers toward UPI in the payment screen.</p>
+
+    <h3 style="margin-top:22px">4. The completion OTP no longer protects money</h3>
+    <p style="margin-top:8px">In an escrow model, OTP2 would gate the release of funds. Here the wage is cash between two people standing in a room, so it does not. Keep the OTP — it is still your proof of completion, your dispute evidence and your trigger for the ratings window — but stop thinking of it as payment protection, because it is not, and designing as though it is will lead to the wrong escalation flows.</p>
+
+    <div class="note crit" style="margin-top:26px"><b>The structural risk in this model is disintermediation.</b> A one-time booking fee plus direct wage settlement gives both parties an obvious incentive to exchange phone numbers once and never book through you again. This is the single biggest threat to the business, not to the software, and it is worth designing against from day one: keep the fee low enough that evading it is not worth the effort; make repeat booking demonstrably faster than a phone call (saved sites, one-tap rebook of a known worker); attach the things they would lose by going direct — verified ratings, job history, dispute support, insurance if you ever add it — to platform bookings only; and track the repeat-booking ratio per worker as your early warning signal.</div>
+
+    <div class="note" style="margin-top:16px"><b>Still open:</b> is there a worker-side charge too — registration fee, monthly subscription, or a per-job listing fee? You have only specified the customer side. It changes the worker onboarding flow, so worth answering before phase one.</div>
+  </div>
+</section>
+
+<section id="surface">
+  <div class="col">
+    <div class="sec-head">
+      <div class="eyebrow">10 — App or website</div>
+      <h2>The decision you asked me to lead on</h2>
+      <div class="rule"></div>
+    </div>
+    <p>This one is not close, and it splits by audience rather than resolving to a single answer.</p>
+  </div>
+  <div class="wide" style="margin-top:18px">
+    <div class="tw">
+      <table>
+        <thead><tr><th>Audience</th><th>Verdict</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td><b>Worker / agent</b></td><td><span class="pill p-new">Native app only</span></td><td>Background push, geolocation with accuracy metadata, and mock-location detection. A web app cannot do the last one at all, and iOS web push cannot be relied on. You already have the Flutter app — this is the cheap path, not the expensive one.</td></tr>
+          <tr><td><b>Customer</b></td><td><span class="pill p-new">App + thin web</span></td><td>The app carries push and the OTP screen. The web page removes install friction for a first-time booker, which matters enormously for acquisition. You already have <code>customer_website</code>; give it booking, status and OTP view, and let the app own the rest.</td></tr>
+          <tr><td><b>Admin</b></td><td><span class="pill p-ok">Web only</span></td><td>Dense tables, side-by-side profile comparison, long shifts at a desk. Already built.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col" style="margin-top:18px">
+    <div class="note"><b>Android first, iOS later.</b> Your worker base is on Android almost without exception. iOS costs ₹8,300/year plus a real review cycle, and buys you very few workers. Ship Android, add iOS for the customer app once volume justifies it.</div>
+  </div>
+</section>
+
+<section id="cost">
+  <div class="col">
+    <div class="sec-head">
+      <div class="eyebrow">11 — Money</div>
+      <h2>What this costs to build and to run</h2>
+      <div class="rule"></div>
+    </div>
+    <p>Running costs first, since they are the ones that never stop. Figures assume pilot scale — under roughly 500 bookings a month.</p>
+  </div>
+  <div class="wide" style="margin-top:18px">
+    <div class="tw">
+      <table>
+        <thead><tr><th>Recurring</th><th>Notes</th><th style="text-align:right">Per month</th></tr></thead>
+        <tbody>
+          <tr><td>Railway — 3 backends + Postgres</td><td>Already running; Postgres adds a little</td><td class="num" style="text-align:right">₹2,100 – 3,800</td></tr>
+          <tr><td>Vercel — 3 static frontends</td><td>Free tier is genuinely sufficient</td><td class="num" style="text-align:right">₹0</td></tr>
+          <tr><td>Firebase Cloud Messaging</td><td>Free at any volume you will reach</td><td class="num" style="text-align:right">₹0</td></tr>
+          <tr><td>Maps — OpenStreetMap + <code>flutter_map</code></td><td>Already a dependency. No licence fee.</td><td class="num" style="text-align:right">₹0</td></tr>
+          <tr><td>SMS — your own Android gateway</td><td>Needs one spare handset and a SIM</td><td class="num" style="text-align:right">≈ ₹300</td></tr>
+          <tr><td>SMS — Fast2SMS fallback</td><td>₹0.20–0.25 per transactional message</td><td class="num" style="text-align:right">₹500 – 1,200</td></tr>
+          <tr><td>Razorpay — service charge collection</td><td>UPI typically zero-rated; cards and netbanking ~2% + GST. Only applies to the fee, not to wages.</td><td class="num" style="text-align:right">≈ 0 – 2% of fees</td></tr>
+          <tr><td>Object storage — Cloudflare R2</td><td>Worker photos and job photos, under 10 GB</td><td class="num" style="text-align:right">₹0 – 400</td></tr>
+        </tbody>
+        <tfoot><tr><td colspan="2">Running total</td><td class="num" style="text-align:right">₹2,900 – 5,700</td></tr></tfoot>
+      </table>
+    </div>
+  </div>
+  <div class="wide" style="margin-top:14px">
+    <div class="tw">
+      <table>
+        <thead><tr><th>One-time</th><th>Notes</th><th style="text-align:right">Cost</th></tr></thead>
+        <tbody>
+          <tr><td>Google Play developer account</td><td>Once, forever</td><td class="num" style="text-align:right">₹2,100</td></tr>
+          <tr><td>Apple Developer</td><td>Only if you go iOS. Annual, not one-time.</td><td class="num" style="text-align:right">₹8,300 / yr</td></tr>
+          <tr><td>TRAI DLT registration</td><td>Mandatory in India for branded transactional SMS. Entity + header + template approval. Budget four to six weeks of lead time.</td><td class="num" style="text-align:right">₹5,000 – 7,000</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col" style="margin-top:26px">
+    <h3>Build cost</h3>
+    <p style="margin-top:8px">If we build it here together, the cost is time rather than cash — roughly <strong>9–11 focused weeks</strong>, broken down in the roadmap below. For comparison, if you were quoting this scope out in the Indian market today:</p>
+  </div>
+  <div class="col">
+    <div class="cards">
+      <div class="card"><span class="k">Freelance pair</span><span class="v">₹4 – 8 L</span><span class="d">Two mid-level devs, 3 months. Cheapest, highest delivery risk.</span></div>
+      <div class="card"><span class="k">Small studio</span><span class="v">₹8 – 14 L</span><span class="d">Kerala or Bangalore boutique. Realistic market rate for this scope.</span></div>
+      <div class="card"><span class="k">Mid agency</span><span class="v">₹18 – 30 L</span><span class="d">Process, QA, contracts. Overkill at your stage.</span></div>
+    </div>
+  </div>
+  <div class="col" style="margin-top:18px">
+    <p style="font-size:.95rem;color:var(--ink-2)">Those figures are for the dispatch layer only, on top of what already exists. Quoted greenfield — everything from scratch, as your message described — the same studios would be at ₹20–40 L. That gap is the whole argument for extending rather than restarting.</p>
+  </div>
+</section>
+
+<section id="roadmap">
+  <div class="col">
+    <div class="sec-head">
+      <div class="eyebrow">12 — Sequence</div>
+      <h2>Build order</h2>
+      <div class="rule"></div>
+    </div>
+    <p>These are genuinely sequential — each phase is unusable without the one before it. Ship and test each before starting the next. Total <strong>11 – 13 weeks</strong>, revised upward from the wage-removal scope and the service charge.</p>
+    <div class="phases">
+      <div class="phase">
+        <div class="n">01</div>
+        <div class="body"><h4>Foundations</h4><p>Postgres migration. New tables. Role tiers for worker, agent and supervisor. Map pin added to the customer booking flow. Published wages stripped from all customer-facing surfaces across both apps and both websites. No visible feature ships here — it is the ground everything else stands on.</p></div>
+        <div class="wk">2 – 2.5 wks</div>
+      </div>
+      <div class="phase">
+        <div class="n">02</div>
+        <div class="body"><h4>Dispatch core</h4><p>Job requests, job offers, the full state machine, and the two admin gates in the admin portal. Testable end to end with notifications faked as email.</p></div>
+        <div class="wk">2 – 3 wks</div>
+      </div>
+      <div class="phase">
+        <div class="n">03</div>
+        <div class="body"><h4>Notifications</h4><p>FCM in both Flutter apps, device token registry, WebSocket channel for the in-app popup, SMS fallback wired to the existing gateway. Fan-out and retry logic.</p></div>
+        <div class="wk">1.5 – 2 wks</div>
+      </div>
+      <div class="phase">
+        <div class="n">04</div>
+        <div class="body"><h4>Geo + OTP</h4><p>Geofenced start, both OTPs, the append-only event log, mock-location flagging, and every escape hatch from §4. The riskiest phase — budget field testing on real handsets in real Kerala towns, not the emulator.</p></div>
+        <div class="wk">2 wks</div>
+      </div>
+      <div class="phase">
+        <div class="n">05</div>
+        <div class="body"><h4>Service charge, ratings and admin ops</h4><p>Tiered service charge collected on assignment via Razorpay UPI, admin-configurable tiers, narrow refund paths. Two-way blind feedback, rating-weighted broadcast ordering, admin dashboards for stuck jobs, overrides and disputes.</p></div>
+        <div class="wk">2 wks</div>
+      </div>
+      <div class="phase">
+        <div class="n">06</div>
+        <div class="body"><h4>Harden and pilot</h4><p>Rotate every production secret. Play Store submission. DLT registration. Then a controlled pilot — one district, ten workers, two weeks — before opening it up.</p></div>
+        <div class="wk">2 wks</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="pushback">
+  <div class="col">
+    <div class="sec-head">
+      <div class="eyebrow">13 — Dissent</div>
+      <h2>Where I would push back</h2>
+      <div class="rule"></div>
+    </div>
+    <p>Five things. The first two decide whether this works at scale; the last three decide whether it holds together in the field.</p>
+    <ol>
+      <li style="margin-top:12px"><strong>An admin gate on every single booking will not survive growth.</strong> At 20 bookings a day it is fine. At 200 it is a full-time job for a person who is asleep at 11pm when a customer books. Build the gates exactly as you described — but add auto-approval rules on day one: a returning customer, a standard job type, a value under some threshold, and a worker whose profile already matches the requirement all skip the queue and land in an audit log the admin reviews later. Same idea on assignment: if only one worker shows interest and they are qualified, auto-assign. Keep manual override always available.</li>
+      <li style="margin-top:12px"><strong>Do not notify every worker about every job.</strong> A plumber in Kannur receiving carpentry offers from Kollam will mute the app within a week, and then your dispatch stops working for everyone. Filter the broadcast by trade, district and availability, order by rating and distance, and give admin a "widen the broadcast" button for when a request goes unanswered. Supervisors and agents can reasonably get a wider feed than individual workers.</li>
+      <li style="margin-top:12px"><strong>Do not schedule the wage removal as a small task.</strong> 95 references across 26 files, spanning both Flutter apps, both React sites, the Node backend and the Python worker backend — including an existing <code>payment_screen.dart</code> built around a per-worker rate. Half-removing it is worse than not starting: a customer who sees a rate on one screen and negotiates a different number on site will file a grievance, and you will be arbitrating it.</li>
+      <li style="margin-top:12px"><strong>Kerala connectivity will break the completion step.</strong> A worker finishing in a basement or a rural interior with no signal cannot submit. The worker app needs an offline queue that stores the start and complete events with their timestamp and location, then syncs when signal returns — with the server trusting the recorded timestamp, not the arrival time.</li>
+      <li style="margin-top:12px"><strong>The revenue model is sound but leaky, and the leak is not technical.</strong> Covered in full in <a href="#revenue">§9</a> — a booking fee with off-platform wages is the easiest model to launch and the easiest to route around. Build the retention hooks in the first version, not after you notice the repeat rate falling.</li>
+    </ol>
+  </div>
+</section>
+
+<section id="decisions">
+  <div class="col">
+    <div class="sec-head">
+      <div class="eyebrow">14 — Settled</div>
+      <h2>Decisions locked</h2>
+      <div class="rule"></div>
+    </div>
+    <p>Recorded here so the build has one source of truth. Anything reopened should be reopened against this list.</p>
+    <div class="cards" style="grid-template-columns:1fr">
+      <div class="q"><span class="qn">Locked 01 — Scope</span><h4>Extend Crewzo as v2</h4><p>No greenfield. Both Flutter apps, all three backends, the admin portal and the SMS gateway carry forward. The dispatch layer is added on top of the existing schema.</p></div>
+      <div class="q"><span class="qn">Locked 02 — Roles</span><h4>Worker, agent and supervisor all take work directly</h4><p>Seniority tiers rather than a delegation hierarchy. Same offer flow for every recipient; the tier affects broadcast priority and ordering, nothing else. This is the simplest of the options and it keeps <code>job_offers</code> flat.</p></div>
+      <div class="q"><span class="qn">Locked 03 — Broadcast</span><h4>Filtered, with an admin widen button</h4><p>Match on trade, district and availability. Order by rating and distance. Admin widens manually when a request goes unanswered, and gets alerted when the offer window expires with zero takers.</p></div>
+      <div class="q"><span class="qn">Locked 04 — Revenue</span><h4>Flat service charge to the customer; wages off-platform</h4><p>Crewzo bills a tiered booking fee, charged on assignment. Customer and worker negotiate and settle wages directly, and per-worker rates come out of every customer-facing surface. Worked through in <a href="#revenue">§9</a>.</p></div>
+      <div class="q"><span class="qn">Still open</span><h4>Is there a worker-side charge?</h4><p>Registration fee, subscription, or per-job listing fee. Only the customer side has been specified. Answer before phase one, since it changes worker onboarding.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="col">Crewzo dispatch layer — plan v0.2 · 24 Aug 2026 · Four decisions locked · No code written yet</div>
+</footer>
