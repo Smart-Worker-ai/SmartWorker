@@ -13,3 +13,8 @@ packages/db/prisma/*.db-journal
 
 # Local document storage — R2 in production
 apps/api/uploads/
+
+# Never commit credentials. Tokens belong in Windows Credential Manager.
+*.token
+*.pem
+secrets/
