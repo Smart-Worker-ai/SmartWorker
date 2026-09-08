@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+*.log
+
+# Committed: the Prisma CLI needs a DATABASE_URL to build the demo database,
+# and requiring setup before `npm run setup` works would defeat the point.
+!packages/db/prisma/.env
+
+# SQLite demo database — regenerate with `npm run db:reset`
+packages/db/prisma/*.db
+packages/db/prisma/*.db-journal
+
+# Local document storage — R2 in production
+apps/api/uploads/

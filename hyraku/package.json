@@ -1,0 +1,50 @@
+{
+  "name": "hyraku",
+  "version": "0.1.0-beta.1",
+  "private": true,
+  "description": "Hyraku — WhatsApp-first home services platform for Kerala",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "setup": "npm install && npm run db:push && npm run db:seed",
+    "db:push": "prisma db push --schema packages/db/prisma/schema.prisma --skip-generate && prisma generate --schema packages/db/prisma/schema.prisma",
+    "db:seed": "tsx packages/db/src/seed.ts",
+    "db:reset": "node -e \"require('fs').rmSync('packages/db/prisma/hyraku.db',{force:true})\" && npm run db:push && npm run db:seed",
+    "dev": "concurrently -n api,console -c green,cyan \"npm:dev:api\" \"npm:dev:console\"",
+    "dev:api": "tsx watch --tsconfig apps/api/tsconfig.json apps/api/src/index.ts",
+    "dev:console": "vite --config apps/console/vite.config.js",
+    "build:console": "vite build --config apps/console/vite.config.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "prisma": "^6.1.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.1.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.24.1"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "allowScripts": {
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "prisma@6.19.3": true,
+    "esbuild@0.28.2": true,
+    "esbuild@0.25.12": true
+  }
+}

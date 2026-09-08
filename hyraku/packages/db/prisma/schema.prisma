@@ -1,0 +1,208 @@
+// Hyraku — data model
+//
+// Two structural commitments carried over from the architecture review:
+//
+//  1. Identity is separate from role. One person = one User row keyed on the
+//     phone number WhatsApp already verified. Customer and worker facts hang
+//     off it as profiles, so one person can be both.
+//
+//  2. Customers are never approved. A customer row is created implicitly on
+//     first contact. Only workers have an approval lifecycle.
+//
+// SQLite for the beta: zero setup, runs on any laptop. Postgres is a two-line
+// change (provider + url) — no model changes, which is why enums and arrays
+// are modelled as strings here.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Identity ────────────────────────────────────────────────────────────────
+
+model User {
+  id                String   @id @default(cuid())
+  phone             String   @unique // E.164, e.g. +919846012345
+  name              String?
+  preferredLanguage String   @default("en") // en | ml
+  whatsappOptIn     Boolean  @default(false)
+  optInSource       String? // deep_link | flow | manual
+  optInAt           DateTime?
+  isBlocked         Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  customer      CustomerProfile?
+  worker        WorkerProfile?
+  jobRequests   JobRequest[]
+  conversation  Conversation?
+  messages      Message[]
+}
+
+model CustomerProfile {
+  id             String  @id @default(cuid())
+  userId         String  @unique
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  defaultAddress String?
+  district       String?
+  town           String?
+
+  createdAt DateTime @default(now())
+}
+
+model WorkerProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Human-readable, immutable, printed on ID cards. HY-000042.
+  workerUid String @unique
+
+  trade           String
+  district        String
+  town            String
+  serviceAreas    String  @default("") // comma-separated district names
+  dailyRate       Float   @default(800)
+  experienceYears Int     @default(0)
+  age             Int?
+  gender          String?
+
+  // pending | approved | rejected | suspended
+  status       String    @default("pending")
+  statusReason String?
+  reviewedAt   DateTime?
+
+  rating       Float @default(0)
+  ratingSum    Float @default(0)
+  totalReviews Int   @default(0)
+
+  acceptedTerms   Boolean   @default(false)
+  acceptedTermsAt DateTime?
+  termsVersion    String?
+
+  createdAt DateTime @default(now())
+
+  documents   WorkerDocument[]
+  assignments Assignment[]
+
+  @@index([trade, district, status])
+}
+
+model WorkerDocument {
+  id       String        @id @default(cuid())
+  workerId String
+  worker   WorkerProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  kind        String // aadhaar | passbook | photo
+  storageKey  String
+  mimeType    String
+  sizeBytes   Int      @default(0)
+  sha256      String?
+  receivedVia String   @default("whatsapp") // whatsapp | web
+  verifiedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([workerId, kind])
+}
+
+// ─── Jobs ────────────────────────────────────────────────────────────────────
+
+model JobRequest {
+  id    String @id @default(cuid())
+  refNo String @unique // HY-4821 — what the customer is told to quote
+
+  customerId String
+  customer   User   @relation(fields: [customerId], references: [id])
+
+  trade         String
+  district      String
+  town          String
+  address       String
+  preferredDate DateTime
+  durationDays  Int      @default(1)
+  isUrgent      Boolean  @default(false)
+  notes         String?
+
+  // new | assigning | assigned | confirmed | in_progress | completed | cancelled
+  status     String   @default("new")
+  createdVia String   @default("whatsapp")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  assignments Assignment[]
+
+  @@index([status, createdAt])
+}
+
+// Separate from JobRequest so reassignment is history rather than an overwrite —
+// you can always see who was tried and who declined.
+model Assignment {
+  id           String     @id @default(cuid())
+  jobRequestId String
+  jobRequest   JobRequest @relation(fields: [jobRequestId], references: [id], onDelete: Cascade)
+
+  workerId String
+  worker   WorkerProfile @relation(fields: [workerId], references: [id])
+
+  assignedBy String @default("admin")
+
+  // When false the assignment is accepted the moment it is made — the admin's
+  // decision is final. Flipping this on turns Accept/Decline into a real step
+  // without touching anything else.
+  responseRequired Boolean @default(false)
+
+  // proposed | accepted | declined | reassigned | completed
+  status      String    @default("proposed")
+  agreedRate  Float?
+  respondedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([jobRequestId])
+  @@index([workerId, status])
+}
+
+// ─── Messaging ───────────────────────────────────────────────────────────────
+
+model Conversation {
+  waPhone String @id
+  userId  String @unique
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  activeFlow String? // booking | registration
+  stepId     String?
+  data       String  @default("{}") // JSON scratchpad for the in-flight flow
+
+  // The 24-hour customer service window. The send path checks this before any
+  // free-form message and falls back to a template — callers never decide.
+  lastInboundAt DateTime?
+
+  updatedAt DateTime @updatedAt
+}
+
+model Message {
+  id String @id @default(cuid())
+
+  // The idempotency guarantee. Meta retries webhooks it thinks failed; without
+  // this constraint a retry becomes a second booking, and WhatsApp is the only
+  // booking path there is.
+  waMessageId String? @unique
+
+  direction String // in | out
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  waPhone   String
+
+  type         String // text | interactive | image | document | template
+  body         String?
+  payload      String  @default("{}")
+  templateName String?
+
+  // queued | sent | delivered | read | failed
+  status    String   @default("sent")
+  createdAt DateTime @default(now())
+
+  @@index([waPhone, createdAt])
+}

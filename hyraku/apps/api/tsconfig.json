@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": "../..",
+    "paths": {
+      "@hyraku/core": ["packages/core/src/index.ts"],
+      "@hyraku/core/*": ["packages/core/src/*"],
+      "@hyraku/db": ["packages/db/src/index.ts"],
+      "@hyraku/whatsapp": ["packages/whatsapp/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "../../packages/*/src/**/*.ts"]
+}

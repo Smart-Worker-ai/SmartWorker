@@ -1,0 +1,7 @@
+# Normalise to LF in the repository. The API runs on Linux in production, and
+# CRLF sneaking into config or scripts from a Windows checkout is a needless
+# class of bug.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.db binary
