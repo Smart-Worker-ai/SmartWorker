@@ -156,6 +156,15 @@ async function advance(
   }
 
   const data = { ...ctx.data, ...(result.patch ?? {}) };
+
+  if (result.exit) {
+    const replies = flow.onExit
+      ? await flow.onExit(result.exit, { ...ctx, data })
+      : [text('Thank you — we have noted that.')];
+    await clearFlow(ctx.phone);
+    return replies;
+  }
+
   const nextId = result.next !== undefined ? result.next : nextInOrder(flow, stepId);
 
   return enterStep(flow, nextId, { ...ctx, data });

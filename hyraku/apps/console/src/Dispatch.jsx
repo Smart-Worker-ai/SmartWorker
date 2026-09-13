@@ -123,8 +123,8 @@ export default function Dispatch({ onToast }) {
                   {job.assignment && (
                     <div className="job-line" style={{ marginTop: 6, fontWeight: 500 }}>
                       {job.assignment.status === 'proposed' ? 'Offered to' : 'Assigned to'}{' '}
-                      {job.assignment.worker.name} ({job.assignment.worker.uid}) · ₹
-                      {job.assignment.agreedRate}/day
+                      {job.assignment.worker.name} ({job.assignment.worker.uid}) ·{' '}
+                      {job.assignment.worker.phone}
                     </div>
                   )}
                 </div>
@@ -190,7 +190,9 @@ export default function Dispatch({ onToast }) {
                             ))}
                           </div>
                         </div>
-                        <div className="cand-rate">₹{c.dailyRate}</div>
+                        <div className="cand-rate" title="Team only — the customer never sees this. Pay is agreed on site.">
+                          {c.usualDailyRate ? `~₹${c.usualDailyRate}` : '—'}
+                        </div>
                         <button
                           className="btn sm"
                           disabled={busy === c.workerId}

@@ -55,6 +55,11 @@ export const api = {
 
   conversations: () => request('/api/admin/conversations'),
 
+  settings: () => request('/api/admin/settings'),
+  setBookingsOpen: (open) =>
+    request('/api/admin/settings', { method: 'POST', body: JSON.stringify({ bookingsOpen: open }) }),
+  coverage: () => request('/api/admin/coverage'),
+
   // Simulator — no admin key required, it stands in for the public channel.
   personas: () => request('/api/sim/personas'),
   thread: (phone) => request(`/api/sim/thread/${encodeURIComponent(phone)}`),

@@ -1,10 +1,14 @@
 import { prisma } from '@hyraku/db';
 import type { OutboundMessage } from './types.js';
 import { template } from './types.js';
-import { tradeLabel } from './catalog.js';
+import { serviceAreaLabel, tradeLabel } from './catalog.js';
 import { formatDate } from './dates.js';
 
 // Assignment and the notifications that follow it.
+//
+// No message here carries a rate. Pay is agreed and settled between customer
+// and worker directly; Hyraku is not party to it, and quoting a number would
+// suggest otherwise.
 //
 // These functions return the messages to send rather than sending them, so the
 // domain has no idea whether it is talking to Meta or the simulator. The API
@@ -29,7 +33,6 @@ export async function assignWorker(opts: {
   jobRequestId: string;
   workerId: string;
   responseRequired?: boolean;
-  agreedRate?: number;
 }): Promise<AssignResult> {
   const job = await prisma.jobRequest.findUnique({
     where: { id: opts.jobRequestId },
@@ -50,7 +53,6 @@ export async function assignWorker(opts: {
   }
 
   const responseRequired = opts.responseRequired ?? false;
-  const rate = opts.agreedRate ?? worker.dailyRate;
 
   // Supersede any outstanding offer so the history shows who was tried.
   await prisma.assignment.updateMany({
@@ -64,7 +66,6 @@ export async function assignWorker(opts: {
       workerId: worker.id,
       responseRequired,
       status: responseRequired ? 'proposed' : 'accepted',
-      agreedRate: rate,
       respondedAt: responseRequired ? null : new Date(),
     },
   });
@@ -80,11 +81,11 @@ export async function assignWorker(opts: {
     `*New job from Hyraku*\n\n` +
     `${tradeLabel(job.trade)}\n` +
     `${formatDate(job.preferredDate)} · ${days}\n` +
-    `${job.town}, ${job.district}\n` +
-    `₹${rate}/day\n\n` +
+    `${job.town}, ${job.district}\n\n` +
     (job.notes ? `Notes: ${job.notes}\n\n` : '') +
     `Customer: ${job.customer.name ?? 'Customer'} — ${job.customer.phone}\n` +
     `Address: ${job.address}\n\n` +
+    `Agree the pay directly with the customer before you start.\n` +
     `Reference ${job.refNo}`;
 
   const outbound: Envelope[] = [
@@ -108,7 +109,7 @@ export async function assignWorker(opts: {
   // The customer is only told about a worker once that worker is actually
   // committed. A "proposed" assignment is not a promise we get to make.
   if (!responseRequired) {
-    outbound.push(customerConfirmation(job, worker, rate));
+    outbound.push(customerConfirmation(job, worker));
   }
 
   return { ok: true, outbound };
@@ -153,13 +154,7 @@ export async function respondToAssignment(
           `We have told the customer to expect you.`
       ),
     });
-    outbound.push(
-      customerConfirmation(
-        assignment.jobRequest,
-        assignment.worker,
-        assignment.agreedRate ?? assignment.worker.dailyRate
-      )
-    );
+    outbound.push(customerConfirmation(assignment.jobRequest, assignment.worker));
   } else {
     outbound.push({
       to: assignment.worker.user.phone,
@@ -184,8 +179,9 @@ export async function setWorkerStatus(
   const messages: Record<string, string> = {
     approved:
       `Good news — you are approved on Hyraku!\n\n` +
-      `*${worker.workerUid}* · ${tradeLabel(worker.trade)} · ₹${worker.dailyRate}/day\n\n` +
-      `You will get job offers on this number. Keep WhatsApp notifications on.`,
+      `*${worker.workerUid}* · ${tradeLabel(worker.trade)}\n\n` +
+      `You will get job offers for ${serviceAreaLabel()} on this number, so keep WhatsApp notifications on. ` +
+      `You agree your pay directly with each customer — Hyraku never takes a share of it.`,
     rejected:
       `We could not approve your registration.\n\n` +
       `${reason ?? 'Your documents could not be verified.'}\n\n` +
@@ -206,9 +202,20 @@ export async function setWorkerStatus(
 }
 
 function customerConfirmation(
-  job: { refNo: string; trade: string; preferredDate: Date; durationDays: number; customer: { phone: string } },
-  worker: { user: { name: string | null; phone: string }; workerUid: string; rating: number; totalReviews: number; experienceYears: number },
-  rate: number
+  job: {
+    refNo: string;
+    trade: string;
+    preferredDate: Date;
+    durationDays: number;
+    customer: { phone: string };
+  },
+  worker: {
+    user: { name: string | null; phone: string };
+    workerUid: string;
+    rating: number;
+    totalReviews: number;
+    experienceYears: number;
+  }
 ): Envelope {
   const days = job.durationDays === 1 ? '1 day' : `${job.durationDays} days`;
   const ratingLine =
@@ -223,9 +230,9 @@ function customerConfirmation(
       `*Your booking is confirmed* — ${job.refNo}\n\n` +
         `*${worker.user.name}* (${worker.workerUid})\n` +
         `${tradeLabel(job.trade)} · ${ratingLine}\n` +
-        `${formatDate(job.preferredDate)} · ${days}\n` +
-        `₹${rate}/day\n\n` +
-        `They will call you before arriving on ${worker.user.phone}.\n\n` +
+        `${formatDate(job.preferredDate)} · ${days}\n\n` +
+        `They will call you from ${worker.user.phone} before arriving. ` +
+        `You agree the pay for the work directly with them.\n\n` +
         `Something wrong? Just reply here.`
     ),
   };

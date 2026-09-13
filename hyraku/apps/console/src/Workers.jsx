@@ -78,9 +78,14 @@ export default function Workers({ onToast }) {
                 </span>
               </div>
               <div className="wcard-meta">
-                {w.tradeLabel} · ₹{w.dailyRate}/day · {w.experienceYears} years
+                {w.tradeLabel} · {w.experienceYears} years
+                {w.usualDailyRate ? (
+                  <span className="team-only" title="Team only — never shown to customers">
+                    {' '}· usually ₹{w.usualDailyRate}/day
+                  </span>
+                ) : null}
                 <br />
-                {w.town}, {w.district} · travels to {w.serviceAreas}
+                Lives in {w.town}, {w.district} · works in {w.serviceAreas}
                 <br />
                 {w.phone}
                 {w.age ? ` · ${w.age}` : ''}
@@ -88,7 +93,10 @@ export default function Workers({ onToast }) {
                 {w.totalJobs > 0 ? ` · ${w.totalJobs} jobs done` : ''}
               </div>
             </div>
-            <span className={`badge ${w.status}`}>{w.status}</span>
+            <div style={{ textAlign: 'right' }}>
+              <span className={`badge ${w.status}`}>{w.status}</span>
+              {w.status === 'pending' && <ReplyWindow closesAt={w.replyWindowClosesAt} />}
+            </div>
           </div>
 
           {w.documents.length > 0 && (
@@ -147,6 +155,24 @@ export default function Workers({ onToast }) {
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+// Shown on registrations awaiting review. Inside the window, the approval goes
+// out as an ordinary free message; after it, WhatsApp requires a paid template
+// that also counts against the daily limit — so this is a nudge to review fast.
+function ReplyWindow({ closesAt }) {
+  if (!closesAt) return null;
+  const msLeft = new Date(closesAt).getTime() - Date.now();
+  if (msLeft <= 0) {
+    return <div className="window shut">Free reply window closed</div>;
+  }
+  const hours = Math.floor(msLeft / 3_600_000);
+  const label = hours >= 1 ? `${hours}h` : `${Math.max(1, Math.floor(msLeft / 60_000))}m`;
+  return (
+    <div className={`window ${hours < 4 ? 'soon' : 'open'}`}>
+      Reply free for {label}
     </div>
   );
 }

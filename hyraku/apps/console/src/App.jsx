@@ -4,6 +4,7 @@ import Phone from './Phone';
 import Dispatch from './Dispatch';
 import Workers from './Workers';
 import Website from './Website';
+import Coverage from './Coverage';
 
 const DEFAULT_CUSTOMER = '+919846010001';
 
@@ -14,6 +15,7 @@ export default function App() {
   const [personas, setPersonas] = useState(null);
   const [stats, setStats] = useState(null);
   const [toast, setToast] = useState(null);
+  const [switching, setSwitching] = useState(false);
 
   useEffect(() => {
     const onUnauth = () => setAuthed(false);
@@ -21,16 +23,20 @@ export default function App() {
     return () => window.removeEventListener('hyraku:unauthorised', onUnauth);
   }, []);
 
+  const loadStats = useCallback(() => {
+    api.stats().then(setStats).catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!authed) return;
     const load = () => {
       api.personas().then(setPersonas).catch(() => {});
-      api.stats().then(setStats).catch(() => {});
+      loadStats();
     };
     load();
     const t = setInterval(load, 4000);
     return () => clearInterval(t);
-  }, [authed]);
+  }, [authed, loadStats]);
 
   const showToast = useCallback((msg) => {
     setToast(msg);
@@ -43,6 +49,26 @@ export default function App() {
     showToast('Opened WhatsApp with the message prefilled →');
   }
 
+  async function toggleBookings() {
+    const next = !stats?.bookingsOpen;
+    const area = stats?.serviceDistricts?.join(', ') ?? 'the service area';
+    const question = next
+      ? `Open bookings in ${area}? Customers who message will be able to book straight away.`
+      : `Close bookings? New customers will be offered a launch notification instead.`;
+    if (!window.confirm(question)) return;
+
+    setSwitching(true);
+    try {
+      await api.setBookingsOpen(next);
+      showToast(next ? `Bookings are open in ${area}` : 'Bookings closed — pre-launch mode');
+      loadStats();
+    } catch (err) {
+      showToast(err.message);
+    } finally {
+      setSwitching(false);
+    }
+  }
+
   if (!authed) return <Login onDone={() => setAuthed(true)} />;
 
   return (
@@ -52,8 +78,20 @@ export default function App() {
           <span className="mark">H</span> Hyraku
         </div>
         <span className="pill">beta</span>
+        {stats && <span className="pill area">{stats.serviceDistricts?.join(', ')}</span>}
         <span className="spacer" />
-        <span className="meta">channel: simulator · no Meta account needed</span>
+        {stats && (
+          <button
+            className={`launch-switch ${stats.bookingsOpen ? 'on' : ''}`}
+            onClick={toggleBookings}
+            disabled={switching}
+            title="Controls whether customers can book, or are offered a launch notification"
+          >
+            <span className="dot-ind" />
+            {stats.bookingsOpen ? 'Bookings open' : 'Pre-launch · bookings closed'}
+          </button>
+        )}
+        <span className="meta">simulator</span>
         <button
           className="linkbtn"
           onClick={() => {
@@ -73,47 +111,58 @@ export default function App() {
             <button className={`tab ${tab === 'website' ? 'active' : ''}`} onClick={() => setTab('website')}>
               Website
             </button>
+            <button className={`tab ${tab === 'workers' ? 'active' : ''}`} onClick={() => setTab('workers')}>
+              Workers
+              {stats?.pendingWorkers > 0 && <span className="count">{stats.pendingWorkers}</span>}
+            </button>
+            <button className={`tab ${tab === 'coverage' ? 'active' : ''}`} onClick={() => setTab('coverage')}>
+              Coverage
+            </button>
             <button className={`tab ${tab === 'dispatch' ? 'active' : ''}`} onClick={() => setTab('dispatch')}>
               Dispatch
               {stats?.open > 0 && (
                 <span className={`count ${stats.urgent > 0 ? 'hot' : ''}`}>{stats.open}</span>
               )}
             </button>
-            <button className={`tab ${tab === 'workers' ? 'active' : ''}`} onClick={() => setTab('workers')}>
-              Workers
-              {stats?.pendingWorkers > 0 && <span className="count">{stats.pendingWorkers}</span>}
-            </button>
           </div>
 
           <div className="panel">
-            {tab !== 'website' && stats && (
+            {(tab === 'workers' || tab === 'dispatch') && stats && (
               <div className="stats">
-                <div className={`stat ${stats.urgent > 0 ? 'hot' : ''}`}>
-                  <div className="n">{stats.open}</div>
-                  <div className="l">Need a worker</div>
-                </div>
-                <div className="stat">
-                  <div className="n">{stats.confirmed}</div>
-                  <div className="l">Assigned</div>
-                </div>
                 <div className="stat">
                   <div className="n">{stats.pendingWorkers}</div>
                   <div className="l">To review</div>
                 </div>
                 <div className="stat">
                   <div className="n">{stats.approvedWorkers}</div>
-                  <div className="l">Active workers</div>
+                  <div className="l">Approved workers</div>
                 </div>
                 <div className="stat">
-                  <div className="n">{stats.customers}</div>
-                  <div className="l">Customers</div>
+                  <div className="n">{stats.waitlist}</div>
+                  <div className="l">On waitlist</div>
+                </div>
+                <div className={`stat ${stats.urgent > 0 ? 'hot' : ''}`}>
+                  <div className="n">{stats.open}</div>
+                  <div className="l">Jobs need a worker</div>
+                </div>
+                <div className="stat">
+                  <div className="n">{stats.confirmed}</div>
+                  <div className="l">Jobs assigned</div>
                 </div>
               </div>
             )}
 
-            {tab === 'website' && <Website onDeepLink={deepLink} customerPhone={DEFAULT_CUSTOMER} />}
-            {tab === 'dispatch' && <Dispatch onToast={showToast} />}
+            {tab === 'website' && (
+              <Website
+                onDeepLink={deepLink}
+                customerPhone={DEFAULT_CUSTOMER}
+                bookingsOpen={Boolean(stats?.bookingsOpen)}
+                serviceArea={stats?.serviceDistricts?.join(', ') ?? 'Kozhikode'}
+              />
+            )}
             {tab === 'workers' && <Workers onToast={showToast} />}
+            {tab === 'coverage' && <Coverage />}
+            {tab === 'dispatch' && <Dispatch onToast={showToast} />}
           </div>
         </div>
       </div>

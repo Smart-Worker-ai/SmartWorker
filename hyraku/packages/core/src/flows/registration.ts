@@ -1,7 +1,18 @@
 import { prisma } from '@hyraku/db';
 import type { Flow, FlowContext, OutboundMessage, Step } from '../types.js';
-import { buttons, fail, list, ok, text } from '../types.js';
-import { DISTRICTS, TRADES, matchDistrict, matchTrade, tradeById, tradeLabel } from '../catalog.js';
+import { buttons, exit, fail, list, ok, text } from '../types.js';
+import {
+  ALL_KERALA_DISTRICTS,
+  HOME_DISTRICT_CHOICES,
+  SERVICE_DISTRICTS,
+  TRADES,
+  isServiced,
+  matchDistrict,
+  matchTrade,
+  serviceAreaLabel,
+  tradeLabel,
+} from '../catalog.js';
+import { addToWaitlist } from '../launch.js';
 
 const TERMS_VERSION = '2026-09-01';
 const TERMS_URL = 'https://hyraku.in/terms';
@@ -12,6 +23,12 @@ const TERMS_URL = 'https://hyraku.in/terms';
 // fields as a chat interview is long, and every abandonment leaves half a
 // worker in the database. The step machine here is the same shape a Flow
 // submits, so moving to one later replaces the transport, not the model.
+//
+// Workers may live anywhere in Kerala, but every job is in a serviced district
+// (today, Kozhikode). There is no "where would you like to work" question —
+// only "can you work where the jobs are". Someone who cannot, or who asks for a
+// district we are not in, gets a proper answer and goes on the waitlist rather
+// than being registered for work that does not exist.
 //
 // Documents are collected after the fields rather than inside them: photos are
 // the step people most often need a second attempt at, and putting them last
@@ -41,15 +58,19 @@ function mediaStep(id: string, prompt: string, dataKey: string): Step {
 export const registrationFlow: Flow = {
   id: 'registration',
 
+  // Where they live, and whether they can work where the jobs are, come right
+  // after the trade. Someone who cannot work in the service area should find out
+  // after a couple of questions, not after answering eight.
   order: [
     'name',
+    'trade',
+    'district',
+    'district_other',
+    'town',
+    'work_location',
     'age',
     'gender',
-    'trade',
     'experience',
-    'district',
-    'town',
-    'service_areas',
     'daily_rate',
     'doc_aadhaar',
     'doc_passbook',
@@ -132,18 +153,32 @@ export const registrationFlow: Flow = {
     district: {
       id: 'district',
       ask: () =>
-        list('Which district do you live in?', 'Choose district', [
+        list('Which district do you *live* in?', 'Choose district', [
           {
             title: 'Districts',
-            rows: DISTRICTS.map((d) => ({ id: d.toLowerCase(), title: d })),
+            rows: [
+              ...HOME_DISTRICT_CHOICES.map((d) => ({ id: d.toLowerCase(), title: d })),
+              { id: 'other', title: 'Other district' },
+            ],
           },
         ]),
       accept: (ctx) => {
+        if (ctx.input.replyId === 'other') return ok({}, 'district_other');
         const picked =
-          DISTRICTS.find((d) => d.toLowerCase() === ctx.input.replyId) ??
+          ALL_KERALA_DISTRICTS.find((d) => d.toLowerCase() === ctx.input.replyId) ??
           matchDistrict(ctx.input.text ?? '');
         if (!picked) return fail('Please choose a district from the list.');
-        return ok({ district: picked });
+        return ok({ district: picked }, 'town');
+      },
+    },
+
+    district_other: {
+      id: 'district_other',
+      ask: () => text('Which district do you live in? Type the name.'),
+      accept: (ctx) => {
+        const d = matchDistrict(ctx.input.text ?? '');
+        if (!d) return fail('That does not look like a Kerala district. Please type it again.');
+        return ok({ district: d });
       },
     },
 
@@ -157,44 +192,68 @@ export const registrationFlow: Flow = {
       },
     },
 
-    service_areas: {
-      id: 'service_areas',
+    work_location: {
+      id: 'work_location',
+      // Already lives where the work is — nothing to ask.
+      skipIf: (ctx) => isServiced(ctx.data.district),
       ask: (ctx) =>
         buttons(
-          `Which districts will you travel to for work?\n\n` +
-            `Type them separated by commas, or tap below to work only in ${ctx.data.district}.`,
-          [{ id: 'same', title: `Only ${String(ctx.data.district).slice(0, 12)}` }]
+          `Right now all Hyraku jobs are in *${serviceAreaLabel()} district*, at the customer's home or site.\n\n` +
+            `You live in ${ctx.data.district}. Are you able to travel to ${serviceAreaLabel()} for work?`,
+          [
+            { id: 'can_travel', title: 'Yes, I can' },
+            { id: 'cannot_travel', title: 'No' },
+          ]
         ),
       accept: (ctx) => {
-        if (ctx.input.replyId === 'same') return ok({ serviceAreas: ctx.data.district });
+        const reply = ctx.input.replyId;
+        const typed = (ctx.input.text ?? '').trim();
 
-        const parts = (ctx.input.text ?? '')
-          .split(',')
-          .map((s) => matchDistrict(s))
-          .filter((d): d is string => Boolean(d));
-
-        if (parts.length === 0) {
-          return fail('I did not recognise those. Type district names separated by commas.');
+        // \b never matches after Malayalam letters (a JS regex without the u flag
+        // does not treat them as word characters), so those are checked separately.
+        if (
+          reply === 'can_travel' ||
+          /^(yes|yeah|ok|okay|sure|athe)\b/i.test(typed) ||
+          typed.startsWith('അതെ')
+        ) {
+          return ok({ serviceAreas: SERVICE_DISTRICTS.join(', ') });
         }
-        return ok({ serviceAreas: [...new Set(parts)].join(', ') });
+
+        // "I want to work in Thrissur" — a preference for a district we are not in.
+        const named = matchDistrict(typed);
+        if (named && isServiced(named)) return ok({ serviceAreas: SERVICE_DISTRICTS.join(', ') });
+        if (named) return exit('cannot_work_in_service_area', { preferredDistrict: named });
+
+        if (
+          reply === 'cannot_travel' ||
+          /^(no|nope|illa)\b/i.test(typed) ||
+          typed.startsWith('ഇല്ല')
+        ) {
+          return exit('cannot_work_in_service_area', { preferredDistrict: ctx.data.district });
+        }
+
+        return fail('Please tap *Yes, I can* or *No*.');
       },
     },
 
     daily_rate: {
       id: 'daily_rate',
-      ask: (ctx) => {
-        const typical = tradeById(ctx.data.trade)?.typicalRate ?? 800;
-        return text(
-          `What is your daily rate in rupees?\n\n` +
-            `Most ${tradeLabel(ctx.data.trade).toLowerCase()}s on Hyraku charge around ₹${typical}.`
-        );
-      },
+      ask: () =>
+        buttons(
+          'Roughly how much do you usually charge for a day of work?\n\n' +
+            'This is only for the Hyraku team. You agree your pay directly with each customer, ' +
+            'and Hyraku never takes any part of it.',
+          [{ id: 'skip', title: 'Skip' }]
+        ),
       accept: (ctx) => {
+        if (ctx.input.replyId === 'skip' || /^skip$/i.test((ctx.input.text ?? '').trim())) {
+          return ok({ usualDailyRate: null });
+        }
         const n = Number((ctx.input.text ?? '').replace(/[^\d]/g, ''));
         if (!Number.isFinite(n) || n < 200 || n > 10000) {
-          return fail('Please give a daily rate between ₹200 and ₹10,000.');
+          return fail('Please type an amount in rupees, like *900* — or tap *Skip*.');
         }
-        return ok({ dailyRate: n });
+        return ok({ usualDailyRate: n });
       },
     },
 
@@ -237,6 +296,32 @@ export const registrationFlow: Flow = {
     },
   },
 
+  async onExit(_reason, ctx): Promise<OutboundMessage[]> {
+    const d = ctx.data;
+    const district = (d.preferredDistrict as string) ?? (d.district as string);
+
+    if (d.name) {
+      await prisma.user.update({ where: { id: ctx.userId }, data: { name: d.name } });
+    }
+    await addToWaitlist({
+      phone: ctx.phone,
+      userId: ctx.userId,
+      role: 'worker',
+      reason: 'cannot_work_in_service_area',
+      district,
+      trade: d.trade ?? null,
+    });
+
+    const first = String(d.name ?? '').split(' ')[0] || 'there';
+    return [
+      text(
+        `Thank you, ${first}.\n\n` +
+          `Right now Hyraku only has work in ${serviceAreaLabel()} district, so we can't register you just yet.\n\n` +
+          `We're opening more districts as Hyraku grows. We've saved your details, and we'll message you here as soon as we have work in ${district}.`
+      ),
+    ];
+  },
+
   async complete(ctx: FlowContext): Promise<OutboundMessage[]> {
     const d = ctx.data;
 
@@ -262,8 +347,8 @@ export const registrationFlow: Flow = {
         trade: d.trade,
         district: d.district,
         town: d.town,
-        serviceAreas: d.serviceAreas ?? d.district,
-        dailyRate: d.dailyRate ?? 800,
+        serviceAreas: d.serviceAreas ?? SERVICE_DISTRICTS.join(', '),
+        usualDailyRate: d.usualDailyRate ?? null,
         experienceYears: d.experienceYears ?? 0,
         age: d.age ?? null,
         gender: d.gender ?? null,
@@ -300,9 +385,9 @@ export const registrationFlow: Flow = {
       text(
         `Thank you, ${String(d.name).split(' ')[0]}! Your registration is submitted.\n\n` +
           `*Your Hyraku ID: ${worker.workerUid}*\n` +
-          `${tradeLabel(worker.trade)} · ${worker.town}, ${worker.district} · ₹${worker.dailyRate}/day\n\n` +
+          `${tradeLabel(worker.trade)} · lives in ${worker.town}, ${worker.district}\n\n` +
           `Our team will verify your documents and message you here once you are approved. ` +
-          `After that you will start receiving job offers on this number.`
+          `After that you will start receiving job offers for ${serviceAreaLabel()} on this number.`
       ),
     ];
   },

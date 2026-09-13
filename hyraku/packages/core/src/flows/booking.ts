@@ -1,14 +1,34 @@
 import { prisma } from '@hyraku/db';
 import type { Flow, FlowContext, OutboundMessage } from '../types.js';
-import { buttons, fail, list, ok, text } from '../types.js';
-import { DISTRICTS, TRADES, matchDistrict, matchTrade, tradeLabel } from '../catalog.js';
+import { buttons, exit, fail, list, ok, text } from '../types.js';
+import {
+  SERVICE_AREAS,
+  SERVICE_DISTRICTS,
+  TRADES,
+  isServiced,
+  matchDistrict,
+  matchDistrictExact,
+  matchTrade,
+  serviceAreaLabel,
+  tradeLabel,
+} from '../catalog.js';
 import { formatDate, parseDate } from '../dates.js';
+import { addToWaitlist } from '../launch.js';
 
 // The customer booking flow.
 //
-// Note what it never asks: which worker, and whether anyone is free. Assignment
-// is a human decision made in the console, which is what keeps this flow short
-// and keeps the bot incapable of promising something that isn't true.
+// Two things it deliberately never does. It never asks which worker or whether
+// anyone is free — assignment is a human decision made in the console. And it
+// never mentions a rate — pay is agreed between customer and worker on site.
+//
+// Jobs are only taken in serviced districts. Anyone outside gets a proper
+// answer and goes on the waitlist, rather than a booking we cannot fulfil.
+
+const areaId = (town: string) => `area:${town.toLowerCase().replace(/\s+/g, '_')}`;
+
+function allAreas(): { district: string; town: string }[] {
+  return SERVICE_DISTRICTS.flatMap((d) => (SERVICE_AREAS[d] ?? []).map((town) => ({ district: d, town })));
+}
 
 export const bookingFlow: Flow = {
   id: 'booking',
@@ -16,9 +36,9 @@ export const bookingFlow: Flow = {
   order: [
     'name',
     'trade',
-    'district',
-    'district_other',
-    'town',
+    'area',
+    'area_other',
+    'outside_district',
     'date',
     'duration',
     'address',
@@ -46,11 +66,7 @@ export const bookingFlow: Flow = {
           {
             title: 'Trades',
             rows: [
-              ...TRADES.map((t) => ({
-                id: t.id,
-                title: t.label,
-                description: `Typically around ₹${t.typicalRate}/day`,
-              })),
+              ...TRADES.map((t) => ({ id: t.id, title: t.label, description: t.labelMl })),
               { id: 'other', title: 'Something else', description: 'Tell us in your own words' },
             ],
           },
@@ -69,47 +85,50 @@ export const bookingFlow: Flow = {
       },
     },
 
-    district: {
-      id: 'district',
+    area: {
+      id: 'area',
       ask: () =>
-        list('Which district is the work in?', 'Choose district', [
-          {
-            title: 'Districts we serve',
-            rows: [
-              ...DISTRICTS.map((d) => ({ id: d.toLowerCase(), title: d })),
-              { id: 'other', title: 'Other district' },
-            ],
-          },
-        ]),
+        list(
+          `Hyraku currently works in *${serviceAreaLabel()} district*.\n\nWhere is the work?`,
+          'Choose area',
+          [
+            {
+              title: serviceAreaLabel(),
+              rows: [
+                ...allAreas().map((a) => ({ id: areaId(a.town), title: a.town })),
+                { id: 'area_other', title: `Another area`, description: `Somewhere else in ${serviceAreaLabel()}` },
+                { id: 'outside', title: `Outside ${serviceAreaLabel()}`, description: 'A different district' },
+              ],
+            },
+          ]
+        ),
       accept: (ctx) => {
-        if (ctx.input.replyId === 'other') return ok({}, 'district_other');
+        const id = ctx.input.replyId;
+        if (id === 'area_other') return ok({}, 'area_other');
+        if (id === 'outside') return ok({}, 'outside_district');
 
-        const picked =
-          DISTRICTS.find((d) => d.toLowerCase() === ctx.input.replyId) ??
-          matchDistrict(ctx.input.text ?? '');
+        const picked = allAreas().find((a) => areaId(a.town) === id);
+        if (picked) return ok({ district: picked.district, town: picked.town }, 'date');
 
-        if (!picked) return fail('Please choose a district from the list.');
-        return ok({ district: picked }, 'town');
+        // Typed instead of tapped.
+        return placeFromText(ctx, 'Please choose an area from the list.');
       },
     },
 
-    district_other: {
-      id: 'district_other',
-      ask: () => text('Which district? Type the name.'),
+    area_other: {
+      id: 'area_other',
+      ask: () => text(`Which town or area in ${serviceAreaLabel()}? Type the name.`),
+      accept: (ctx) => placeFromText(ctx, 'Please type the town or area name.'),
+    },
+
+    outside_district: {
+      id: 'outside_district',
+      ask: () => text('Which district is the work in?'),
       accept: (ctx) => {
         const d = matchDistrict(ctx.input.text ?? '');
         if (!d) return fail('That does not look like a Kerala district. Try again.');
-        return ok({ district: d });
-      },
-    },
-
-    town: {
-      id: 'town',
-      ask: (ctx) => text(`Which town or area in ${ctx.data.district}?`),
-      accept: (ctx) => {
-        const v = (ctx.input.text ?? '').trim();
-        if (v.length < 2) return fail('Please type the town or area name.');
-        return ok({ town: v.slice(0, 60) });
+        if (isServiced(d)) return ok({}, 'area');
+        return exit('outside_service_area', { requestedDistrict: d });
       },
     },
 
@@ -184,10 +203,11 @@ export const bookingFlow: Flow = {
 
     confirm: {
       id: 'confirm',
-      ask: (ctx) => buttons(summarise(ctx), [
-        { id: 'confirm', title: 'Confirm' },
-        { id: 'cancel', title: 'Cancel' },
-      ]),
+      ask: (ctx) =>
+        buttons(summarise(ctx), [
+          { id: 'confirm', title: 'Confirm' },
+          { id: 'cancel', title: 'Cancel' },
+        ]),
       accept: (ctx) => {
         if (ctx.input.replyId === 'confirm') return ok({}, null);
         if (/^(yes|ok|confirm|correct|sari|ശരി)$/i.test((ctx.input.text ?? '').trim())) {
@@ -196,6 +216,33 @@ export const bookingFlow: Flow = {
         return fail('Tap *Confirm* to send this request, or *Cancel* to start over.');
       },
     },
+  },
+
+  async onExit(reason, ctx): Promise<OutboundMessage[]> {
+    if (reason !== 'outside_service_area') return [text('Thank you — we have noted that.')];
+
+    const district = ctx.data.requestedDistrict as string;
+
+    if (ctx.data.name && !ctx.name) {
+      await prisma.user.update({ where: { id: ctx.userId }, data: { name: ctx.data.name } });
+    }
+    await addToWaitlist({
+      phone: ctx.phone,
+      userId: ctx.userId,
+      role: 'customer',
+      reason,
+      district,
+      trade: ctx.data.trade ?? null,
+    });
+
+    return [
+      text(
+        `Sorry — Hyraku isn't available in ${district} yet.\n\n` +
+          `We're starting in ${serviceAreaLabel()} and adding districts as our team of workers grows. ` +
+          `We've noted your request, and we'll message you here as soon as we start taking bookings in ${district}.\n\n` +
+          `Thank you for thinking of us.`
+      ),
+    ];
   },
 
   async complete(ctx: FlowContext): Promise<OutboundMessage[]> {
@@ -252,6 +299,30 @@ export const bookingFlow: Flow = {
   },
 };
 
+/**
+ * Typed location. A district name we do not serve ends the flow politely; a
+ * serviced district name asks for the area within it; anything else is taken
+ * as a town inside the service area.
+ */
+function placeFromText(ctx: FlowContext, emptyMessage: string) {
+  const v = (ctx.input.text ?? '').trim();
+  if (v.length < 2) return fail(emptyMessage);
+
+  const district = matchDistrictExact(v);
+  if (district && !isServiced(district)) {
+    return exit('outside_service_area', { requestedDistrict: district });
+  }
+
+  const known = allAreas().find((a) => a.town.toLowerCase() === v.toLowerCase());
+  if (known) return ok({ district: known.district, town: known.town }, 'date');
+
+  if (district && isServiced(district)) {
+    return ok({ district, town: `${district} City` }, 'date');
+  }
+
+  return ok({ district: SERVICE_DISTRICTS[0], town: v.slice(0, 60) }, 'date');
+}
+
 function summarise(ctx: FlowContext): string {
   const d = ctx.data;
   const days = d.durationDays === 1 ? '1 day' : `${d.durationDays} days`;
@@ -262,7 +333,7 @@ function summarise(ctx: FlowContext): string {
     `*Where:* ${d.town}, ${d.district}\n` +
     `*Address:* ${d.address}\n` +
     (d.notes ? `*Notes:* ${d.notes}\n` : '') +
-    `\nShall I send it?`
+    `\nYou agree the pay directly with the worker.\n\nShall I send it?`
   );
 }
 

@@ -1,20 +1,25 @@
 import { prisma } from '@hyraku/db';
 import type { FlowContext, OutboundMessage } from '../types.js';
 import { buttons, text } from '../types.js';
-import { matchTrade, tradeLabel } from '../catalog.js';
+import { matchTrade, serviceAreaLabel, tradeLabel } from '../catalog.js';
 import { formatDate } from '../dates.js';
+import { addToWaitlist, bookingsOpen } from '../launch.js';
 
 // Intent routing. Everything arrives here first — either a tapped button, or
-// the text a wa.me deep link prefilled, or something the person typed.
+// the text a wa.me link or Click-to-WhatsApp ad prefilled, or something typed.
 //
-// The deep link is the important path: the website already knows what they
-// clicked, so it hands that context over in the message body and the bot skips
-// straight past the questions it would otherwise have to ask.
+// The prefilled text is the important path: the ad or the website already knows
+// what they clicked, so it hands that context over in the message body and the
+// bot skips straight past the questions it would otherwise have to ask.
+//
+// Before launch, booking intent does not start a booking. Hyraku recruits its
+// workers first, so a customer who arrives early gets a clear "not yet" and the
+// offer of a message on launch day — never a booking nobody can fulfil.
 
 // Order of precedence matters more than the patterns do. "I want to register as
 // a worker" contains "want", which reads as booking intent — so the register
 // signals have to be unambiguous and checked first, or the site's own
-// "Work with us" deep link routes people into the booking flow.
+// "Work with us" link routes people into the booking flow.
 const REGISTER_WORDS =
   /\b(register|registration|sign\s?-?up|signup|join)\b|work with us|work for you|രജിസ്റ്റർ/i;
 const BOOK_WORDS = /\b(book|booking|need|want|hire|service|help|repair|fix)\b/i;
@@ -23,13 +28,15 @@ const STATUS_WORDS = /\b(my (bookings?|jobs?|requests?)|status|booked)\b/i;
 export async function routeIntent(ctx: FlowContext): Promise<OutboundMessage[]> {
   const reply = ctx.input.replyId;
   const body = (ctx.input.text ?? '').trim();
+  const open = await bookingsOpen();
 
-  if (reply === 'book') return enter(ctx, 'booking');
+  if (reply?.startsWith('notify_launch')) return notifyAtLaunch(ctx, reply.split(':')[1]);
+  if (reply === 'book') return open ? enter(ctx, 'booking') : preLaunch();
   if (reply === 'register') return enter(ctx, 'registration');
   if (reply === 'my_jobs') return myJobs(ctx);
 
   if (body) {
-    // Deep links can name a specific worker: "...book HY-000042".
+    // Links can name a specific worker: "...book HY-000042".
     const uid = body.match(/\bHY-\d{6}\b/i)?.[0];
     if (uid) ctx.data.requestedWorkerUid = uid.toUpperCase();
 
@@ -38,12 +45,13 @@ export async function routeIntent(ctx: FlowContext): Promise<OutboundMessage[]> 
     if (REGISTER_WORDS.test(body)) return enter(ctx, 'registration');
     if (STATUS_WORDS.test(body)) return myJobs(ctx);
     if (BOOK_WORDS.test(body) || trade || uid) {
+      if (!open) return preLaunch(trade?.id);
       if (trade) ctx.data.trade = trade.id;
       return enter(ctx, 'booking');
     }
   }
 
-  return greeting(ctx);
+  return greeting(ctx, open);
 }
 
 function enter(ctx: FlowContext, flowId: string): OutboundMessage[] {
@@ -55,7 +63,7 @@ function enter(ctx: FlowContext, flowId: string): OutboundMessage[] {
   if (flowId === 'registration') {
     return [
       text(
-        'Welcome to Hyraku. Let us get you registered as a worker.\n\n' +
+        'Welcome to Hyraku! Registering as a worker is completely free.\n\n' +
           'It takes about two minutes, and you will need photos of your Aadhaar and bank passbook ready.'
       ),
     ];
@@ -63,11 +71,61 @@ function enter(ctx: FlowContext, flowId: string): OutboundMessage[] {
   return [];
 }
 
-function greeting(ctx: FlowContext): OutboundMessage[] {
-  const hello = ctx.name ? `Hello ${ctx.name.split(' ')[0]}!` : 'Hello!';
+function preLaunch(trade?: string): OutboundMessage[] {
+  const want = trade ? `a ${tradeLabel(trade).toLowerCase()}` : 'a worker';
   return [
     buttons(
-      `${hello} This is *Hyraku* — verified electricians, plumbers, carpenters and more across Kerala.\n\nWhat would you like to do?`,
+      `Thanks for reaching out about ${want}!\n\n` +
+        `Hyraku is launching soon in *${serviceAreaLabel()}*. We're building our team of verified workers first, ` +
+        `so bookings aren't open just yet.\n\n` +
+        `Shall we message you here the day bookings open?`,
+      [
+        // The trade rides in the button id: nothing about this chat is stored
+        // until they tap, so this is the only place to keep it.
+        { id: `notify_launch:${trade ?? ''}`, title: 'Yes, notify me' },
+        { id: 'register', title: 'I want to work' },
+      ]
+    ),
+  ];
+}
+
+async function notifyAtLaunch(ctx: FlowContext, trade?: string): Promise<OutboundMessage[]> {
+  await addToWaitlist({
+    phone: ctx.phone,
+    userId: ctx.userId,
+    role: 'customer',
+    reason: 'bookings_closed',
+    district: null,
+    trade: trade || null,
+  });
+  return [
+    text(
+      `Done — we'll message you here as soon as bookings open in ${serviceAreaLabel()}.\n\n` +
+        `If you know a good electrician, plumber or carpenter, send them our way — registering is free.`
+    ),
+  ];
+}
+
+function greeting(ctx: FlowContext, open: boolean): OutboundMessage[] {
+  const hello = ctx.name ? `Hello ${ctx.name.split(' ')[0]}!` : 'Hello!';
+
+  if (!open) {
+    return [
+      buttons(
+        `${hello} This is *Hyraku* — verified electricians, plumbers, carpenters and more, ` +
+          `launching soon in ${serviceAreaLabel()}.\n\n` +
+          `We're building our team of workers right now. What would you like to do?`,
+        [
+          { id: 'register', title: 'Work with us' },
+          { id: 'notify_launch:', title: 'Notify me at launch' },
+        ]
+      ),
+    ];
+  }
+
+  return [
+    buttons(
+      `${hello} This is *Hyraku* — verified electricians, plumbers, carpenters and more in ${serviceAreaLabel()}.\n\nWhat would you like to do?`,
       [
         { id: 'book', title: 'Book a service' },
         { id: 'register', title: 'Work with us' },

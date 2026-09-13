@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'node:path';
 import fs from 'node:fs';
-import { DISTRICTS, TRADES, UPLOAD_ROOT } from '@hyraku/core';
+import { SERVICE_AREAS, SERVICE_DISTRICTS, TRADES, UPLOAD_ROOT, bookingsOpen } from '@hyraku/core';
 import { adminRouter } from './routes/admin.js';
 import { simRouter } from './routes/sim.js';
 import { webhookRouter } from './routes/webhook.js';
@@ -33,8 +33,13 @@ app.get('/health', (_req, res) => {
 });
 
 // Public — the marketing site reads this to build its deep links.
-app.get('/api/catalog', (_req, res) => {
-  res.json({ trades: TRADES, districts: DISTRICTS });
+app.get('/api/catalog', async (_req, res) => {
+  res.json({
+    trades: TRADES,
+    serviceDistricts: SERVICE_DISTRICTS,
+    serviceAreas: SERVICE_AREAS,
+    bookingsOpen: await bookingsOpen(),
+  });
 });
 
 app.use('/api/admin', adminRouter);

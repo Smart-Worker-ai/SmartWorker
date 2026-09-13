@@ -90,7 +90,7 @@ export interface FlowContext {
 }
 
 export type AcceptResult =
-  | { ok: true; patch?: Record<string, any>; next?: string | null }
+  | { ok: true; patch?: Record<string, any>; next?: string | null; exit?: string }
   | { ok: false; message: string };
 
 export interface Step {
@@ -112,6 +112,12 @@ export interface Flow {
   order: string[];
   steps: Record<string, Step>;
   complete(ctx: FlowContext): Promise<OutboundMessage[]>;
+  /**
+   * End the flow early for a reason that is not an error — someone asking for
+   * work outside the districts we serve. They get a proper answer rather than a
+   * re-ask loop, and the flow gets a chance to record why.
+   */
+  onExit?(reason: string, ctx: FlowContext): Promise<OutboundMessage[]>;
 }
 
 export const ok = (patch?: Record<string, any>, next?: string | null): AcceptResult => ({
@@ -121,3 +127,10 @@ export const ok = (patch?: Record<string, any>, next?: string | null): AcceptRes
 });
 
 export const fail = (message: string): AcceptResult => ({ ok: false, message });
+
+/** Leave the flow now, handing `reason` to the flow's onExit. */
+export const exit = (reason: string, patch?: Record<string, any>): AcceptResult => ({
+  ok: true,
+  patch,
+  exit: reason,
+});

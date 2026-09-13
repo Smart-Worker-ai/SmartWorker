@@ -1,8 +1,14 @@
 import { prisma } from '@hyraku/db';
+import { NEIGHBOURS } from './catalog.js';
 
 // The admin bottleneck is the real scaling risk in an assign-by-hand model, so
 // assignment has to be one tap rather than a search. This ranks candidates the
-// way a dispatcher would: right trade first, then nearby, then good, then free.
+// way a dispatcher would: right trade first, then who lives closest, then who
+// is good, then who is free.
+//
+// Every worker takes jobs in the serviced district, wherever they live, so
+// "closest" means home district: living in Kozhikode beats living next door,
+// which beats travelling in from across the state.
 
 export interface Candidate {
   workerId: string;
@@ -12,7 +18,8 @@ export interface Candidate {
   trade: string;
   district: string;
   town: string;
-  dailyRate: number;
+  /** Team-only reference. Never shown to a customer; pay is agreed on site. */
+  usualDailyRate: number | null;
   rating: number;
   totalReviews: number;
   experienceYears: number;
@@ -36,63 +43,65 @@ export async function rankCandidates(jobRequestId: string): Promise<Candidate[]>
     },
   });
 
-  const candidates = workers.map((w) => {
-    const reasons: string[] = [];
-    let score = 0;
+  const takesJobsHere = (serviceAreas: string) =>
+    serviceAreas
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .includes(job.district.toLowerCase());
 
-    if (w.district === job.district) {
-      score += 50;
-      reasons.push('Same district');
-    } else if (
-      w.serviceAreas
-        .split(',')
-        .map((s) => s.trim().toLowerCase())
-        .includes(job.district.toLowerCase())
-    ) {
-      score += 30;
-      reasons.push('Covers this district');
-    }
+  const candidates = workers
+    .filter((w) => takesJobsHere(w.serviceAreas))
+    .map((w) => {
+      const reasons: string[] = [];
+      let score = 0;
 
-    if (w.town.toLowerCase() === job.town.toLowerCase()) {
-      score += 20;
-      reasons.push('Same town');
-    }
+      if (w.district === job.district) {
+        score += 50;
+        reasons.push(`Lives in ${job.district}`);
+        if (w.town.toLowerCase() === job.town.toLowerCase()) {
+          score += 20;
+          reasons.push('Same town');
+        }
+      } else if ((NEIGHBOURS[job.district] ?? []).includes(w.district)) {
+        score += 30;
+        reasons.push(`Lives nearby — ${w.district}`);
+      } else {
+        reasons.push(`Travels from ${w.district}`);
+      }
 
-    score += w.rating * 8;
-    if (w.rating >= 4.5 && w.totalReviews >= 10) reasons.push('Highly rated');
+      score += w.rating * 8;
+      if (w.rating >= 4.5 && w.totalReviews >= 10) reasons.push('Highly rated');
 
-    score += Math.min(w.experienceYears, 15);
+      score += Math.min(w.experienceYears, 15);
 
-    // Busy on the requested day is disqualifying, not merely a penalty — the
-    // whole point of showing candidates is that the top one can be tapped.
-    const clash = w.assignments.some((a) => overlaps(a.jobRequest, job));
-    if (clash) {
-      score -= 200;
-      reasons.push('Already booked that day');
-    }
+      // Busy on the requested day is disqualifying, not merely a penalty — the
+      // whole point of showing candidates is that the top one can be tapped.
+      const clash = w.assignments.some((a) => overlaps(a.jobRequest, job));
+      if (clash) {
+        score -= 200;
+        reasons.push('Already booked that day');
+      }
 
-    const activeJobs = w.assignments.length;
-    score -= activeJobs * 3;
+      const activeJobs = w.assignments.length;
+      score -= activeJobs * 3;
 
-    if (w.dailyRate <= 0) score -= 5;
-
-    return {
-      workerId: w.id,
-      workerUid: w.workerUid,
-      name: w.user.name ?? 'Unnamed',
-      phone: w.user.phone,
-      trade: w.trade,
-      district: w.district,
-      town: w.town,
-      dailyRate: w.dailyRate,
-      rating: w.rating,
-      totalReviews: w.totalReviews,
-      experienceYears: w.experienceYears,
-      activeJobs,
-      score: Math.round(score),
-      reasons,
-    };
-  });
+      return {
+        workerId: w.id,
+        workerUid: w.workerUid,
+        name: w.user.name ?? 'Unnamed',
+        phone: w.user.phone,
+        trade: w.trade,
+        district: w.district,
+        town: w.town,
+        usualDailyRate: w.usualDailyRate,
+        rating: w.rating,
+        totalReviews: w.totalReviews,
+        experienceYears: w.experienceYears,
+        activeJobs,
+        score: Math.round(score),
+        reasons,
+      };
+    });
 
   return candidates.sort((a, b) => b.score - a.score);
 }

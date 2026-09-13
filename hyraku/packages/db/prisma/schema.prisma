@@ -1,6 +1,6 @@
 // Hyraku — data model
 //
-// Two structural commitments carried over from the architecture review:
+// Three structural commitments:
 //
 //  1. Identity is separate from role. One person = one User row keyed on the
 //     phone number WhatsApp already verified. Customer and worker facts hang
@@ -8,6 +8,10 @@
 //
 //  2. Customers are never approved. A customer row is created implicitly on
 //     first contact. Only workers have an approval lifecycle.
+//
+//  3. Hyraku never touches wages. Pay is agreed and settled between customer
+//     and worker directly, so no rate here is ever shown to a customer or
+//     written into a booking. Hyraku's revenue is a flat service charge.
 //
 // SQLite for the beta: zero setup, runs on any laptop. Postgres is a two-line
 // change (provider + url) — no model changes, which is why enums and arrays
@@ -61,12 +65,16 @@ model WorkerProfile {
   // Human-readable, immutable, printed on ID cards. HY-000042.
   workerUid String @unique
 
-  trade           String
-  district        String
-  town            String
-  serviceAreas    String  @default("") // comma-separated district names
-  dailyRate       Float   @default(800)
-  experienceYears Int     @default(0)
+  trade    String
+  // Where they live. Anywhere in Kerala — distinct from where they work.
+  district String
+  town     String
+  // Districts they take jobs in. Only serviced districts are ever written here,
+  // which today means Kozhikode for everyone.
+  serviceAreas    String @default("Kozhikode")
+  // Optional, team-only, never shown to customers. Pay is agreed on site.
+  usualDailyRate  Float?
+  experienceYears Int    @default(0)
   age             Int?
   gender          String?
 
@@ -156,7 +164,6 @@ model Assignment {
 
   // proposed | accepted | declined | reassigned | completed
   status      String    @default("proposed")
-  agreedRate  Float?
   respondedAt DateTime?
   createdAt   DateTime  @default(now())
 
@@ -205,4 +212,35 @@ model Message {
   createdAt DateTime @default(now())
 
   @@index([waPhone, createdAt])
+}
+
+// ─── Pre-launch ──────────────────────────────────────────────────────────────
+
+// People who asked for something Hyraku does not offer yet — a booking before
+// launch, work in a district we are not in. Kept because it is the evidence for
+// where to open next, and because each of them was promised a message.
+model WaitlistEntry {
+  id     String  @id @default(cuid())
+  phone  String
+  userId String?
+
+  role   String // customer | worker
+  // bookings_closed | outside_service_area | cannot_work_in_service_area
+  reason String
+
+  district String?
+  trade    String?
+
+  notifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([role, district])
+  @@index([phone])
+}
+
+// Operational switches the team flips from the console without a redeploy.
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

@@ -16,7 +16,8 @@
     "dev:api": "tsx watch --tsconfig apps/api/tsconfig.json apps/api/src/index.ts",
     "dev:console": "vite --config apps/console/vite.config.js",
     "build:console": "vite build --config apps/console/vite.config.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "smoke": "node scripts/smoke.mjs"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

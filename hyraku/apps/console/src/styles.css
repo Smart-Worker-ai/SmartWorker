@@ -661,3 +661,74 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ── Launch controls ───────────────────────────────────────────────────── */
+
+.pill.area { background: rgba(255,255,255,0.1); }
+
+.launch-switch {
+  display: flex; align-items: center; gap: 7px;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  font-size: 12px; font-weight: 600;
+  padding: 6px 11px; border-radius: 16px;
+}
+.launch-switch:hover { background: rgba(255,255,255,0.14); }
+.launch-switch .dot-ind {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #e8b04a;
+  box-shadow: 0 0 0 3px rgba(232,176,74,0.25);
+}
+.launch-switch.on .dot-ind {
+  background: #5fd39f;
+  box-shadow: 0 0 0 3px rgba(95,211,159,0.25);
+}
+
+.hero-flag {
+  display: inline-block;
+  font-family: var(--f-mono);
+  font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase;
+  background: rgba(255,255,255,0.14);
+  padding: 4px 9px; border-radius: 4px; margin-bottom: 12px;
+}
+
+/* ── Coverage ──────────────────────────────────────────────────────────── */
+
+.t-wrap {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+
+table.grid { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 13px; }
+table.grid th {
+  font-family: var(--f-mono); font-size: 10px; font-weight: 600;
+  letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted);
+  text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line);
+  background: #fafaf8; white-space: nowrap;
+}
+table.grid td { padding: 9px 12px; border-bottom: 1px solid var(--line-soft); }
+table.grid tr:last-child td { border-bottom: none; }
+table.grid .num { text-align: right; font-variant-numeric: tabular-nums; }
+table.grid .strong { font-weight: 600; }
+table.grid tr.row-live td { background: var(--brand-wash); }
+
+.badge.cov-ready { background: var(--brand-wash); color: var(--brand-deep); }
+.badge.cov-thin  { background: #fdf0d9; color: var(--amber); }
+.badge.cov-none  { background: var(--signal-wash); color: var(--signal); }
+
+.muted-note { font-size: 12px; color: var(--muted); }
+
+/* ── Worker review ─────────────────────────────────────────────────────── */
+
+.team-only { color: var(--muted); }
+
+.window {
+  font-family: var(--f-mono); font-size: 10px;
+  margin-top: 6px; padding: 2px 6px; border-radius: 3px; white-space: nowrap;
+}
+.window.open { background: var(--brand-wash); color: var(--brand-deep); }
+.window.soon { background: #fdf0d9; color: var(--amber); }
+.window.shut { background: var(--surface-2); color: var(--muted); }
