@@ -36,6 +36,7 @@ export const bookingFlow: Flow = {
   order: [
     'name',
     'trade',
+    'workers',
     'area',
     'area_other',
     'outside_district',
@@ -82,6 +83,32 @@ export const bookingFlow: Flow = {
           return fail('No problem — describe the work in a few words and we will match it.');
         }
         return fail('Sorry, we could not match that to a trade. Pick one from the list.');
+      },
+    },
+
+    workers: {
+      id: 'workers',
+      ask: () =>
+        buttons(
+          'How many workers do you need?',
+          [
+            { id: 'w1', title: 'Just one' },
+            { id: 'w2', title: 'Two' },
+            { id: 'wmore', title: 'More than two' },
+          ]
+        ),
+      accept: (ctx) => {
+        const map: Record<string, number> = { w1: 1, w2: 2 };
+        const id = ctx.input.replyId;
+
+        if (id && map[id]) return ok({ workersNeeded: map[id] });
+        if (id === 'wmore') return fail('How many altogether? Type a number.');
+
+        const n = Number((ctx.input.text ?? '').replace(/\D/g, ''));
+        if (!Number.isInteger(n) || n < 1 || n > 30) {
+          return fail('Please give a number of workers between 1 and 30.');
+        }
+        return ok({ workersNeeded: n });
       },
     },
 
@@ -265,9 +292,10 @@ export const bookingFlow: Flow = {
 
     const job = await prisma.jobRequest.create({
       data: {
-        refNo: await uniqueRefNo(),
+        refNo: await nextRefNo(),
         customerId: ctx.userId,
         trade: d.trade,
+        workersNeeded: d.workersNeeded ?? 1,
         district: d.district,
         town: d.town,
         address: d.address,
@@ -286,13 +314,14 @@ export const bookingFlow: Flow = {
     // Nothing is committed on the worker's behalf until a human assigns one.
     const eta = job.isUrgent
       ? 'Because this is for today or tomorrow, we will call you within the hour.'
-      : 'We will confirm your worker shortly — usually within a few hours.';
+      : 'We will confirm shortly — usually within a few hours.';
 
     return [
       text(
         `Done! Your request is in.\n\n` +
           `*Reference: ${job.refNo}*\n` +
-          `${tradeLabel(job.trade)} · ${formatDate(job.preferredDate)} · ${job.town}\n\n` +
+          `${job.workersNeeded > 1 ? `${job.workersNeeded} × ` : ''}${tradeLabel(job.trade)} · ` +
+          `${formatDate(job.preferredDate)} · ${job.town}\n\n` +
           `${eta}\n\nQuote ${job.refNo} if you need to reach us about it.`
       ),
     ];
@@ -326,22 +355,22 @@ function placeFromText(ctx: FlowContext, emptyMessage: string) {
 function summarise(ctx: FlowContext): string {
   const d = ctx.data;
   const days = d.durationDays === 1 ? '1 day' : `${d.durationDays} days`;
+  const workers = (d.workersNeeded ?? 1) === 1 ? '' : ` × ${d.workersNeeded}`;
   return (
     `Please check this is right:\n\n` +
-    `*Work:* ${tradeLabel(d.trade)}\n` +
+    `*Work:* ${tradeLabel(d.trade)}${workers}\n` +
     `*When:* ${d.dateDisplay} (${days})\n` +
     `*Where:* ${d.town}, ${d.district}\n` +
     `*Address:* ${d.address}\n` +
     (d.notes ? `*Notes:* ${d.notes}\n` : '') +
-    `\nYou agree the pay directly with the worker.\n\nShall I send it?`
+    `\nYou pay the worker directly, at their Hyraku rate.\n\nShall I send it?`
   );
 }
 
-async function uniqueRefNo(): Promise<string> {
-  for (let i = 0; i < 12; i++) {
-    const candidate = `HY-${Math.floor(1000 + Math.random() * 9000)}`;
-    const clash = await prisma.jobRequest.findUnique({ where: { refNo: candidate } });
-    if (!clash) return candidate;
-  }
-  return `HY-${Date.now().toString().slice(-6)}`;
+// From a sequence. Four random digits collided long before the 9000 available
+// refs were spent, and a collision here is a customer quoting someone else's
+// booking number.
+async function nextRefNo(): Promise<string> {
+  const [row] = await prisma.$queryRaw<Array<{ ref: string }>>`SELECT next_job_ref() AS ref`;
+  return row.ref;
 }

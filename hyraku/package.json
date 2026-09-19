@@ -17,7 +17,8 @@
     "build": "npm run db:generate && tsc -b && npm run build:console",
     "build:console": "vite build --config apps/console/vite.config.js",
     "start": "node apps/api/dist/index.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx --test packages/*/test/*.test.ts"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",

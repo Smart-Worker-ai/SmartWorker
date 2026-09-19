@@ -1,4 +1,5 @@
 import type { InboundMedia, OutboundMessage } from '@hyraku/core';
+import { templateByName } from './templates.js';
 
 // WhatsApp Cloud API client — direct to Meta, no BSP in the path.
 //
@@ -84,21 +85,51 @@ export class WhatsAppCloudClient {
           },
         };
 
-      case 'template':
-        // Templates carry a fully-composed body here. Meta assembles approved
-        // templates from parameters instead, so the adapter only reaches this
-        // branch when the 24-hour window is closed and a template is required.
+      case 'template': {
+        // Meta rejects a template send whose parameter count does not match the
+        // approved template, and the rejection arrives as a failed message to a
+        // real worker. Fail here instead, where the stack says which call site.
+        const def = templateByName(m.name);
+        if (!def) throw new Error(`unregistered template: ${m.name}`);
+        if (def.params.length !== m.params.length) {
+          throw new Error(
+            `template ${m.name} expects ${def.params.length} parameters, got ${m.params.length}`
+          );
+        }
+
+        // Reached only when the 24-hour window is closed. Meta assembles the
+        // message from the approved template and these positional parameters —
+        // passing the composed body as one parameter is rejected, because the
+        // count will not match what the template declares.
+        const components: Array<Record<string, unknown>> = [
+          {
+            type: 'body',
+            parameters: m.params.map((text) => ({ type: 'text', text: truncate(text, 1024) })),
+          },
+        ];
+
+        // Quick-reply buttons are fixed when the template is approved; at send
+        // time only the payload travels, one component per button index. Without
+        // this a job offer arrives outside the window with no way to accept it.
+        m.buttons?.forEach((button, index) => {
+          components.push({
+            type: 'button',
+            sub_type: 'quick_reply',
+            index: String(index),
+            parameters: [{ type: 'payload', payload: button.id }],
+          });
+        });
+
         return {
           ...envelope,
           type: 'template',
           template: {
             name: m.name,
-            language: { code: 'en' },
-            components: [
-              { type: 'body', parameters: [{ type: 'text', text: truncate(m.body, 1024) }] },
-            ],
+            language: { code: m.lang ?? 'en' },
+            components,
           },
         };
+      }
     }
   }
 

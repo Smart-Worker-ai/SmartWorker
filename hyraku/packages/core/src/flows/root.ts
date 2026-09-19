@@ -141,9 +141,12 @@ async function myJobs(ctx: FlowContext): Promise<OutboundMessage[]> {
     orderBy: { createdAt: 'desc' },
     take: 5,
     include: {
+      // Only accepted work. A proposed assignment is not a promise we get to
+      // make, and naming a worker who has not agreed yet is how a customer
+      // ends up ringing someone who never took the job.
       assignments: {
-        where: { status: { in: ['proposed', 'accepted'] } },
-        include: { worker: { include: { user: true } } },
+        where: { status: 'accepted' },
+        include: { members: { include: { worker: { include: { user: true } } } } },
       },
     },
   });
@@ -155,10 +158,14 @@ async function myJobs(ctx: FlowContext): Promise<OutboundMessage[]> {
   }
 
   const lines = jobs.map((j) => {
-    const worker = j.assignments[0]?.worker;
-    const who = worker ? `\n   Worker: ${worker.user.name} (${worker.user.phone})` : '';
+    const crew = j.assignments[0]?.members ?? [];
+    const who = crew.length
+      ? `\n   ${crew
+          .map((m) => `${m.worker.user.name} (${m.worker.user.phone}) — ₹${m.agreedRate}/day`)
+          .join('\n   ')}`
+      : '';
     return (
-      `*${j.refNo}* — ${tradeLabel(j.trade)}\n` +
+      `*${j.refNo}* — ${j.workersNeeded > 1 ? `${j.workersNeeded} × ` : ''}${tradeLabel(j.trade)}\n` +
       `   ${formatDate(j.preferredDate)} · ${j.town}\n` +
       `   Status: ${prettyStatus(j.status)}${who}`
     );

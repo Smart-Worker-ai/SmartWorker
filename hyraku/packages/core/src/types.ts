@@ -43,6 +43,8 @@ export interface ListSection {
   rows: ListRow[];
 }
 
+export type Lang = 'en' | 'ml';
+
 export type OutboundMessage =
   | { kind: 'text'; body: string }
   | { kind: 'buttons'; body: string; buttons: Button[] }
@@ -51,8 +53,21 @@ export type OutboundMessage =
   | {
       kind: 'template';
       name: string;
+      /**
+       * Positional {{1}}..{{n}} substitutions, in the order the approved
+       * template declares them. Meta assembles the message from these; it
+       * rejects a send whose parameter count does not match the template.
+       */
+      params: string[];
+      /**
+       * The same message, fully composed. Used only inside the 24-hour window,
+       * where free-form text is richer and cheaper than a template and keeps
+       * buttons a template body would lose.
+       */
       body: string;
+      /** Quick-reply payloads, in the order the template declares the buttons. */
       buttons?: Button[];
+      lang?: Lang;
     };
 
 export const text = (body: string): OutboundMessage => ({ kind: 'text', body });
@@ -69,11 +84,13 @@ export const list = (
   sections: ListSection[]
 ): OutboundMessage => ({ kind: 'list', body, buttonLabel, sections });
 
-export const template = (
-  name: string,
-  body: string,
-  btns?: Button[]
-): OutboundMessage => ({ kind: 'template', name, body, buttons: btns });
+export const template = (opts: {
+  name: string;
+  params: string[];
+  body: string;
+  buttons?: Button[];
+  lang?: Lang;
+}): OutboundMessage => ({ kind: 'template', ...opts });
 
 // ─── Flow machinery ──────────────────────────────────────────────────────────
 
@@ -98,7 +115,7 @@ export interface Step {
   /** What we send on entering this step. */
   ask(ctx: FlowContext): OutboundMessage | OutboundMessage[];
   /** Validate the reply. Returning ok:false re-asks with the message shown first. */
-  accept(ctx: FlowContext): AcceptResult;
+  accept(ctx: FlowContext): AcceptResult | Promise<AcceptResult>;
   /**
    * Skip without asking. Used when a deep link already told us the answer —
    * tapping "Book an Electrician" on the site should not then ask which trade.

@@ -5,31 +5,31 @@
 // anything outside a customer service window. Approval takes real time and
 // rejections are often unexplained, so submit early.
 //
-// No template quotes a rate. Pay is agreed between customer and worker directly
-// and Hyraku is not party to it.
+// `params` is load-bearing. Meta assembles an approved template from
+// positional {{1}}..{{n}} values and rejects any send whose parameter count
+// does not match, so the array here must agree with the placeholders in both
+// language bodies and with every template() call site. A test enforces all
+// three agree; it is not a convention.
 //
-// The Malayalam bodies are drafts. Have a native speaker check them before
-// submission — Meta approves a template per language, and a clumsy translation
-// is still a live message to a real worker.
-//
-// Categories matter for cost and for approval. Anything triggered by an event
-// the recipient is party to is UTILITY. The two launch announcements tell people
-// something new is available, which Meta treats as MARKETING however politely
-// it is worded — they cost more, and need the opt-in the waitlist records.
+// Categories matter for cost and approval. Anything triggered by an event the
+// recipient is party to is UTILITY. The two launch announcements tell people
+// something new exists, which Meta treats as MARKETING however politely it is
+// worded — they cost more, and need the opt-in the waitlist records.
 
 export type TemplateCategory = 'UTILITY' | 'AUTHENTICATION' | 'MARKETING';
 
 export interface TemplateDefinition {
   name: string;
   category: TemplateCategory;
-  /** Ordered {{n}} substitutions, for the submission form and for sendTemplate. */
+  /** Ordered {{n}} substitutions, for the submission form and for sending. */
   params: string[];
   body: { en: string; ml: string };
+  /** Quick-reply button titles, declared at creation and fixed thereafter. */
   buttons?: string[];
 }
 
 export const TEMPLATES: TemplateDefinition[] = [
-  // ── Worker recruitment — the launch phase ────────────────────────────────
+  // ── Registration ─────────────────────────────────────────────────────────
   {
     name: 'registration_approved',
     category: 'UTILITY',
@@ -38,11 +38,11 @@ export const TEMPLATES: TemplateDefinition[] = [
       en:
         'You are approved on Hyraku. Your ID is {{1}} ({{2}}). ' +
         'Job offers for {{3}} will arrive on this number, so keep notifications on. ' +
-        'You agree your pay directly with each customer.',
+        'Your rate is shown on your profile and the customer pays you directly.',
       ml:
         'ഹൈരാകുവിൽ നിങ്ങളുടെ രജിസ്ട്രേഷൻ അംഗീകരിച്ചു. നിങ്ങളുടെ ഐഡി {{1}} ({{2}}). ' +
         '{{3}}-ലെ ജോലി അറിയിപ്പുകൾ ഈ നമ്പറിൽ വരും. ' +
-        'കൂലി ഓരോ ഉപഭോക്താവുമായി നേരിട്ട് തീരുമാനിക്കാം.',
+        'നിങ്ങളുടെ കൂലി പ്രൊഫൈലിൽ കാണാം, ഉപഭോക്താവ് നേരിട്ട് നൽകും.',
     },
   },
   {
@@ -55,6 +55,26 @@ export const TEMPLATES: TemplateDefinition[] = [
     },
   },
   {
+    name: 'registration_suspended',
+    category: 'UTILITY',
+    params: ['reason'],
+    body: {
+      en: 'Your Hyraku account has been paused. {{1}} Reply here to talk to us.',
+      ml: 'നിങ്ങളുടെ ഹൈരാകു അക്കൗണ്ട് താൽക്കാലികമായി നിർത്തി. {{1}} ഞങ്ങളോട് സംസാരിക്കാൻ ഇവിടെ മറുപടി അയക്കുക.',
+    },
+  },
+  {
+    name: 'registration_terminated',
+    category: 'UTILITY',
+    params: ['reason'],
+    body: {
+      en: 'Your Hyraku account has been closed permanently. {{1}} You will not receive further job offers.',
+      ml: 'നിങ്ങളുടെ ഹൈരാകു അക്കൗണ്ട് ശാശ്വതമായി അടച്ചു. {{1}} ഇനി ജോലി അറിയിപ്പുകൾ ലഭിക്കില്ല.',
+    },
+  },
+
+  // ── Recruitment ──────────────────────────────────────────────────────────
+  {
     // Sent to workers on the waitlist when their district opens.
     name: 'district_open_for_workers',
     category: 'MARKETING',
@@ -64,8 +84,6 @@ export const TEMPLATES: TemplateDefinition[] = [
       ml: 'ഹൈരാകുവിന് ഇപ്പോൾ {{1}}-ൽ ജോലികളുണ്ട്. രജിസ്റ്റർ ചെയ്യാൻ REGISTER എന്ന് മറുപടി അയക്കുക. രജിസ്ട്രേഷൻ സൗജന്യമാണ്.',
     },
   },
-
-  // ── Customer launch ──────────────────────────────────────────────────────
   {
     // Sent once, on launch day, to customers who tapped "notify me".
     name: 'bookings_now_open',
@@ -77,7 +95,7 @@ export const TEMPLATES: TemplateDefinition[] = [
     },
   },
 
-  // ── Bookings ─────────────────────────────────────────────────────────────
+  // ── Jobs ─────────────────────────────────────────────────────────────────
   {
     name: 'worker_job_offer',
     category: 'UTILITY',
@@ -85,24 +103,68 @@ export const TEMPLATES: TemplateDefinition[] = [
     body: {
       en:
         'New job from Hyraku: {{1}} on {{2}} at {{3}}. Reference {{4}}. ' +
-        'Open this chat for the address and customer details, and agree the pay with the customer directly.',
+        'Open this chat for the address, the customer details and your rate.',
       ml:
         'ഹൈരാകുവിൽ നിന്ന് പുതിയ ജോലി: {{2}}-ന് {{3}}-ൽ {{1}}. റഫറൻസ് {{4}}. ' +
-        'വിലാസത്തിനും ഉപഭോക്താവിന്റെ വിവരങ്ങൾക്കും ഈ ചാറ്റ് തുറക്കുക. കൂലി ഉപഭോക്താവുമായി നേരിട്ട് തീരുമാനിക്കുക.',
+        'വിലാസം, ഉപഭോക്താവിന്റെ വിവരങ്ങൾ, നിങ്ങളുടെ കൂലി എന്നിവയ്ക്ക് ഈ ചാറ്റ് തുറക്കുക.',
     },
     buttons: ['Accept', 'Decline'],
   },
   {
+    name: 'worker_job_accepted',
+    category: 'UTILITY',
+    params: ['reference', 'date', 'location'],
+    body: {
+      en: 'Confirmed — Hyraku job {{1}} on {{2}} at {{3}}. We have told the customer to expect you.',
+      ml: 'സ്ഥിരീകരിച്ചു — ഹൈരാകു ജോലി {{1}}, {{2}}-ന് {{3}}-ൽ. നിങ്ങൾ വരുമെന്ന് ഉപഭോക്താവിനോട് പറഞ്ഞിട്ടുണ്ട്.',
+    },
+  },
+  {
+    name: 'worker_job_declined',
+    category: 'UTILITY',
+    params: ['reference'],
+    body: {
+      en: 'No problem — Hyraku job {{1}} will be offered to someone else.',
+      ml: 'കുഴപ്പമില്ല — ഹൈരാകു ജോലി {{1}} മറ്റൊരാൾക്ക് നൽകും.',
+    },
+  },
+  {
     name: 'booking_confirmed',
     category: 'UTILITY',
-    params: ['reference', 'worker_name', 'trade', 'date', 'phone'],
+    params: ['reference', 'worker_name', 'trade', 'date', 'rate', 'phone'],
     body: {
       en:
         'Your Hyraku booking {{1}} is confirmed. {{2}} ({{3}}) will come on {{4}}. ' +
-        'They will call you from {{5}} before arriving. You agree the pay with them directly.',
+        'Their rate is {{5}}, paid to them directly. They will call you from {{6}} before arriving.',
       ml:
         'നിങ്ങളുടെ ഹൈരാകു ബുക്കിംഗ് {{1}} സ്ഥിരീകരിച്ചു. {{4}}-ന് {{2}} ({{3}}) വരും. ' +
-        'എത്തുന്നതിന് മുൻപ് {{5}} എന്ന നമ്പറിൽ നിന്ന് വിളിക്കും. കൂലി അവരുമായി നേരിട്ട് തീരുമാനിക്കാം.',
+        'കൂലി {{5}}, നേരിട്ട് നൽകുക. എത്തുന്നതിന് മുൻപ് {{6}} എന്ന നമ്പറിൽ നിന്ന് വിളിക്കും.',
+    },
+  },
+  {
+    // A crew is accepted before anyone knows which people. The lead and the
+    // headcount are what is true at that moment; the names follow.
+    name: 'booking_crew_confirmed',
+    category: 'UTILITY',
+    params: ['reference', 'headcount', 'trade', 'date', 'lead_name', 'phone'],
+    body: {
+      en:
+        'Your Hyraku booking {{1}} is confirmed: {{2}} × {{3}} on {{4}}. ' +
+        '{{5}} is leading the job and will call you from {{6}}. ' +
+        'We will send you the names of everyone coming before the day.',
+      ml:
+        'നിങ്ങളുടെ ഹൈരാകു ബുക്കിംഗ് {{1}} സ്ഥിരീകരിച്ചു: {{4}}-ന് {{2}} × {{3}}. ' +
+        '{{5}} ജോലിക്ക് നേതൃത്വം നൽകും, {{6}} എന്ന നമ്പറിൽ നിന്ന് വിളിക്കും. ' +
+        'വരുന്നവരുടെ പേരുകൾ ദിവസത്തിന് മുൻപ് അയക്കാം.',
+    },
+  },
+  {
+    name: 'crew_roster',
+    category: 'UTILITY',
+    params: ['reference', 'headcount', 'date'],
+    body: {
+      en: 'Hyraku booking {{1}}: the {{2}} workers coming on {{3}} are listed in this chat, with their rates.',
+      ml: 'ഹൈരാകു ബുക്കിംഗ് {{1}}: {{3}}-ന് വരുന്ന {{2}} തൊഴിലാളികളുടെ പേരും കൂലിയും ഈ ചാറ്റിൽ ഉണ്ട്.',
     },
   },
   {
@@ -127,4 +189,10 @@ export const TEMPLATES: TemplateDefinition[] = [
 
 export function templateByName(name: string): TemplateDefinition | undefined {
   return TEMPLATES.find((t) => t.name === name);
+}
+
+/** Highest {{n}} referenced in a body — what Meta will expect to be given. */
+export function placeholderCount(body: string): number {
+  const found = [...body.matchAll(/\{\{(\d+)\}\}/g)].map((m) => Number(m[1]));
+  return found.length ? Math.max(...found) : 0;
 }
