@@ -3,18 +3,16 @@ dist/
 .env
 *.log
 
-# Committed: the Prisma CLI needs a DATABASE_URL to build the demo database,
-# and requiring setup before `npm run setup` works would defeat the point.
-!packages/db/prisma/.env
+# DATABASE_URL is supplied by the environment. Nothing that resolves to a
+# connection string is ever committed, including for local development.
+.env.*
+!.env.example
 
-# SQLite demo database — regenerate with `npm run db:reset`
-packages/db/prisma/*.db
-packages/db/prisma/*.db-journal
-
-# Local document storage — R2 in production
+# Local document storage. Production uses object storage; these are KYC and
+# police verification images either way and must never reach the repository.
 apps/api/uploads/
 
-# Never commit credentials. Tokens belong in Windows Credential Manager.
+# Never commit credentials.
 *.token
 *.pem
 secrets/

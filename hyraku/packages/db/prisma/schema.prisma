@@ -1,49 +1,234 @@
 // Hyraku — data model
 //
-// Three structural commitments:
+// Four structural commitments:
 //
-//  1. Identity is separate from role. One person = one User row keyed on the
-//     phone number WhatsApp already verified. Customer and worker facts hang
-//     off it as profiles, so one person can be both.
+//  1. Identity is separate from role. One person = one User row keyed on their
+//     mobile number. Customer and worker facts hang off it as profiles, so one
+//     person can be both. The number is the identity whether or not it is on
+//     WhatsApp — registration is phone-first, and WhatsApp is one of two
+//     transports rather than the way in.
 //
 //  2. Customers are never approved. A customer row is created implicitly on
 //     first contact. Only workers have an approval lifecycle.
 //
-//  3. Hyraku never touches wages. Pay is agreed and settled between customer
-//     and worker directly, so no rate here is ever shown to a customer or
-//     written into a booking. Hyraku's revenue is a flat service charge.
+//  3. Affiliation is an identifier, not a permission. A worker registered
+//     through an agent or supervisor carries that link for attribution and for
+//     who answers a job offer. It grants the lead no authority over the
+//     worker's profile, documents or rating.
 //
-// SQLite for the beta: zero setup, runs on any laptop. Postgres is a two-line
-// change (provider + url) — no model changes, which is why enums and arrays
-// are modelled as strings here.
+//  4. Hyraku never handles money between customer and worker. Rates are set by
+//     the Hyraku team, published on the worker's profile, and paid directly on
+//     site. Hyraku's revenue is a flat service charge on the booking.
+//
+// Postgres. Enums and arrays are modelled natively; the SQLite-era string
+// columns they replace are gone.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// ─── Identity ────────────────────────────────────────────────────────────────
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum WorkerKind {
+  individual
+  agent // labour contractor. Supplies a crew; not necessarily on site.
+  supervisor // on-site lead. Leading a job consumes their day.
+}
+
+enum WorkerStatus {
+  pending // registered, documents not yet reviewed
+  approved // reviewed and accepted — still needs a current PVC to be dispatched
+  rejected
+  suspended // reversible, usually pending a grievance outcome
+  terminated // permanent. Blocks re-registration by PVC number.
+}
+
+enum ContactChannel {
+  whatsapp
+  sms // the number is not on WhatsApp; offers go by SMS and a dispatcher call
+}
+
+enum DocumentKind {
+  aadhaar // masked preferred. The NUMBER is never stored — see WorkerProfile.
+  pvc // Police Verification Certificate
+  photo // face photo, shown to customers
+}
+
+enum JobStatus {
+  new
+  assigning
+  assigned // offered, awaiting a response
+  confirmed // crew committed
+  in_progress
+  completed
+  cancelled
+}
+
+enum AssignmentStatus {
+  proposed
+  accepted
+  declined
+  expired // the responder did not answer inside the window — cascade moved on
+  reassigned
+  completed
+}
+
+enum AdminRole {
+  dispatcher // queue, assignment, conversations
+  admin // the above, plus approvals, rates, terminations, the launch switch
+}
+
+enum GrievanceCategory {
+  overcharging
+  no_show
+  conduct
+  quality
+  payment
+  other
+}
+
+enum GrievanceStatus {
+  open
+  investigating
+  resolved
+  dismissed
+}
+
+enum WaitlistRole {
+  customer
+  worker
+}
+
+enum WaitlistReason {
+  bookings_closed
+  outside_service_area
+  cannot_work_in_service_area
+}
+
+// ─── Staff identity ──────────────────────────────────────────────────────────
+//
+// Deliberately a separate table from User, reached only from the admin
+// instance, which runs on its own host behind a private tunnel. A worker,
+// agent or supervisor has no credential the admin instance will accept —
+// not a permission denial, no account exists there at all.
+
+model AdminUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String // argon2id
+  role         AdminRole @default(dispatcher)
+  totpSecret   String? // required for role = admin
+  disabledAt   DateTime? @db.Timestamptz(3)
+  lastLoginAt  DateTime? @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+
+  sessions   AdminSession[]
+  auditLogs  AuditLog[]
+  grievances Grievance[]
+}
+
+model AdminSession {
+  id        String    @id @default(cuid())
+  adminId   String
+  admin     AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  // Only the hash is stored. A database read never yields a usable session.
+  tokenHash String    @unique
+  ip        String
+  userAgent String
+  expiresAt DateTime  @db.Timestamptz(3)
+  revokedAt DateTime? @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([adminId, expiresAt])
+}
+
+// Written in the same transaction as the change it records, never after.
+// "Who approved this worker" and "who opened this Aadhaar image" are both
+// questions someone will eventually ask under pressure.
+model AuditLog {
+  id        String     @id @default(cuid())
+  adminId   String?
+  admin     AdminUser? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  action    String // worker.approve | worker.terminate | job.assign | doc.view | rate.set
+  subjectId String?
+  detail    Json       @default("{}")
+  ip        String
+  createdAt DateTime   @default(now()) @db.Timestamptz(3)
+
+  @@index([subjectId, createdAt])
+  @@index([adminId, createdAt])
+  @@index([action, createdAt])
+}
+
+// ─── Field identity ──────────────────────────────────────────────────────────
 
 model User {
-  id                String   @id @default(cuid())
-  phone             String   @unique // E.164, e.g. +919846012345
+  id                String         @id @default(cuid())
+  phone             String         @unique // E.164, e.g. +919846012345
   name              String?
-  preferredLanguage String   @default("en") // en | ml
-  whatsappOptIn     Boolean  @default(false)
-  optInSource       String? // deep_link | flow | manual
-  optInAt           DateTime?
-  isBlocked         Boolean  @default(false)
-  createdAt         DateTime @default(now())
+  preferredLanguage String         @default("en") // en | ml
+  contactChannel    ContactChannel @default(whatsapp)
+  // Null means the number is not reachable on WhatsApp, which is why
+  // contactChannel exists at all. Set when a WhatsApp message first arrives.
+  waVerifiedAt      DateTime?      @db.Timestamptz(3)
+  phoneVerifiedAt   DateTime?      @db.Timestamptz(3)
 
-  customer      CustomerProfile?
-  worker        WorkerProfile?
-  jobRequests   JobRequest[]
-  conversation  Conversation?
-  messages      Message[]
+  whatsappOptIn Boolean   @default(false)
+  optInSource   String? // inbound_message | web_form | referral_link
+  optInAt       DateTime? @db.Timestamptz(3)
+  // Set when someone sends STOP. Suppresses every MARKETING template.
+  optOutAt      DateTime? @db.Timestamptz(3)
+
+  isBlocked Boolean  @default(false)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  customer          CustomerProfile?
+  worker            WorkerProfile?
+  jobRequests       JobRequest[]
+  conversation      Conversation?
+  messages          Message[]
+  sessions          UserSession[]
+  waitlistEntries   WaitlistEntry[]
+  grievancesRaised  Grievance[]      @relation("grievanceRaisedBy")
+  grievancesAgainst Grievance[]      @relation("grievanceAgainst")
+}
+
+// Field users authenticate with phone + OTP. Passwords are the wrong factor
+// for people who are on a roof with one hand free.
+model UserSession {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  deviceName String?
+  ip         String
+  expiresAt  DateTime  @db.Timestamptz(3)
+  revokedAt  DateTime? @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([userId, expiresAt])
+}
+
+// Rate limiting lives here rather than only in Redis, because an OTP that
+// costs money per send is worth a durable attempt count.
+model OtpChallenge {
+  id         String         @id @default(cuid())
+  phone      String
+  codeHash   String
+  purpose    String // login | registration | phone_change
+  attempts   Int            @default(0)
+  sentVia    ContactChannel
+  expiresAt  DateTime       @db.Timestamptz(3)
+  consumedAt DateTime?      @db.Timestamptz(3)
+  createdAt  DateTime       @default(now()) @db.Timestamptz(3)
+
+  @@index([phone, createdAt])
 }
 
 model CustomerProfile {
@@ -54,8 +239,10 @@ model CustomerProfile {
   district       String?
   town           String?
 
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 }
+
+// ─── Workers, agents, supervisors ────────────────────────────────────────────
 
 model WorkerProfile {
   id     String @id @default(cuid())
@@ -63,40 +250,115 @@ model WorkerProfile {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Human-readable, immutable, printed on ID cards. HY-000042.
-  workerUid String @unique
+  // Drawn from a Postgres sequence, not a row count — counting collides the
+  // moment two people register at once, and the collision lands on a unique
+  // index at the very end of a long registration.
+  workerUid String     @unique
+  kind      WorkerKind @default(individual)
 
-  trade    String
+  // ── Affiliation ──
+  // Null for individuals, and for agents and supervisors themselves.
+  leadId String?
+  lead   WorkerProfile?  @relation("crew", fields: [leadId], references: [id], onDelete: SetNull)
+  crew   WorkerProfile[] @relation("crew")
+
+  // Agents and supervisors hand this out. A worker registering through one
+  // types it, or arrives on hyraku.in/join/<code>.
+  referralCode   String? @unique
+  referredByCode String? // kept raw, as typed, even after leadId resolves
+
+  // ── What they can be sent ──
+  // Their own trade. Agents and supervisors have one too: they may take jobs
+  // personally as well as lead them.
+  trade             String
+  canWorkPersonally Boolean  @default(true)
+  // Leads only — the trades their crew covers, which need not include theirs.
+  crewTrades        String[] @default([])
+  // Individuals only. Null for leads, who work with crews by definition.
+  // Gates eligibility for any job needing more than one worker.
+  worksWithCrews    Boolean?
+
   // Where they live. Anywhere in Kerala — distinct from where they work.
-  district String
-  town     String
-  // Districts they take jobs in. Only serviced districts are ever written here,
-  // which today means Kozhikode for everyone.
-  serviceAreas    String @default("Kozhikode")
-  // Optional, team-only, never shown to customers. Pay is agreed on site.
-  usualDailyRate  Float?
-  experienceYears Int    @default(0)
+  district        String
+  town            String
+  // Districts they take jobs in. Only serviced districts are ever written here.
+  serviceAreas    String[] @default([])
+  experienceYears Int      @default(0)
   age             Int?
   gender          String?
 
-  // pending | approved | rejected | suspended
-  status       String    @default("pending")
+  // ── Pay ──
+  // What the worker said they usually charge. Team reference only; it is an
+  // input to the rate the team sets, never the published figure.
+  usualDailyRate Int?
+  // Set by Hyraku from the rate card at approval. This is what customers see.
+  rateTier       String?
+  publishedRate  Int?
+  rateOverride   Boolean @default(false) // true = set by hand, ignore card revisions
+
+  // ── Standing ──
+  status       WorkerStatus @default(pending)
   statusReason String?
-  reviewedAt   DateTime?
+  reviewedAt   DateTime?    @db.Timestamptz(3)
+
+  // A Police Verification Certificate is a credential, not a status: it is
+  // issued, it goes stale, it gets renewed. Approval does not wait for it, so
+  // recruiting can run while certificates are in process — but nobody is
+  // dispatched without a current one.
+  pvcNumber     String?   @unique
+  pvcStation    String?
+  pvcIssuedAt   DateTime? @db.Timestamptz(3)
+  pvcVerifiedAt DateTime? @db.Timestamptz(3)
+  pvcExpiresAt  DateTime? @db.Timestamptz(3)
+
+  // ── Reliability ──
+  // What an agent otherwise provides, made mechanical for workers who have no
+  // agent. Feeds ranking directly, so someone who ignores offers stops
+  // receiving them without anyone deciding that by hand.
+  reliability     Int @default(70) // 0-100
+  acceptedCount   Int @default(0)
+  declinedCount   Int @default(0)
+  noResponseCount Int @default(0)
+  noShowCount     Int @default(0)
+  completedCount  Int @default(0)
+  // First three jobs are supervised: solo, single-day, one at a time.
+  probationJobs   Int @default(0)
 
   rating       Float @default(0)
   ratingSum    Float @default(0)
   totalReviews Int   @default(0)
 
   acceptedTerms   Boolean   @default(false)
-  acceptedTermsAt DateTime?
+  acceptedTermsAt DateTime? @db.Timestamptz(3)
   termsVersion    String?
 
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 
-  documents   WorkerDocument[]
-  assignments Assignment[]
+  documents          WorkerDocument[]
+  assignmentsLed     Assignment[]       @relation("assignmentResponder")
+  crewMemberships    AssignmentMember[]
+  affiliationHistory AffiliationEvent[] @relation("affiliationWorker")
 
   @@index([trade, district, status])
+  @@index([kind, status])
+  @@index([leadId])
+  @@index([status, pvcVerifiedAt])
+}
+
+// Affiliation is expected to change — a worker leaves one agent for another.
+// Recorded rather than overwritten, because "who did this worker belong to in
+// March" is a question attribution and grievances both need answered.
+model AffiliationEvent {
+  id         String        @id @default(cuid())
+  workerId   String
+  worker     WorkerProfile @relation("affiliationWorker", fields: [workerId], references: [id], onDelete: Cascade)
+  fromLeadId String?
+  toLeadId   String?
+  reason     String
+  actorAdmin String?
+  createdAt  DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@index([workerId, createdAt])
 }
 
 model WorkerDocument {
@@ -104,71 +366,161 @@ model WorkerDocument {
   workerId String
   worker   WorkerProfile @relation(fields: [workerId], references: [id], onDelete: Cascade)
 
-  kind        String // aadhaar | passbook | photo
+  kind        DocumentKind
+  // Opaque. Local encrypted path during development, object-storage key in
+  // production — callers never parse it and never persist a resolved URL.
   storageKey  String
   mimeType    String
-  sizeBytes   Int      @default(0)
+  sizeBytes   Int          @default(0)
   sha256      String?
-  receivedVia String   @default("whatsapp") // whatsapp | web
-  verifiedAt  DateTime?
-  createdAt   DateTime @default(now())
+  receivedVia String       @default("whatsapp") // whatsapp | web
+  verifiedAt  DateTime?    @db.Timestamptz(3)
+  verifiedBy  String?
+  createdAt   DateTime     @default(now()) @db.Timestamptz(3)
 
   @@index([workerId, kind])
+}
+
+// Rates are standardised by trade and tier so a revision is one row, not five
+// hundred. A worker whose rate was set by hand carries rateOverride and is
+// skipped when the card changes.
+model RateCard {
+  id        String   @id @default(cuid())
+  trade     String
+  tier      String // entry | skilled | senior | master
+  dailyRate Int
+  note      String?
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@unique([trade, tier])
 }
 
 // ─── Jobs ────────────────────────────────────────────────────────────────────
 
 model JobRequest {
   id    String @id @default(cuid())
-  refNo String @unique // HY-4821 — what the customer is told to quote
+  // HY-4821 — what the customer is told to quote. From a sequence; the old
+  // four-random-digits scheme collided long before the namespace ran out.
+  refNo String @unique
 
   customerId String
   customer   User   @relation(fields: [customerId], references: [id])
 
   trade         String
+  // 1 = anyone. 2+ = individuals need worksWithCrews. 4+ = a lead must take it,
+  // and opted-in individuals fill the remaining slots.
+  workersNeeded Int    @default(1)
+
   district      String
   town          String
   address       String
-  preferredDate DateTime
+  preferredDate DateTime @db.Date
   durationDays  Int      @default(1)
   isUrgent      Boolean  @default(false)
   notes         String?
 
-  // new | assigning | assigned | confirmed | in_progress | completed | cancelled
-  status     String   @default("new")
-  createdVia String   @default("whatsapp")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  status     JobStatus @default(new)
+  createdVia String    @default("whatsapp") // whatsapp | web
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt  DateTime  @updatedAt @db.Timestamptz(3)
 
   assignments Assignment[]
+  grievances  Grievance[]
 
   @@index([status, createdAt])
+  @@index([trade, preferredDate])
 }
 
-// Separate from JobRequest so reassignment is history rather than an overwrite —
-// you can always see who was tried and who declined.
+// An offer to ONE responder for N slots on a job.
+//
+// An individual answers for themselves. An agent or supervisor answers for a
+// crew and names its members afterwards. Separate from JobRequest so that
+// reassignment is history rather than an overwrite — you can always see who
+// was offered a job, who declined, and who simply never replied.
 model Assignment {
   id           String     @id @default(cuid())
   jobRequestId String
   jobRequest   JobRequest @relation(fields: [jobRequestId], references: [id], onDelete: Cascade)
 
-  workerId String
-  worker   WorkerProfile @relation(fields: [workerId], references: [id])
+  responderId String
+  responder   WorkerProfile @relation("assignmentResponder", fields: [responderId], references: [id])
+  headcount   Int           @default(1)
 
   assignedBy String @default("admin")
 
-  // When false the assignment is accepted the moment it is made — the admin's
-  // decision is final. Flipping this on turns Accept/Decline into a real step
-  // without touching anything else.
-  responseRequired Boolean @default(false)
+  // When false the assignment is accepted the moment it is made — the
+  // dispatcher's decision is final.
+  responseRequired Boolean   @default(false)
+  // An agent answers from an office; an individual may be up a ladder. The
+  // offer expires and cascades to the next candidate rather than stalling.
+  expiresAt        DateTime? @db.Timestamptz(3)
 
-  // proposed | accepted | declined | reassigned | completed
-  status      String    @default("proposed")
-  respondedAt DateTime?
-  createdAt   DateTime  @default(now())
+  status      AssignmentStatus @default(proposed)
+  respondedAt DateTime?        @db.Timestamptz(3)
+  createdAt   DateTime         @default(now()) @db.Timestamptz(3)
+
+  members AssignmentMember[]
 
   @@index([jobRequestId])
-  @@index([workerId, status])
+  @@index([responderId, status])
+  @@index([status, expiresAt])
+}
+
+// Who actually turns up. One row for an individual. For a lead, the workers
+// they name — which must be their own approved crew, which is the whole
+// reason agents need a login.
+model AssignmentMember {
+  id           String     @id @default(cuid())
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  workerId String
+  worker   WorkerProfile @relation(fields: [workerId], references: [id])
+
+  // The published rate at the moment of acceptance. Snapshotted so a later
+  // rate-card revision cannot rewrite what a customer was quoted — which is
+  // exactly the dispute the grievance module exists to settle.
+  agreedRate Int
+
+  namedAt   DateTime  @default(now()) @db.Timestamptz(3)
+  arrivedAt DateTime? @db.Timestamptz(3)
+  noShow    Boolean   @default(false)
+
+  @@unique([assignmentId, workerId])
+  @@index([workerId])
+}
+
+// ─── Grievances ──────────────────────────────────────────────────────────────
+
+// Runs in both directions: customer about a worker, worker about a customer,
+// worker about their lead. Overcharging and conduct pause new offers to the
+// subject pending an outcome.
+model Grievance {
+  id    String @id @default(cuid())
+  refNo String @unique // GR-1043
+
+  raisedById String
+  raisedBy   User    @relation("grievanceRaisedBy", fields: [raisedById], references: [id])
+  againstId  String?
+  against    User?   @relation("grievanceAgainst", fields: [againstId], references: [id])
+
+  jobRequestId String?
+  jobRequest   JobRequest? @relation(fields: [jobRequestId], references: [id], onDelete: SetNull)
+
+  category GrievanceCategory
+  status   GrievanceStatus   @default(open)
+  detail   String
+
+  handledById String?
+  handledBy   AdminUser? @relation(fields: [handledById], references: [id], onDelete: SetNull)
+  resolution  String?
+  resolvedAt  DateTime?  @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  @@index([status, createdAt])
+  @@index([againstId, createdAt])
 }
 
 // ─── Messaging ───────────────────────────────────────────────────────────────
@@ -180,59 +532,78 @@ model Conversation {
 
   activeFlow String? // booking | registration
   stepId     String?
-  data       String  @default("{}") // JSON scratchpad for the in-flight flow
+  data       Json    @default("{}") // scratchpad for the in-flight flow
 
   // The 24-hour customer service window. The send path checks this before any
   // free-form message and falls back to a template — callers never decide.
-  lastInboundAt DateTime?
+  lastInboundAt DateTime? @db.Timestamptz(3)
 
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 }
 
 model Message {
   id String @id @default(cuid())
 
   // The idempotency guarantee. Meta retries webhooks it thinks failed; without
-  // this constraint a retry becomes a second booking, and WhatsApp is the only
-  // booking path there is.
+  // this constraint a retry becomes a second booking. Enforced by letting the
+  // insert fail, not by reading first — a read-then-write loses the race.
   waMessageId String? @unique
 
   direction String // in | out
   userId    String?
-  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user      User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   waPhone   String
+  channel   ContactChannel @default(whatsapp)
 
   type         String // text | interactive | image | document | template
   body         String?
-  payload      String  @default("{}")
+  payload      Json    @default("{}")
   templateName String?
 
-  // queued | sent | delivered | read | failed
-  status    String   @default("sent")
-  createdAt DateTime @default(now())
+  status    String   @default("sent") // queued | sent | delivered | read | failed
+  error     String?
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([waPhone, createdAt])
+  @@index([status, createdAt])
+}
+
+// Durability for the webhook. The raw event is committed before Meta gets its
+// 2xx, so a crash between acknowledgement and processing loses nothing — Meta
+// will not retry a message it already received a 200 for.
+model WebhookEvent {
+  id          String    @id @default(cuid())
+  waMessageId String?   @unique
+  payload     Json
+  signature   String
+  status      String    @default("queued") // queued | processing | done | failed
+  attempts    Int       @default(0)
+  lastError   String?
+  processedAt DateTime? @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+
+  @@index([status, createdAt])
 }
 
 // ─── Pre-launch ──────────────────────────────────────────────────────────────
 
-// People who asked for something Hyraku does not offer yet — a booking before
-// launch, work in a district we are not in. Kept because it is the evidence for
-// where to open next, and because each of them was promised a message.
+// People who asked for something Hyraku does not offer yet. Kept because it is
+// the evidence for where to open next, and because each of them was promised a
+// message.
 model WaitlistEntry {
   id     String  @id @default(cuid())
   phone  String
   userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  role   String // customer | worker
-  // bookings_closed | outside_service_area | cannot_work_in_service_area
-  reason String
+  role   WaitlistRole
+  reason WaitlistReason
 
   district String?
   trade    String?
 
-  notifiedAt DateTime?
-  createdAt  DateTime  @default(now())
+  notifiedAt DateTime? @db.Timestamptz(3)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(3)
 
   @@index([role, district])
   @@index([phone])
@@ -242,5 +613,5 @@ model WaitlistEntry {
 model Setting {
   key       String   @id
   value     String
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 }
