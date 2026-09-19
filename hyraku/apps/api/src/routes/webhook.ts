@@ -4,7 +4,7 @@ import { handleVerification, parseWebhook, verifySignature } from '@hyraku/whats
 import { cloud, deliver, deliverAll } from '../channel.js';
 import { env } from '../env.js';
 
-// The live WhatsApp Cloud API webhook. Dormant while CHANNEL=simulator.
+// The WhatsApp Cloud API webhook.
 
 export const webhookRouter = Router();
 
@@ -16,11 +16,13 @@ webhookRouter.get('/', (req, res) => {
 });
 
 webhookRouter.post('/', async (req, res) => {
-  const raw = (req as any).rawBody ?? Buffer.from(JSON.stringify(req.body));
+  const raw = (req as any).rawBody;
+  if (!raw) return res.sendStatus(400);
 
-  if (env.whatsapp.appSecret) {
-    const valid = verifySignature(raw, req.get('x-hub-signature-256'), env.whatsapp.appSecret);
-    if (!valid) return res.sendStatus(401);
+  // Unconditional. A webhook that accepts unsigned bodies accepts them from
+  // whoever finds the URL, and every message here creates or moves a booking.
+  if (!verifySignature(raw, req.get('x-hub-signature-256'), env.whatsapp.appSecret)) {
+    return res.sendStatus(401);
   }
 
   // Acknowledge before doing any work. Meta retries anything it does not get a
@@ -48,7 +50,7 @@ async function process(message: InboundMessage & { mediaId?: string }): Promise<
 
   // Download now or lose it: Meta's media URLs expire within minutes and need
   // the auth header even then, so nothing may defer this.
-  if (message.mediaId && cloud) {
+  if (message.mediaId) {
     try {
       const media = await cloud.downloadMedia(message.mediaId);
       inbound = { ...message, media };
@@ -60,7 +62,7 @@ async function process(message: InboundMessage & { mediaId?: string }): Promise<
   const result = await handleInbound(inbound);
   if (!result.processed) return; // duplicate — Meta retried
 
-  if (cloud) await cloud.markRead(message.waMessageId);
+  await cloud.markRead(message.waMessageId);
 
   for (const reply of result.replies) await deliver(message.from, reply);
   await deliverAll(result.outbound);

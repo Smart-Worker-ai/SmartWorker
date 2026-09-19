@@ -11,8 +11,8 @@ import { formatDate } from './dates.js';
 // suggest otherwise.
 //
 // These functions return the messages to send rather than sending them, so the
-// domain has no idea whether it is talking to Meta or the simulator. The API
-// layer owns transport; this owns what is true.
+// domain has no idea whether it is talking to WhatsApp or SMS. The API layer
+// owns transport; this owns what is true.
 //
 // Everything here goes out as a template because it is business-initiated —
 // the recipient has not necessarily messaged us in the last 24 hours, and that

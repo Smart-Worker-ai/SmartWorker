@@ -1,14 +1,10 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { PrismaClient } from '@prisma/client';
 
-// The demo must run with no .env at all, from any working directory, so the
-// SQLite file is resolved from this module rather than from the process cwd.
-// Setting DATABASE_URL overrides it — that is the Postgres path.
-const here = path.dirname(fileURLToPath(import.meta.url));
-const defaultUrl = `file:${path.join(here, '..', 'prisma', 'hyraku.db').replace(/\\/g, '/')}`;
-
-const url = process.env.DATABASE_URL || defaultUrl;
+// DATABASE_URL is required. There is no fallback: a client that silently
+// connects somewhere else on a missing variable is how a migration lands in
+// the wrong database.
+const url = process.env.DATABASE_URL;
+if (!url) throw new Error('DATABASE_URL is required');
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
@@ -20,7 +16,7 @@ export const prisma =
   });
 
 // tsx watch reloads the module graph on every save; without this the process
-// accumulates a new connection pool per reload until SQLite starts refusing them.
+// accumulates a connection pool per reload.
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 export * from '@prisma/client';

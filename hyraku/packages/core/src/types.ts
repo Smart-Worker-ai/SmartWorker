@@ -1,11 +1,11 @@
-// Channel-neutral message shapes.
+// Transport-neutral message shapes.
 //
-// Nothing below mentions WhatsApp. The Cloud API adapter and the simulator both
-// normalise into InboundMessage and both render OutboundMessage, which is what
-// lets the entire bot be demonstrated before Meta approves anything.
+// Nothing below mentions WhatsApp. Every adapter normalises into InboundMessage
+// and renders OutboundMessage, which is what lets the same flows serve a
+// WhatsApp conversation, an SMS thread and a web form.
 
 export interface InboundMedia {
-  /** base64 for the simulator; the Cloud adapter fills this after download. */
+  /** base64. The Cloud adapter fills this after downloading from Meta. */
   data: string;
   mimeType: string;
   filename?: string;

@@ -2,9 +2,8 @@ import type { InboundMedia, OutboundMessage } from '@hyraku/core';
 
 // WhatsApp Cloud API client — direct to Meta, no BSP in the path.
 //
-// Dormant during the beta (CHANNEL=simulator). Nothing else in the codebase
-// changes when it wakes up: the adapter in apps/api picks this or the simulator
-// and both consume the same OutboundMessage.
+// One of two transports. apps/api/src/channel.ts picks this or SMS from the
+// recipient's contactChannel; both consume the same OutboundMessage.
 
 export interface CloudConfig {
   phoneNumberId: string;

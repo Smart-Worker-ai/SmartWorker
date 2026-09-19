@@ -9,10 +9,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    open: true,
     proxy: {
       '/api': 'http://localhost:4000',
-      '/uploads': 'http://localhost:4000',
     },
   },
   build: {
