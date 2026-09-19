@@ -168,6 +168,35 @@ export const TEMPLATES: TemplateDefinition[] = [
     },
   },
   {
+    name: 'crew_slots_released',
+    category: 'UTILITY',
+    params: ['reference', 'released', 'remaining'],
+    body: {
+      en:
+        'Noted — you have given back {{2}} slots on Hyraku job {{1}} and are still down for {{3}}. ' +
+        'Thank you for telling us in time; we will fill the rest.',
+      ml:
+        'ശ്രദ്ധിച്ചു — ഹൈരാകു ജോലി {{1}}-ൽ നിങ്ങൾ {{2}} സ്ഥാനങ്ങൾ തിരികെ നൽകി, {{3}} എണ്ണം ബാക്കിയുണ്ട്. ' +
+        'സമയത്ത് അറിയിച്ചതിന് നന്ദി; ബാക്കി ഞങ്ങൾ നികത്തും.',
+    },
+  },
+  {
+    // A lead who took a job and did not field the crew they agreed to.
+    name: 'crew_shortfall_warning',
+    category: 'UTILITY',
+    params: ['reference', 'missing'],
+    body: {
+      en:
+        'You took Hyraku job {{1}} and did not field {{2}} of the workers you agreed to, ' +
+        'so a customer was left short. If you cannot fill a job, tell us before 6pm the day ' +
+        'before and we will cover it. A second time pauses your account; a third closes it.',
+      ml:
+        'ഹൈരാകു ജോലി {{1}} ഏറ്റെടുത്ത ശേഷം സമ്മതിച്ച {{2}} തൊഴിലാളികളെ എത്തിച്ചില്ല, ' +
+        'ഉപഭോക്താവിന് ആളില്ലാതെ പോയി. ജോലി നിറയ്ക്കാൻ കഴിയില്ലെങ്കിൽ തലേദിവസം വൈകിട്ട് 6 മണിക്ക് ' +
+        'മുൻപ് അറിയിക്കുക. രണ്ടാമതും ആവർത്തിച്ചാൽ അക്കൗണ്ട് നിർത്തും; മൂന്നാമത് അടയ്ക്കും.',
+    },
+  },
+  {
     name: 'job_reminder',
     category: 'UTILITY',
     params: ['reference', 'worker_name', 'date', 'location'],

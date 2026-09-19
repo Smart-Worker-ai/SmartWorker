@@ -69,6 +69,12 @@ enum JobStatus {
   cancelled
 }
 
+enum ShortfallKind {
+  released_early // told us in time — we could still re-fill the slots
+  missed_deadline // the crew was never named
+  no_show // people did not turn up on the day
+}
+
 enum AssignmentStatus {
   proposed
   accepted
@@ -274,6 +280,10 @@ model WorkerProfile {
   canWorkPersonally Boolean  @default(true)
   // Leads only — the trades their crew covers, which need not include theirs.
   crewTrades        String[] @default([])
+  // What a lead says they can field. There is no cap on the crew they may
+  // register; this is the claim they are held to when a job needs filling,
+  // and the console shows it against the number actually approved.
+  claimedCrewSize   Int?
   // Individuals only. Null for leads, who work with crews by definition.
   // Gates eligibility for any job needing more than one worker.
   worksWithCrews    Boolean?
@@ -321,6 +331,9 @@ model WorkerProfile {
   noResponseCount Int @default(0)
   noShowCount     Int @default(0)
   completedCount  Int @default(0)
+  // Jobs a lead accepted and could not field. The customer was left short on
+  // the day, so these escalate rather than merely scoring.
+  shortfallCount  Int @default(0)
   // First three jobs are supervised: solo, single-day, one at a time.
   probationJobs   Int @default(0)
 
@@ -459,11 +472,20 @@ model Assignment {
   respondedAt DateTime?        @db.Timestamptz(3)
   createdAt   DateTime         @default(now()) @db.Timestamptz(3)
 
+  // A lead names their crew by 18:00 the day before. The deadline exists so a
+  // shortfall surfaces while a dispatcher can still do something about it.
+  crewDeadlineAt DateTime?      @db.Timestamptz(3)
+  shortfallAt    DateTime?      @db.Timestamptz(3)
+  shortfallBy    Int?           // slots the lead could not fill
+  shortfallKind  ShortfallKind?
+
   members AssignmentMember[]
 
   @@index([jobRequestId])
   @@index([responderId, status])
   @@index([status, expiresAt])
+  @@index([status, crewDeadlineAt])
+  @@index([responderId, shortfallAt])
 }
 
 // Who actually turns up. One row for an individual. For a lead, the workers

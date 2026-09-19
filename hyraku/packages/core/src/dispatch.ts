@@ -5,7 +5,12 @@ import { serviceAreaLabel, tradeLabel } from './catalog.js';
 import { formatDate } from './dates.js';
 import { formatRate } from './rates.js';
 import { offerWindowMs, type Capacity } from './eligibility.js';
-import { recordReliability } from './reliability.js';
+import {
+  SHORTFALL_WINDOW_DAYS,
+  recordReliability,
+  shortfallAction,
+  type ShortfallAction,
+} from './reliability.js';
 
 // Assignment, and the notifications that follow it.
 //
@@ -34,6 +39,21 @@ export interface DispatchResult {
 }
 
 const fail = (error: string): DispatchResult => ({ ok: false, error, outbound: [] });
+
+/**
+ * When a lead must have named their crew: 18:00 IST the day before.
+ *
+ * Early enough that a dispatcher still has an evening to re-fill the slots,
+ * which is the entire point of having a deadline rather than finding out when
+ * nobody arrives. preferredDate is a calendar day at UTC midnight, and 18:00
+ * in Kerala is 12:30 UTC.
+ */
+export function crewDeadlineFor(preferredDate: Date): Date {
+  const deadline = new Date(preferredDate);
+  deadline.setUTCDate(deadline.getUTCDate() - 1);
+  deadline.setUTCHours(12, 30, 0, 0);
+  return deadline;
+}
 
 // ─── Offering ────────────────────────────────────────────────────────────────
 
@@ -82,6 +102,8 @@ export async function offerJob(opts: {
         expiresAt: responseRequired
           ? new Date(Date.now() + offerWindowMs(responder, job))
           : null,
+        crewDeadlineAt:
+          opts.capacity === 'lead' ? crewDeadlineFor(job.preferredDate) : null,
       },
     });
 
@@ -144,6 +166,13 @@ export async function respondToAssignment(
         expiresAt: null,
       },
     });
+
+    if (accept && capacity === 'lead') {
+      await tx.assignment.update({
+        where: { id: assignmentId },
+        data: { crewDeadlineAt: crewDeadlineFor(job.preferredDate) },
+      });
+    }
 
     if (accept && capacity === 'personal') {
       await tx.assignmentMember.create({
@@ -485,3 +514,206 @@ function customerConfirmation(
     }),
   };
 }
+
+// ─── Crew shortfalls ─────────────────────────────────────────────────────────
+//
+// An agent or supervisor may register as many workers as they like — there is
+// no cap, and recruiting is the job. The accountability is at the other end: a
+// lead who takes a job for eight and fields five has left a customer short on
+// the day they were promised a crew.
+//
+// Two paths out of that, and the difference between them is deliberate. Saying
+// so before the deadline costs a little and returns the slots to the queue
+// while there is still time. Saying nothing costs a great deal and escalates.
+
+/**
+ * A lead giving back slots they cannot fill.
+ *
+ * Honest and early. The job returns to the queue for the remainder, the
+ * customer is not told anything alarming, and it does not count as a strike.
+ */
+export async function releaseSlots(
+  assignmentId: string,
+  releasedCount: number,
+  reason?: string
+): Promise<DispatchResult> {
+  const assignment = await prisma.assignment.findUnique({
+    where: { id: assignmentId },
+    include: { responder: { include: { user: true } }, jobRequest: true, members: true },
+  });
+  if (!assignment) return fail('Assignment not found');
+  if (assignment.status !== 'accepted') return fail('That job is not accepted');
+  if (releasedCount < 1 || releasedCount >= assignment.headcount) {
+    return fail(`Release between 1 and ${assignment.headcount - 1} slots, or decline the job`);
+  }
+
+  const remaining = assignment.headcount - releasedCount;
+
+  await prisma.$transaction([
+    prisma.assignment.update({
+      where: { id: assignmentId },
+      data: {
+        headcount: remaining,
+        shortfallAt: new Date(),
+        shortfallBy: releasedCount,
+        shortfallKind: 'released_early',
+      },
+    }),
+    // Back in the queue so a dispatcher can see slots need filling.
+    prisma.jobRequest.update({
+      where: { id: assignment.jobRequestId },
+      data: { status: 'assigning' },
+    }),
+  ]);
+
+  await recordReliability(assignment.responderId, 'crew_released');
+
+  return {
+    ok: true,
+    outbound: [
+      {
+        to: assignment.responder.user.phone,
+        message: template({
+          name: 'crew_slots_released',
+          params: [assignment.jobRequest.refNo, String(releasedCount), String(remaining)],
+          body:
+            `Noted — you have given back ${releasedCount} of the slots on ${assignment.jobRequest.refNo}. ` +
+            `You are still down for ${remaining}.\n\n` +
+            `Thank you for telling us in time. We will fill the rest.` +
+            (reason ? `\n\nReason recorded: ${reason}` : ''),
+        }),
+      },
+    ],
+  };
+}
+
+/**
+ * Leads who never named their crew.
+ *
+ * Run on a schedule. Anything still short past its deadline is a shortfall:
+ * the slots go back to the queue, and the lead's account moves along the
+ * escalation ladder.
+ */
+export async function flagCrewShortfalls(now = new Date()): Promise<DispatchResult> {
+  const late = await prisma.assignment.findMany({
+    where: {
+      status: 'accepted',
+      shortfallAt: null,
+      crewDeadlineAt: { lt: now },
+    },
+    include: {
+      responder: { include: { user: true } },
+      jobRequest: true,
+      members: true,
+    },
+  });
+
+  const outbound: Envelope[] = [];
+
+  for (const assignment of late) {
+    const missing = assignment.headcount - assignment.members.length;
+    if (missing <= 0) continue;
+
+    const result = await recordCrewShortfall(assignment, 'missed_deadline', missing);
+    outbound.push(...result.outbound);
+  }
+
+  return { ok: true, outbound };
+}
+
+/**
+ * A crew that did not turn up.
+ *
+ * Worse than never naming them, because nobody had a chance to re-fill. Called
+ * by a dispatcher marking no-shows after the fact.
+ */
+export async function reportCrewNoShow(
+  assignmentId: string,
+  absentWorkerIds: string[]
+): Promise<DispatchResult> {
+  const assignment = await prisma.assignment.findUnique({
+    where: { id: assignmentId },
+    include: { responder: { include: { user: true } }, jobRequest: true, members: true },
+  });
+  if (!assignment) return fail('Assignment not found');
+
+  await prisma.assignmentMember.updateMany({
+    where: { assignmentId, workerId: { in: absentWorkerIds } },
+    data: { noShow: true },
+  });
+
+  for (const workerId of absentWorkerIds) {
+    await recordReliability(workerId, 'no_show');
+  }
+
+  // The lead answers for the crew they named, on top of each absentee's own
+  // record. That is what taking the job meant.
+  return recordCrewShortfall(assignment, 'no_show', absentWorkerIds.length);
+}
+
+async function recordCrewShortfall(
+  assignment: {
+    id: string;
+    headcount: number;
+    responderId: string;
+    jobRequestId: string;
+    responder: { workerUid: string; user: { phone: string } };
+    jobRequest: { refNo: string };
+  },
+  kind: 'missed_deadline' | 'no_show',
+  missing: number
+): Promise<DispatchResult> {
+  const since = new Date(Date.now() - SHORTFALL_WINDOW_DAYS * 86_400_000);
+
+  await prisma.$transaction([
+    prisma.assignment.update({
+      where: { id: assignment.id },
+      data: { shortfallAt: new Date(), shortfallBy: missing, shortfallKind: kind },
+    }),
+    prisma.jobRequest.update({
+      where: { id: assignment.jobRequestId },
+      data: { status: 'assigning' },
+    }),
+  ]);
+
+  await recordReliability(assignment.responderId, 'crew_shortfall');
+
+  const recent = await prisma.assignment.count({
+    where: {
+      responderId: assignment.responderId,
+      shortfallAt: { gte: since },
+      shortfallKind: { in: ['missed_deadline', 'no_show'] },
+    },
+  });
+
+  const action = shortfallAction(recent);
+  const outbound: Envelope[] = [];
+
+  if (action === 'warned') {
+    outbound.push({
+      to: assignment.responder.user.phone,
+      message: template({
+        name: 'crew_shortfall_warning',
+        params: [assignment.jobRequest.refNo, String(missing)],
+        body:
+          `You took ${assignment.jobRequest.refNo} and did not field ${missing} of the workers you agreed to.\n\n` +
+          `A customer was left short on the day. If you cannot fill a job, tell us before 6pm the ` +
+          `day before and we will cover it — that costs you nothing.\n\n` +
+          `A second time in ${SHORTFALL_WINDOW_DAYS} days pauses your account. A third closes it.`,
+      }),
+    });
+  } else {
+    // setWorkerStatus writes its own message, so no duplicate here.
+    const status = action === 'suspended' ? 'suspended' : 'terminated';
+    const result = await setWorkerStatus(
+      assignment.responderId,
+      status,
+      `${recent} crews not fielded in ${SHORTFALL_WINDOW_DAYS} days — most recently ${assignment.jobRequest.refNo}.`
+    );
+    outbound.push(...result.outbound);
+  }
+
+  return { ok: true, outbound };
+}
+
+export type { ShortfallAction };

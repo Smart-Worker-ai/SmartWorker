@@ -70,6 +70,7 @@ export const registrationFlow: Flow = {
     'name',
     'trade',
     'crew_trades',
+    'crew_size',
     'district',
     'district_other',
     'town',
@@ -197,6 +198,25 @@ export const registrationFlow: Flow = {
           return fail('We could not match any of those to a trade. Try again, or type *same*.');
         }
         return ok({ crewTrades: [...new Set([...matched, ctx.data.trade])] });
+      },
+    },
+
+    crew_size: {
+      id: 'crew_size',
+      skipIf: (ctx) => !isLead(ctx),
+      ask: () =>
+        text(
+          'How many workers can you bring to a job?\n\n' +
+            'Register as many as you like — there is no limit. This is the number we will ' +
+            'count on when a job needs a team, so give us the figure you can actually field ' +
+            'on the day.'
+        ),
+      accept: (ctx) => {
+        const n = Number((ctx.input.text ?? '').replace(/\D/g, ''));
+        if (!Number.isInteger(n) || n < 1 || n > 500) {
+          return fail('Please give a number of workers.');
+        }
+        return ok({ claimedCrewSize: n });
       },
     },
 
@@ -478,6 +498,7 @@ export const registrationFlow: Flow = {
         referralCode: kind === 'individual' ? null : await uniqueReferralCode(),
         trade: d.trade,
         crewTrades: (d.crewTrades as string[]) ?? [],
+        claimedCrewSize: (d.claimedCrewSize as number) ?? null,
         // Only asked of people working on their own — see the step's skipIf.
         worksWithCrews: kind === 'individual' && !lead ? (d.worksWithCrews ?? null) : null,
         district: d.district,

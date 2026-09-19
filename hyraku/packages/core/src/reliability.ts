@@ -18,6 +18,11 @@ const DELTA = {
   declined: -1, // answering honestly is much better than silence
   no_response: -6,
   no_show: -25, // a customer waited at home for nobody
+  // A lead who tells us in time that they are short has cost us a re-fill.
+  // A lead who does not has cost a customer their day. The gap between these
+  // two numbers is the whole incentive.
+  crew_released: -8,
+  crew_shortfall: -35,
 } as const;
 
 export type ReliabilityEvent = keyof typeof DELTA;
@@ -39,12 +44,16 @@ export async function recordReliability(
     declined: 'declinedCount',
     no_response: 'noResponseCount',
     no_show: 'noShowCount',
+    crew_released: null,
+    crew_shortfall: 'shortfallCount',
   }[event] as
     | 'acceptedCount'
     | 'completedCount'
     | 'declinedCount'
     | 'noResponseCount'
-    | 'noShowCount';
+    | 'noShowCount'
+    | 'shortfallCount'
+    | null;
 
   const worker = await prisma.workerProfile.findUnique({
     where: { id: workerId },
@@ -56,7 +65,7 @@ export async function recordReliability(
     where: { id: workerId },
     data: {
       reliability: clamp(worker.reliability + DELTA[event]),
-      [counter]: { increment: 1 },
+      ...(counter ? { [counter]: { increment: 1 } } : {}),
       ...(event === 'completed' ? { probationJobs: { increment: 1 } } : {}),
     },
   });
@@ -64,6 +73,33 @@ export async function recordReliability(
 
 export function onProbation(worker: { probationJobs: number }): boolean {
   return worker.probationJobs < PROBATION_JOBS;
+}
+
+// ─── Crew shortfalls ─────────────────────────────────────────────────────────
+//
+// There is no cap on how many workers an agent or supervisor may register.
+// The accountability is at the other end: a lead who takes a job for eight
+// workers and fields five has left a customer short on the day, and that is
+// the claim they are held to.
+//
+// Escalation is by count inside a rolling window, not by a judgement call, so
+// the same thing happens to everyone and the record shows why.
+
+/** Shortfalls older than this stop counting towards escalation. */
+export const SHORTFALL_WINDOW_DAYS = 90;
+
+export type ShortfallAction = 'warned' | 'suspended' | 'terminated';
+
+/**
+ * What a shortfall costs, by how many there have been recently.
+ *
+ * Deliberately blunt. These are the numbers to tune once there is real data on
+ * how often a genuine emergency looks like this.
+ */
+export function shortfallAction(recentCount: number): ShortfallAction {
+  if (recentCount <= 1) return 'warned';
+  if (recentCount === 2) return 'suspended';
+  return 'terminated';
 }
 
 /** Shown in the console beside the number, so it reads as a judgement. */

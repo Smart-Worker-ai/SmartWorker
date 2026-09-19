@@ -9,6 +9,8 @@ import {
   formatRate,
   offerJob,
   nameCrew,
+  releaseSlots,
+  reportCrewNoShow,
   prettyStatus,
   rankCandidates,
   rateFor,
@@ -261,6 +263,10 @@ adminRouter.get(
                   rate: m.agreedRate,
                 })),
                 crewComplete: a.members.length >= a.headcount,
+                crewDeadlineAt: a.crewDeadlineAt,
+                shortfall: a.shortfallAt
+                  ? { at: a.shortfallAt, by: a.shortfallBy, kind: a.shortfallKind }
+                  : null,
               }
             : null,
         };
@@ -314,6 +320,37 @@ adminRouter.post(
   })
 );
 
+/** A lead handing back slots before the deadline. No strike — see dispatch. */
+adminRouter.post(
+  '/assignments/:id/release',
+  wrap(async (req, res) => {
+    const { count, reason } = req.body ?? {};
+    if (!count) return res.status(400).json({ error: 'count is required' });
+
+    const result = await releaseSlots(req.params.id, Number(count), reason);
+    if (!result.ok) return res.status(400).json({ error: result.error });
+
+    await deliverAll(result.outbound);
+    res.json({ ok: true });
+  })
+);
+
+adminRouter.post(
+  '/assignments/:id/no-show',
+  wrap(async (req, res) => {
+    const { workerIds } = req.body ?? {};
+    if (!Array.isArray(workerIds) || workerIds.length === 0) {
+      return res.status(400).json({ error: 'workerIds is required' });
+    }
+
+    const result = await reportCrewNoShow(req.params.id, workerIds);
+    if (!result.ok) return res.status(400).json({ error: result.error });
+
+    await deliverAll(result.outbound);
+    res.json({ ok: true });
+  })
+);
+
 adminRouter.post(
   '/jobs/:id/status',
   wrap(async (req, res) => {
@@ -362,7 +399,12 @@ adminRouter.get(
         contactChannel: w.user.contactChannel,
         lead: w.lead ? { uid: w.lead.workerUid, name: w.lead.user.name, kind: w.lead.kind } : null,
         referralCode: w.referralCode,
+        // What they said they could field, against what is actually approved
+        // under them. A wide gap is the thing to look at before trusting a
+        // lead with a big job.
+        claimedCrewSize: w.claimedCrewSize,
         crewSize: w.crew.length,
+        shortfallCount: w.shortfallCount,
         worksWithCrews: w.worksWithCrews,
         age: w.age,
         gender: w.gender,
