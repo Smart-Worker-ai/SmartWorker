@@ -87,7 +87,7 @@ class PublicEnquiryIn(BaseModel):
     locality: str = ""
     work_dates: str = ""
     crew_summary: str = ""
-    crew_json: list = Field(default_factory=list)
+    crew_json: dict | list = Field(default_factory=dict)
     daily_wage: float = 0
     message: str = ""
 
