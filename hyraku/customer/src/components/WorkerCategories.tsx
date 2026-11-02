@@ -1,9 +1,126 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import {
+  motion,
+  useMotionTemplate,
+  useMotionValue,
+  useReducedMotion,
+  useSpring,
+  useTransform,
+} from 'framer-motion';
 import { WORKER_CATEGORIES } from '../data/workersData';
-import { WorkerCategory } from '../types';
+import { WorkerCategory, WorkerTypeInfo } from '../types';
 import { ArrowRight, HardHat, ShieldCheck, Clock, Users, PhoneCall } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+
+const MAX_TILT = 14;
+
+interface TradeCardProps {
+  cat: WorkerTypeInfo;
+  index: number;
+  title: string;
+  tierLabel: string;
+  selectLabel: string;
+  isLabour: boolean;
+  onSelect: () => void;
+}
+
+const TradeCard: React.FC<TradeCardProps> = ({ cat, index, title, tierLabel, selectLabel, isLabour, onSelect }) => {
+  const reduceMotion = useReducedMotion();
+  // Pointer position over the card, 0..1 on each axis.
+  const px = useMotionValue(0.5);
+  const py = useMotionValue(0.5);
+  const spring = { stiffness: 220, damping: 18, mass: 0.6 };
+  const sx = useSpring(px, spring);
+  const sy = useSpring(py, spring);
+
+  const rotateY = useTransform(sx, [0, 1], [-MAX_TILT, MAX_TILT]);
+  const rotateX = useTransform(sy, [0, 1], [MAX_TILT, -MAX_TILT]);
+  const imgX = useTransform(sx, [0, 1], [10, -10]);
+  const imgY = useTransform(sy, [0, 1], [8, -8]);
+  const shineX = useTransform(sx, (v) => `${v * 100}%`);
+  const shineY = useTransform(sy, (v) => `${v * 100}%`);
+  const shine = useMotionTemplate`radial-gradient(circle at ${shineX} ${shineY}, rgba(255,255,255,0.55), rgba(255,255,255,0) 55%)`;
+  const shadowX = useTransform(sx, [0, 1], [14, -14]);
+  const shadowY = useTransform(sy, [0, 1], [26, 10]);
+  const boxShadow = useMotionTemplate`${shadowX}px ${shadowY}px 34px -10px rgba(2, 132, 199, 0.35), inset 0 1px 0 rgba(255,255,255,0.9)`;
+
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (reduceMotion || e.pointerType !== 'mouse') return;
+    const r = e.currentTarget.getBoundingClientRect();
+    px.set((e.clientX - r.left) / r.width);
+    py.set((e.clientY - r.top) / r.height);
+  }
+
+  function onPointerLeave() {
+    px.set(0.5);
+    py.set(0.5);
+  }
+
+  return (
+    <motion.div
+      initial={reduceMotion ? false : { opacity: 0, y: 28, rotateX: -35, scale: 0.92 }}
+      whileInView={{ opacity: 1, y: 0, rotateX: 0, scale: 1 }}
+      viewport={{ once: true, amount: 0.3 }}
+      transition={{ type: 'spring', stiffness: 140, damping: 16, delay: index * 0.07 }}
+      style={{ transformPerspective: 900 }}
+      className="relative"
+    >
+      <div className="trade-ground-shadow" style={{ animationDelay: `${index * -0.6}s` }} aria-hidden="true" />
+      <div className="trade-float" style={{ animationDelay: `${index * -0.6}s` }}>
+        <motion.div
+          role="button"
+          tabIndex={0}
+          onClick={onSelect}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onSelect();
+            }
+          }}
+          onPointerMove={onPointerMove}
+          onPointerLeave={onPointerLeave}
+          whileHover={reduceMotion ? undefined : { scale: 1.04 }}
+          whileTap={{ scale: 0.97 }}
+          style={{ rotateX, rotateY, transformPerspective: 900, boxShadow }}
+          className="group relative bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 overflow-hidden hover:border-[#0091ea] transition-colors duration-200 flex flex-col cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[#0091ea]"
+        >
+          <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
+            <motion.img
+              src={cat.image}
+              alt={cat.shortName}
+              style={{ x: imgX, y: imgY, scale: 1.14 }}
+              className="w-full h-full object-cover object-center"
+              loading="lazy"
+              draggable={false}
+            />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-slate-900/25 via-transparent to-white/10" />
+            <motion.div
+              className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 mix-blend-soft-light"
+              style={{ background: shine }}
+            />
+            <span
+              className={`absolute bottom-2 left-2 px-2.5 py-0.5 rounded-lg text-[10px] sm:text-xs font-bold text-white tracking-wide shadow-[0_4px_10px_rgba(0,0,0,0.25)] transition-transform duration-300 group-hover:-translate-y-0.5 ${
+                isLabour ? 'bg-gradient-to-b from-[#fb923c] to-[#ea580c]' : 'bg-slate-900/70 backdrop-blur-sm'
+              }`}
+            >
+              {tierLabel}
+            </span>
+          </div>
+
+          <div className="p-2.5 sm:p-3.5 text-center flex-1 flex flex-col justify-between bg-gradient-to-b from-white to-sky-50/40">
+            <h3 className="text-xs sm:text-sm font-extrabold text-slate-800 group-hover:text-[#0091ea] transition-colors font-display line-clamp-2 min-h-[2.4rem] flex items-center justify-center leading-snug">
+              {title}
+            </h3>
+            <span className="text-xs sm:text-sm text-[#0091ea] font-bold mt-1 flex items-center justify-center gap-1 group-hover:underline">
+              <span>{selectLabel}</span>
+              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+            </span>
+          </div>
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+};
 
 interface WorkerCategoriesProps {
   onSelectCategory: (categoryId: WorkerCategory) => void;
@@ -76,52 +193,19 @@ export const WorkerCategories: React.FC<WorkerCategoriesProps> = ({
         </div>
 
         {/* Clean Grid of Worker Types matching user screenshot */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-5">
-          {WORKER_CATEGORIES.map((cat, index) => {
-            const isLabour = cat.id === 'general-workers' || cat.id === 'painter';
-            return (
-              <motion.div
-                key={cat.id}
-                onClick={() => onSelectCategory(cat.id)}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.3 }}
-                transition={{ duration: 0.35, delay: index * 0.05 }}
-                whileHover={{ y: -4 }}
-                className="group bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 overflow-hidden shadow-sm hover:shadow-xl hover:shadow-sky-100/90 hover:border-[#0091ea] transition-shadow duration-200 flex flex-col cursor-pointer active:scale-[0.98]"
-              >
-                {/* Photo Thumbnail with Badge from screenshot */}
-                <div className="relative aspect-[4/3] overflow-hidden bg-slate-50">
-                  <img
-                    src={cat.image}
-                    alt={cat.shortName}
-                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                  />
-                  {/* Badge overlay matching screenshot */}
-                  <span
-                    className={`absolute bottom-2 left-2 px-2.5 py-0.5 rounded-lg text-[10px] sm:text-xs font-bold text-white shadow-sm tracking-wide ${
-                      isLabour ? 'bg-[#f97316]' : 'bg-slate-900/70 backdrop-blur-sm'
-                    }`}
-                  >
-                    {getTierName(cat.id, cat.tier)}
-                  </span>
-                </div>
-
-                {/* Card Title & Select -> exactly like screenshot */}
-                <div className="p-2.5 sm:p-3.5 text-center flex-1 flex flex-col justify-between">
-                  <h3 className="text-xs sm:text-sm font-extrabold text-slate-800 group-hover:text-[#0091ea] transition-colors font-display line-clamp-2 min-h-[2.4rem] flex items-center justify-center leading-snug">
-                    {getCategoryName(cat.id, cat.shortName)}
-                  </h3>
-                  
-                  <span className="text-xs sm:text-sm text-[#0091ea] font-bold mt-1 flex items-center justify-center gap-1 group-hover:underline">
-                    <span>{language === 'ml' ? 'തിരഞ്ഞെടുക്കുക' : 'Select'}</span>
-                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-                  </span>
-                </div>
-              </motion.div>
-            );
-          })}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-5 pt-2 pb-4">
+          {WORKER_CATEGORIES.map((cat, index) => (
+            <TradeCard
+              key={cat.id}
+              cat={cat}
+              index={index}
+              title={getCategoryName(cat.id, cat.shortName)}
+              tierLabel={getTierName(cat.id, cat.tier)}
+              selectLabel={language === 'ml' ? 'തിരഞ്ഞെടുക്കുക' : 'Select'}
+              isLabour={cat.id === 'general-workers' || cat.id === 'painter'}
+              onSelect={() => onSelectCategory(cat.id)}
+            />
+          ))}
         </div>
 
         {/* Book Worker Section Directly Under Type of Workers (Mobile Ergonomic) */}

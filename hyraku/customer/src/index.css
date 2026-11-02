@@ -103,11 +103,41 @@ h1, h2, h3, .font-display {
   100% { transform: translateX(0); }
 }
 
+.trade-float {
+  animation: trade-float 4.2s ease-in-out infinite;
+  will-change: transform;
+}
+
+.trade-ground-shadow {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: -10px;
+  height: 14px;
+  border-radius: 9999px;
+  background: radial-gradient(ellipse at center, rgba(2, 132, 199, 0.28), rgba(2, 132, 199, 0) 70%);
+  filter: blur(2px);
+  animation: trade-ground 4.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes trade-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+@keyframes trade-ground {
+  0%, 100% { transform: scaleX(1); opacity: 0.9; }
+  50% { transform: scaleX(0.8); opacity: 0.5; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .crew-doodle-lead,
   .crew-doodle-mate,
   .crew-cloud-a,
-  .crew-cloud-b {
+  .crew-cloud-b,
+  .trade-float,
+  .trade-ground-shadow {
     animation: none !important;
   }
 }

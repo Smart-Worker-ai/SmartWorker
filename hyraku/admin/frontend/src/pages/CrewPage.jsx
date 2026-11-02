@@ -4,6 +4,16 @@ import api from '../api.js';
 
 const empty = { name: '', phone: '', trade: '', role: '', town: '', notes: '', active: true };
 
+// Must match the trade names the customer site counts for availability.
+const TRADES = [
+  'General Labour',
+  'Concrete Finisher / Cement Setter',
+  'Wall Builder',
+  'Stone Breaker / Stone Setter',
+  'Tiler',
+  'Painter',
+];
+
 export default function CrewPage() {
   const [rows, setRows] = useState([]);
   const [form, setForm] = useState(empty);
@@ -47,7 +57,14 @@ export default function CrewPage() {
       {msg && <p className="text-sm text-emerald-700">{msg}</p>}
       <form onSubmit={add} className="card grid gap-3 sm:grid-cols-3">
         {['name', 'phone', 'trade', 'role', 'town'].map((k) => (
-          <input key={k} className="field" placeholder={k} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} required={k === 'name'} />
+          k === 'trade' ? (
+            <select key={k} className="field" value={form.trade} onChange={(e) => setForm({ ...form, trade: e.target.value })} required>
+              <option value="" disabled>trade</option>
+              {TRADES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          ) : (
+            <input key={k} className="field" placeholder={k} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} required={k === 'name'} />
+          )
         ))}
         <button className="btn-primary sm:col-span-3 md:col-span-1" type="submit">Add crew member</button>
       </form>

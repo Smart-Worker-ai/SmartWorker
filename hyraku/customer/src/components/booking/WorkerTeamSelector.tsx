@@ -13,7 +13,9 @@ import {
   Layers,
   Sparkles,
   Paintbrush,
-  Construction
+  Construction,
+  PhoneCall,
+  UserX
 } from 'lucide-react';
 import { WORKER_CATEGORIES } from '../../data/workersData';
 import { WorkerCategory, CrewCounts } from '../../types';
@@ -28,6 +30,8 @@ interface WorkerTeamSelectorProps {
   onBack: () => void;
   onProceedToDates: () => void;
   selectedCity: string;
+  availabilityLoaded: boolean;
+  availableFor: (catId: WorkerCategory) => number;
 }
 
 export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
@@ -37,8 +41,18 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
   onUpdateCrewCount,
   onBack,
   onProceedToDates,
+  availabilityLoaded,
+  availableFor,
 }) => {
   const { t, language } = useLanguage();
+
+  const isUnavailable = (catId: WorkerCategory) => availabilityLoaded && availableFor(catId) === 0;
+  const noneAvailable = availabilityLoaded && WORKER_CATEGORIES.every((c) => isUnavailable(c.id));
+  const tradeTotal = (catId: WorkerCategory) =>
+    WORKER_CATEGORIES.find((c) => c.id === catId)!.subRoles.reduce(
+      (sum, role) => sum + (crewCounts[`${catId}_${role.id}`] || 0),
+      0
+    );
 
   // Compute total workers and total cost
   let totalWorkers = 0;
@@ -195,9 +209,37 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
           </div>
         </div>
 
+        {noneAvailable && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+            <div className="flex items-center gap-3">
+              <UserX className="w-6 h-6 text-amber-600 shrink-0 hidden sm:block" />
+              <div>
+                <h4 className="text-sm font-bold text-amber-900">
+                  {language === 'ml' ? 'ഇപ്പോൾ തൊഴിലാളികൾ ലഭ്യമല്ല' : 'No workers available right now'}
+                </h4>
+                <p className="text-xs text-amber-800 mt-0.5">
+                  {language === 'ml'
+                    ? 'ദയവായി പിന്നീട് പരിശോധിക്കുക, അല്ലെങ്കിൽ ഞങ്ങളെ വിളിക്കുക.'
+                    : 'Please check back soon, or call us and we will arrange a crew.'}
+                </p>
+              </div>
+            </div>
+            <a
+              href="tel:+916238476615"
+              className="inline-flex items-center gap-2 bg-white border border-amber-300 text-amber-900 px-4 py-2 rounded-xl font-bold text-xs shrink-0"
+            >
+              <PhoneCall className="w-3.5 h-3.5" />
+              +91 62384 76615
+            </a>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
           {visibleCategories.map((cat) => {
             const IconComponent = getCategoryIcon(cat.id);
+            const unavailable = isUnavailable(cat.id);
+            const available = availableFor(cat.id);
+            const atLimit = tradeTotal(cat.id) >= available;
 
             return (
               <motion.div
@@ -205,22 +247,54 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.28 }}
-                className="bg-white rounded-2xl border border-slate-100 p-4 sm:p-5 shadow-sm space-y-2.5 h-full"
+                className={`rounded-2xl border p-4 sm:p-5 shadow-sm space-y-2.5 h-full ${
+                  unavailable ? 'bg-slate-50 border-slate-200' : 'bg-white border-slate-100'
+                }`}
               >
                 {/* Header: Compact circular icon + Title + Subtitle */}
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full border border-sky-100 bg-sky-50/50 flex items-center justify-center text-[#0091ea] shrink-0 shadow-sm">
+                  <div
+                    className={`w-10 h-10 rounded-full border flex items-center justify-center shrink-0 shadow-sm ${
+                      unavailable ? 'border-slate-200 bg-white text-slate-400' : 'border-sky-100 bg-sky-50/50 text-[#0091ea]'
+                    }`}
+                  >
                     <IconComponent className="w-5 h-5 stroke-[2]" />
                   </div>
-                  <div>
-                    <h3 className="text-sm sm:text-base font-bold text-slate-900 font-display leading-tight">
+                  <div className="flex-1 min-w-0">
+                    <h3 className={`text-sm sm:text-base font-bold font-display leading-tight ${unavailable ? 'text-slate-500' : 'text-slate-900'}`}>
                       {getCategoryTitle(cat.id, cat.name)}
                     </h3>
                     <p className="text-[11px] text-slate-400 font-medium">
                       {getTierTitle(cat.id, cat.tier)}
                     </p>
                   </div>
+                  {availabilityLoaded && Number.isFinite(available) && (
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 border ${
+                        unavailable
+                          ? 'bg-slate-100 text-slate-500 border-slate-200'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      }`}
+                    >
+                      {unavailable
+                        ? (language === 'ml' ? 'ലഭ്യമല്ല' : 'Not available')
+                        : `${available} ${language === 'ml' ? 'ലഭ്യം' : 'available'}`}
+                    </span>
+                  )}
                 </div>
+
+                {unavailable ? (
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-white px-3.5 py-4 text-center">
+                    <UserX className="w-5 h-5 text-slate-400 mx-auto" />
+                    <p className="text-xs font-bold text-slate-600 mt-1.5">
+                      {language === 'ml' ? 'ഈ വിഭാഗത്തിൽ ഇപ്പോൾ തൊഴിലാളികൾ ലഭ്യമല്ല' : 'No workers available for this trade right now'}
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      {language === 'ml' ? 'ദയവായി പിന്നീട് പരിശോധിക്കുക' : 'Please check back soon'}
+                    </p>
+                  </div>
+                ) : (
+                <>
 
                 {/* Booking Fee banner (Compact) */}
                 <div className="bg-[#f0f4fa] rounded-xl px-3.5 py-1.5 flex items-center justify-between">
@@ -283,8 +357,13 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
 
                           <button
                             type="button"
+                            disabled={atLimit}
                             onClick={() => onUpdateCrewCount(key, 1)}
-                            className="h-10 w-10 rounded-xl border border-sky-200 bg-white text-slate-700 hover:bg-sky-50 flex items-center justify-center transition-all cursor-pointer active:scale-95 touch-manipulation shadow-sm"
+                            className={`h-10 w-10 rounded-xl border flex items-center justify-center transition-all active:scale-95 touch-manipulation ${
+                              atLimit
+                                ? 'border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed'
+                                : 'border-sky-200 bg-white text-slate-700 hover:bg-sky-50 cursor-pointer shadow-sm'
+                            }`}
                             aria-label={`Increase ${role.name}`}
                           >
                             <Plus className="w-4 h-4 sm:w-3.5 sm:h-3.5 stroke-[2.2]" />
@@ -294,6 +373,8 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
                     );
                   })}
                 </div>
+                </>
+                )}
               </motion.div>
             );
           })}

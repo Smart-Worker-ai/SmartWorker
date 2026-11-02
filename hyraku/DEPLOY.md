@@ -1,57 +1,65 @@
 # Deploy Hyraku on AIC Cloud (shared-IP container)
 
-VPS `15.235.145.222`. SSH **20115**. Do not use public 80, 443, or 8080.
+VPS `15.235.145.222`. SSH **20115**.
 
 | Port | Service |
 |---|---|
-| **31080** | Customer site (Caddy; `admin.*` Host → admin) |
-| **31081** | Admin desk (direct) |
+| **80** (inside the container; AIC routes public 80/443 here by domain) | Customer site (Caddy) |
+| **31080** | Same Caddy, published on the VPS (not reachable from the internet) |
+| **31081** | Admin desk, published on the VPS (not reachable from the internet) |
 | 20115 | SSH only |
 
-HTTPS for visitors: AIC Cloud **Add Domain** (they terminate TLS). Caddy on the VPS is HTTP.
+AIC runs the front proxy on public 80/443 of `15.235.145.222`, terminates TLS, and forwards each
+domain added under **Add Domain** to container port 80. Caddy on the VPS is plain HTTP.
 
-## 1. Firewall
+Public URL: `https://zyoim.aiccloud.online`.
 
-Add two TCP rules, allow from empty:
+## 1. AIC panel — Add Domain
 
-- **31080** — `hyraku-web`
-- **31081** — `hyraku-admin`
+On the VPS card → **+ Add Domain**, target port **80**:
 
-If the panel rejects a port, pick another high port (e.g. 32080 / 32081) and set `HYRAKU_HTTP_PORT` / `HYRAKU_ADMIN_PORT` in `.env.hyraku` to match.
+| Domain | Port |
+|---|---|
+| `hyraku.com` | 80 |
+| `www.hyraku.com` | 80 |
+| `hyraku.in` | 80 |
+| `www.hyraku.in` | 80 |
 
-## 2. Domains
+Do **not** add `admin.hyraku.com` / `admin.hyraku.in`. The admin desk is private (section 4).
 
-**Add Domain** on the VPS:
+After DNS is live, press **Verify DNS** on each domain. AIC issues the certificate once it passes.
 
-- `hyraku.com`, `www.hyraku.com`, `hyraku.in`, `www.hyraku.in` → port **31080**
-- `admin.hyraku.com`, `admin.hyraku.in` → port **31080** (Host header) or **31081**
+## 2. Namecheap DNS (both domains on BasicDNS)
 
-Namecheap: use the CNAME AIC Cloud shows (often `zyu1h.aiccloud.online`), not an A record that expects port 80.
+Nameservers: `dns1.registrar-servers.com` / `dns2.registrar-servers.com`.
 
-Direct test after deploy (HTTP): `http://15.235.145.222:31080`
+**Domain List → hyraku.com / hyraku.in → Manage → Advanced DNS → Host records**
 
-## 3. On the VPS (after SSH 20115 works)
+| Type | Host | Value | TTL |
+|---|---|---|---|
+| A | `@` | `15.235.145.222` | Automatic |
+| A | `www` | `15.235.145.222` | Automatic |
+
+No `admin` record. `hyraku.in` keeps its Private Email mail settings; `hyraku.com` has no email.
+
+## 3. Check
 
 ```bash
-apt-get update
-apt-get install -y ca-certificates curl
-curl -fsSL https://get.docker.com | sh
-cd /opt/hyraku
-cp .env.example .env.hyraku
-# set HYRAKU_JWT_SECRET (openssl rand -hex 32) and HYRAKU_ADMIN_PASSWORD
-docker compose --env-file .env.hyraku up -d --build
+nslookup hyraku.com      # 15.235.145.222
+nslookup www.hyraku.com  # 15.235.145.222
+nslookup hyraku.in       # 15.235.145.222
+nslookup www.hyraku.in   # 15.235.145.222
 ```
 
-Laptop rsync (when the VPS is stable):
+Then open `https://hyraku.com` and `https://hyraku.in`.
+
+## 4. Admin desk (private, SSH tunnel)
+
+The admin desk has no public domain. Open it through SSH from the client's computer:
 
 ```bash
-rsync -az --exclude node_modules --exclude .venv --exclude .env.hyraku \
-  -e "ssh -p 20115 -o IdentitiesOnly=yes" \
-  ./ root@15.235.145.222:/opt/hyraku/
+ssh -p 20115 -N -L 8081:127.0.0.1:31081 <user>@15.235.145.222
 ```
 
-Admin: `https://admin.hyraku.com` after Add Domain, then TOTP.
-
-## 4. Updates
-
-rsync again (keep excluding `.env.hyraku`), then `docker compose --env-file .env.hyraku up -d --build`.
+Leave that running, then open `http://localhost:8081` in Chrome or Edge and log in (TOTP).
+Close the terminal to end the session.

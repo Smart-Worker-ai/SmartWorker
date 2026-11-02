@@ -10,6 +10,8 @@ export default function BookWorkersPage() {
     crewCounts,
     updateCrewCount,
     setTeamPreset,
+    availabilityLoaded,
+    availableFor,
   } = useBooking();
 
   return (
@@ -19,6 +21,8 @@ export default function BookWorkersPage() {
       crewCounts={crewCounts}
       onUpdateCrewCount={updateCrewCount}
       onSetTeamPreset={setTeamPreset}
+      availabilityLoaded={availabilityLoaded}
+      availableFor={availableFor}
       onBack={() => {
         navigate('/');
         window.scrollTo({ top: 0, behavior: 'smooth' });

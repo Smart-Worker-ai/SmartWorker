@@ -21,7 +21,7 @@ services:
       HYRAKU_ADMIN_PASSWORD: ${HYRAKU_ADMIN_PASSWORD:?set in .env.hyraku}
       HYRAKU_DB_PATH: /app/data/hyraku.db
       HYRAKU_COOKIE_SECURE: ${HYRAKU_COOKIE_SECURE:-true}
-      CORS_ORIGINS: ${CORS_ORIGINS:-https://hyraku.com,https://www.hyraku.com,https://hyraku.in,https://www.hyraku.in,https://admin.hyraku.com,https://admin.hyraku.in,https://zyu1h.aiccloud.online}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://hyraku.com,https://www.hyraku.com,https://hyraku.in,https://www.hyraku.in,https://admin.hyraku.com,https://admin.hyraku.in,https://zyoim.aiccloud.online}
     volumes:
       - hyraku_admin_data:/app/data
     expose:

@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { WORKER_CATEGORIES } from '../data/workersData';
 
 const BookingContext = createContext(null);
@@ -29,12 +29,52 @@ export async function persistHyrakuEnquiry(payload) {
   }
 }
 
+/** Map of trade id -> active crew count, or null when the API could not be reached. */
+async function fetchAvailability() {
+  try {
+    const res = await fetch('/hyraku-api/public/availability');
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.trades && typeof data.trades === 'object' ? data.trades : null;
+  } catch {
+    return null;
+  }
+}
+
 export function BookingProvider({ children }) {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('all');
   const [crewCounts, setCrewCounts] = useState({});
+  const [availability, setAvailability] = useState(null);
+  const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    fetchAvailability().then((trades) => {
+      if (!alive) return;
+      setAvailability(trades);
+      setAvailabilityLoaded(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  /** Active crew for a trade; Infinity when availability is unknown so booking still works. */
+  function availableFor(catId) {
+    if (!availability) return Infinity;
+    return Number(availability[catId]) || 0;
+  }
+
+  function tradeTotal(counts, catId) {
+    return Object.entries(counts)
+      .filter(([key]) => key.startsWith(`${catId}_`))
+      .reduce((sum, [, n]) => sum + (n || 0), 0);
+  }
 
   function updateCrewCount(key, delta) {
+    const catId = key.slice(0, key.lastIndexOf('_'));
     setCrewCounts((prev) => {
+      if (delta > 0 && tradeTotal(prev, catId) + delta > availableFor(catId)) return prev;
       const updated = Math.max(0, (prev[key] || 0) + delta);
       return { ...prev, [key]: updated };
     });
@@ -65,6 +105,9 @@ export function BookingProvider({ children }) {
     updateCrewCount,
     setTeamPreset,
     totalWorkers,
+    availability,
+    availabilityLoaded,
+    availableFor,
   };
 
   return <BookingContext.Provider value={value}>{children}</BookingContext.Provider>;

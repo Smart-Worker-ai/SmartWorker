@@ -16,7 +16,8 @@ Docker **is running** on AIC Cloud VPS **hyraku** (`vps-vys4`).
 | App on the box | `curl -sI http://127.0.0.1:80` → **200** (Caddy → customer) |
 | `http://127.0.0.1:31081` | **200** (admin nginx) |
 | Browser on `http://15.235.145.222:…` | **Does not work** (shared IP) |
-| `https://zyu1h.aiccloud.online` | AIC **parking page**, not Hyraku |
+| `https://zyoim.aiccloud.online` | **Live** customer site (AIC Public URL) |
+| `hyraku.com` / `hyraku.in` | Namecheap — see `DEPLOY.md` §2–3 |
 | `http://15.235.145.222:3000` | **Someone else’s app** (Kort Kacheri). Not us. |
 
 Public HTTP is blocked because this plan is a **Linux container on a shared IPv4**. AIC Cloud owns 80/443 (and other common ports) on `15.235.145.222`. Custom firewall rules (18080, 31080, …) accept TCP then **reset**. There is **no “public URL port”** under VPS Settings.
@@ -68,26 +69,14 @@ If they add a “public URL → internal port” control, set it to **80**.
 
 ### B. hyraku.com / hyraku.in (Namecheap)
 
-Already added in the VPS **Add Domain** list, all to port **31080** (orange **Verify DNS**).
-
-Do **not** A-record those names to `15.235.145.222` (that IP’s :80 is not this container).
-
-Typical AIC proxy records:
+Full steps: **`DEPLOY.md`**.
 
 | Type | Host | Value |
 |---|---|---|
-| A | `@` | AIC proxy IP (they showed **37.187.159.43** for `zyu1h.aiccloud.online`, confirm in **Verify DNS**) |
-| CNAME | `www` | `zyu1h.aiccloud.online` |
-| CNAME | `admin` | `zyu1h.aiccloud.online` |
+| A | `@` | `15.235.145.222` |
+| A | `www` | `15.235.145.222` |
 
-`hyraku.com` was on **Namecheap hosting nameservers**; switch to **Namecheap BasicDNS** or DNS will not apply.
-
-Also add **admin.hyraku.com** / **admin.hyraku.in** in Add Domain → **80** or **31080** (Caddy routes `admin.*` to the admin UI). After a port change on the VPS, update those Add Domain ports to match.
-
-If Caddy is only on 80/3000 now, either:
-
-- change Add Domain target port to **80**, or
-- set `HYRAKU_HTTP_PORT=31080` and `docker compose --env-file .env.hyraku up -d` so 31080 matches the panel.
+Add Domain target port: **80**. No `admin` domain: the admin desk is reached over an SSH tunnel (`DEPLOY.md` §4).
 
 ## Update code
 

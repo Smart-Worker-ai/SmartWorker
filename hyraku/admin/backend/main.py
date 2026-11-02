@@ -121,6 +121,38 @@ def public_enquiry(body: PublicEnquiryIn, db: Session = Depends(get_db)):
     return {"ok": True, "ref_code": ref, "id": row.id}
 
 
+TRADES = {
+    "general-workers": ["General Labour", "General Construction Labour", "Labour", "Labourer"],
+    "concrete-finisher": ["Concrete Finisher / Cement Setter", "Concrete Finisher", "Cement Setter"],
+    "bricklayer": ["Wall Builder", "Bricklayer", "Block Mason"],
+    "stone-setter": ["Stone Breaker / Stone Setter", "Stone Breaker", "Stone Setter"],
+    "tiler": ["Tiler", "Tiles", "Tile Setter", "Marble Setter"],
+    "painter": ["Painter", "Painting"],
+}
+
+
+def _norm(text: str) -> str:
+    return "".join(ch for ch in (text or "").lower() if ch.isalnum())
+
+
+_TRADE_LOOKUP = {_norm(alias): tid for tid, aliases in TRADES.items() for alias in [tid, *aliases]}
+
+
+def trade_id(text: str) -> str | None:
+    return _TRADE_LOOKUP.get(_norm(text))
+
+
+@app.get("/api/public/availability")
+def public_availability(db: Session = Depends(get_db)):
+    """Active crew count per fixed trade. Counts only; no crew details leave admin."""
+    counts = {tid: 0 for tid in TRADES}
+    for (trade,) in db.query(CrewMember.trade).filter(CrewMember.active.is_(True)).all():
+        tid = trade_id(trade)
+        if tid:
+            counts[tid] += 1
+    return {"trades": counts}
+
+
 # ── auth / totp ─────────────────────────────────────────────────────────────
 class LoginIn(BaseModel):
     username: str
