@@ -1,0 +1,8 @@
+**/node_modules/
+**/.venv/
+**/dist/
+admin/backend/data/
+**/.env
+.env.hyraku
+__pycache__/
+*.pyc

@@ -1,0 +1,38 @@
+{
+    auto_https off
+    servers {
+        protocols h1 h2
+    }
+}
+
+# HTTP behind AIC Cloud TLS (Add Domain). X-Forwarded-Proto is set to https
+# so admin cookies stay Secure.
+
+:80 {
+    encode gzip zstd
+    @admin host admin.hyraku.com admin.hyraku.in
+    handle @admin {
+        reverse_proxy hyraku_admin_web:80 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {http.request.header.X-Forwarded-For}
+            header_up X-Forwarded-Proto https
+        }
+    }
+    handle {
+        reverse_proxy customer_frontend:80 {
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {http.request.header.X-Forwarded-For}
+            header_up X-Forwarded-Proto https
+        }
+    }
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+    log {
+        output stdout
+        format json
+    }
+}

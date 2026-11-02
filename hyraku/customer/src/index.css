@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: clip;
+}
+
+body {
+  @apply bg-slate-50 text-slate-800 antialiased;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: clip;
+  min-height: 100dvh;
+}
+
+h1, h2, h3, .font-display {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+@layer components {
+  .navlink {
+    @apply inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-sky-50 hover:text-slate-900;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-[#0091ea] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0284c7] disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-sky-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-sky-50;
+  }
+  .field {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base outline-none transition focus:border-[#0091ea] focus:ring-2 focus:ring-sky-100 sm:text-sm;
+  }
+  .label {
+    @apply mb-1 block text-sm font-medium text-slate-700;
+  }
+  .card {
+    @apply rounded-2xl border border-sky-100 bg-white p-6 shadow-sm;
+  }
+}
+
+.crew-stage {
+  position: relative;
+  width: 100%;
+  height: 440px;
+  overflow: hidden;
+  background: #e8f4ff;
+}
+
+.crew-stage-compact {
+  height: 288px;
+}
+
+.crew-doodle {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.crew-doodle-lead,
+.crew-doodle-mate {
+  transform-box: fill-box;
+  transform-origin: 50% 90%;
+}
+
+.crew-doodle-lead {
+  animation: doodle-bob 3.4s ease-in-out infinite;
+}
+
+.crew-doodle-mate {
+  animation: doodle-bob 3.9s ease-in-out infinite 0.45s;
+}
+
+.crew-cloud-a {
+  animation: cloud-drift 18s linear infinite;
+}
+
+.crew-cloud-b {
+  animation: cloud-drift 24s linear infinite reverse;
+}
+
+@keyframes doodle-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+@keyframes cloud-drift {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(18px); }
+  100% { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crew-doodle-lead,
+  .crew-doodle-mate,
+  .crew-cloud-a,
+  .crew-cloud-b {
+    animation: none !important;
+  }
+}

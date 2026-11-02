@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-sky-50 text-slate-800 antialiased;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+.font-display { font-family: Outfit, 'Plus Jakarta Sans', sans-serif; }
+.btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-[#0091ea] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#0284c7] disabled:opacity-50; }
+.btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-sky-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-sky-50; }
+.field { @apply w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#0091ea] focus:ring-2 focus:ring-sky-100; }
+.card { @apply rounded-2xl border border-sky-100 bg-white p-5 shadow-sm; }
+.nav-active { @apply bg-sky-50 text-[#0091ea]; }
