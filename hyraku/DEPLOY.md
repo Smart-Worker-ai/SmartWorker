@@ -6,7 +6,7 @@ VPS `15.235.145.222`. SSH **20115**.
 |---|---|
 | **80** (inside the container; AIC routes public 80/443 here by domain) | Customer site (Caddy) |
 | **31080** | Same Caddy, published on the VPS (not reachable from the internet) |
-| **31081** | Admin desk, published on the VPS (not reachable from the internet) |
+| **31081** | Admin desk, bound to `127.0.0.1` on the VPS (SSH tunnel only) |
 | 20115 | SSH only |
 
 AIC runs the front proxy on public 80/443 of `15.235.145.222`, terminates TLS, and forwards each
@@ -63,3 +63,24 @@ ssh -p 20115 -N -L 8081:127.0.0.1:31081 <user>@15.235.145.222
 
 Leave that running, then open `http://localhost:8081` in Chrome or Edge and log in (TOTP).
 Close the terminal to end the session.
+
+## 5. Encryption
+
+| Path | Protection |
+|---|---|
+| Browser ↔ AIC front proxy | HTTPS (Let's Encrypt), HSTS on the four public domains |
+| AIC front proxy → VPS port 80 | Plain HTTP inside AIC's network (AIC controls this hop) |
+| Containers ↔ each other | Docker network on the VPS; never leaves the machine |
+| Admin desk | SSH tunnel (encrypted end to end) |
+| Database file | SQLCipher, AES-256, key `HYRAKU_DB_KEY` |
+
+Set the key once in `/opt/hyraku/.env.hyraku`:
+
+```bash
+echo "HYRAKU_DB_KEY=$(openssl rand -hex 32)" >> /opt/hyraku/.env.hyraku
+grep HYRAKU_DB_KEY /opt/hyraku/.env.hyraku   # copy this into a password manager
+```
+
+On the first start with the key, an existing unencrypted database is converted in place (row counts
+are checked before the plain file is replaced). Never change or lose the key: the data cannot be
+read without it. The `sqlite3` command-line tool can no longer open the file.

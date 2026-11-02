@@ -25,6 +25,10 @@
             header_up X-Forwarded-Proto https
         }
     }
+    # Public sites are only ever served over AIC's HTTPS; tell browsers never to use plain HTTP.
+    # Not includeSubDomains, and never on localhost (the admin tunnel uses http://localhost).
+    @public host hyraku.com www.hyraku.com hyraku.in www.hyraku.in
+    header @public Strict-Transport-Security "max-age=31536000"
     header {
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
