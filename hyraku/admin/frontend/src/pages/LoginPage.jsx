@@ -1,7 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api.js';
-import LoginDoodles from './LoginDoodles.jsx';
+
+export function LoginBackdrop({ children, className = '' }) {
+  return (
+    <div className={`relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#0b1f33] px-4 py-8 ${className}`}>
+      <img
+        src="/assets/hyraku-login-bg.png"
+        alt=""
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-[0.35]"
+      />
+      <div className="relative z-10 w-full max-w-md">{children}</div>
+    </div>
+  );
+}
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -48,9 +60,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[radial-gradient(1200px_600px_at_50%_-10%,#bae6fd_0%,#e0f2fe_42%,#f8fbff_100%)] px-4 py-8 sm:px-6">
-      <LoginDoodles />
-      <div className="relative z-10 w-full max-w-sm sm:max-w-md">
+    <LoginBackdrop className="sm:px-6">
+      <div className="w-full max-w-sm sm:max-w-md">
         <form
           onSubmit={step === 'password' ? login : verify}
           className="card relative space-y-4 p-5 shadow-lg sm:p-8"
@@ -87,6 +98,6 @@ export default function LoginPage() {
           )}
         </form>
       </div>
-    </div>
+    </LoginBackdrop>
   );
 }

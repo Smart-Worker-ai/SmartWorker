@@ -17,21 +17,29 @@ PORT="${HYRAKU_VPS_PORT:-20115}"
 REMOTE="${HYRAKU_VPS_DIR:-/opt/hyraku}"
 PASS_FILE="${HYRAKU_VPS_PASSWORD_FILE:-$ROOT/.vps-password}"
 
-SSH_OPTS=(-p "$PORT" -o IdentitiesOnly=yes -o PreferredAuthentications=password -o PubkeyAuthentication=no -o NumberOfPasswordPrompts=1)
-SSH=(ssh "${SSH_OPTS[@]}")
-RSH="ssh ${SSH_OPTS[*]}"
-
 if [[ -f "$PASS_FILE" ]]; then
   chmod 600 "$PASS_FILE" || true
-  if ! command -v sshpass >/dev/null 2>&1; then
-    echo "Install sshpass (sudo apt install sshpass) to use ${PASS_FILE}" >&2
+  SSH_OPTS=(-o IdentitiesOnly=yes -o PreferredAuthentications=password -o PubkeyAuthentication=no -o NumberOfPasswordPrompts=1 -o StrictHostKeyChecking=accept-new)
+  if command -v sshpass >/dev/null 2>&1; then
+    SSH=(sshpass -f "$PASS_FILE" ssh -p "$PORT" "${SSH_OPTS[@]}")
+    RSH="sshpass -f $(printf '%q' "$PASS_FILE") ssh -p $PORT ${SSH_OPTS[*]}"
+    SCP=(sshpass -f "$PASS_FILE" scp -P "$PORT" "${SSH_OPTS[@]}")
+    echo "==> using password file ${PASS_FILE} (sshpass)"
+  else
+    if command -v python >/dev/null 2>&1 || command -v python3 >/dev/null 2>&1; then
+      PY="$(command -v python3 2>/dev/null || command -v python)"
+      echo "==> using password file ${PASS_FILE} (python paramiko)"
+      exec "$PY" "$ROOT/deploy-vps-py.py" "$@"
+    fi
+    echo "Need sshpass or Python paramiko to use ${PASS_FILE}" >&2
     exit 1
   fi
-  SSH=(sshpass -f "$PASS_FILE" ssh "${SSH_OPTS[@]}")
-  RSH="sshpass -f $(printf '%q' "$PASS_FILE") ssh ${SSH_OPTS[*]}"
-  echo "==> using password file ${PASS_FILE}"
 else
-  echo "==> no ${PASS_FILE} — SSH will prompt"
+  echo "==> no ${PASS_FILE} — using default SSH keys"
+  SSH_OPTS=(-p "$PORT" -o BatchMode=yes -o ConnectTimeout=20)
+  SSH=(ssh "${SSH_OPTS[@]}")
+  RSH="ssh ${SSH_OPTS[*]}"
+  SCP=(scp -P "$PORT" -o BatchMode=yes -o ConnectTimeout=20)
 fi
 
 BUILD=0
@@ -70,17 +78,45 @@ EXCLUDES=(
   --exclude .DS_Store
 )
 
+copy_tree() {
+  local src="$1" dest="$2"
+  if command -v rsync >/dev/null 2>&1; then
+    rsync -az --progress "${EXCLUDES[@]}" -e "$RSH" "$src/" "${HOST}:${dest}/"
+    return
+  fi
+  echo "==> rsync not found; staging with tar and scp"
+  local stage
+  stage="$(mktemp -d)"
+  mkdir -p "$stage/tree"
+  tar -C "$src" \
+    --exclude=node_modules \
+    --exclude=dist \
+    --exclude=.venv \
+    --exclude=data \
+    --exclude=__pycache__ \
+    --exclude='*.pyc' \
+    --exclude=.DS_Store \
+    --exclude=.env.hyraku \
+    --exclude=.vps-password \
+    -cf - . | tar -C "$stage/tree" -xf -
+  "${SSH[@]}" "$HOST" "mkdir -p $(printf '%q' "$dest")"
+  "${SCP[@]}" -r "$stage/tree/." "${HOST}:${dest}/"
+  rm -rf "$stage"
+}
+
 echo "==> ${ROOT}/customer  ->  ${HOST}:${REMOTE}/customer"
-rsync -az --progress "${EXCLUDES[@]}" -e "$RSH" \
-  "$ROOT/customer/" "${HOST}:${REMOTE}/customer/"
+copy_tree "$ROOT/customer" "${REMOTE}/customer"
 
 echo "==> ${ROOT}/admin  ->  ${HOST}:${REMOTE}/admin"
-rsync -az --progress "${EXCLUDES[@]}" -e "$RSH" \
-  "$ROOT/admin/" "${HOST}:${REMOTE}/admin/"
+copy_tree "$ROOT/admin" "${REMOTE}/admin"
 
 for extra in VERSION CHANGELOG.md docker-compose.yml Caddyfile; do
   if [[ -f "$ROOT/$extra" ]]; then
-    rsync -az -e "$RSH" "$ROOT/$extra" "${HOST}:${REMOTE}/$extra"
+    if command -v rsync >/dev/null 2>&1; then
+      rsync -az -e "$RSH" "$ROOT/$extra" "${HOST}:${REMOTE}/$extra"
+    else
+      "${SCP[@]}" "$ROOT/$extra" "${HOST}:${REMOTE}/$extra"
+    fi
   fi
 done
 

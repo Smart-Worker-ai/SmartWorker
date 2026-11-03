@@ -212,3 +212,35 @@ def monthly_report_pdf(company, month_label, stats: dict) -> bytes:
     _footer(c, company, page_w)
     c.save()
     return buf.getvalue()
+
+
+def roster_table_pdf(company, title: str, headers: list[str], rows: list[list[str]]) -> bytes:
+    buf = BytesIO()
+    page_w, page_h = A4
+    c = canvas.Canvas(buf, pagesize=A4)
+    _header(c, company, title, f"{len(rows)} record(s)", page_w, page_h)
+    y = page_h - 50 * mm
+    col_w = (page_w - 36 * mm) / max(1, len(headers))
+    c.setFillColor(BLUE)
+    c.rect(18 * mm, y - 2 * mm, page_w - 36 * mm, 8 * mm, fill=1, stroke=0)
+    c.setFillColor(white)
+    c.setFont("Times-Bold", 8)
+    for i, h in enumerate(headers):
+        c.drawString(20 * mm + i * col_w, y, str(h)[:22])
+    y -= 8 * mm
+    c.setFillColor(NAVY)
+    c.setFont("Times-Roman", 8)
+    for row in rows:
+        if y < 24 * mm:
+            _footer(c, company, page_w)
+            c.showPage()
+            _header(c, company, title, "continued", page_w, page_h)
+            y = page_h - 50 * mm
+            c.setFillColor(NAVY)
+            c.setFont("Times-Roman", 8)
+        for i, cell in enumerate(row):
+            c.drawString(20 * mm + i * col_w, y, str(cell or "—")[:22])
+        y -= 5.4 * mm
+    _footer(c, company, page_w)
+    c.save()
+    return buf.getvalue()

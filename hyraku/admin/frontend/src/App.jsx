@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import api from './api.js';
 import Layout from './pages/Layout.jsx';
-import LoginPage from './pages/LoginPage.jsx';
-import LoginDoodles from './pages/LoginDoodles.jsx';
+import LoginPage, { LoginBackdrop } from './pages/LoginPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import EnquiriesPage from './pages/EnquiriesPage.jsx';
 import CustomersPage from './pages/CustomersPage.jsx';
@@ -19,10 +18,9 @@ function Protected({ children }) {
   }, []);
   if (state.loading) {
     return (
-      <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[radial-gradient(1200px_600px_at_50%_-10%,#bae6fd_0%,#e0f2fe_42%,#f8fbff_100%)]">
-        <LoginDoodles />
-        <div className="relative z-10 h-10 w-10 animate-spin rounded-full border-4 border-[#0091ea] border-t-transparent" />
-      </div>
+      <LoginBackdrop>
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#0091ea] border-t-transparent" />
+      </LoginBackdrop>
     );
   }
   return state.ok ? children : <Navigate to="/login" replace />;

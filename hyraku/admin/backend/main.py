@@ -2,6 +2,7 @@ import csv
 import io
 import json
 import os
+import re
 import secrets
 from collections import Counter, defaultdict
 from datetime import datetime
@@ -12,7 +13,6 @@ import qrcode
 from fastapi import Depends, FastAPI, File, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from openpyxl import Workbook
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -27,7 +27,7 @@ from auth_utils import (
 )
 from database import Base, SessionLocal, engine, get_db
 from models import AdminUser, Booking, CompanySettings, CrewMember, Customer, Enquiry
-from pdfs import booking_packet_pdf, monthly_report_pdf
+from pdfs import booking_packet_pdf, monthly_report_pdf, roster_table_pdf
 
 app = FastAPI(title="Hyraku Admin", version="1.0.0")
 app.add_middleware(
@@ -58,7 +58,7 @@ bootstrap()
 
 
 def upsert_customer(db: Session, name: str, phone: str, town: str, locality: str) -> Customer:
-    phone = phone.replace("+91", "").replace(" ", "").strip()
+    phone = normalize_mobile(phone)
     row = db.query(Customer).filter(Customer.phone == phone).first()
     now = datetime.utcnow()
     if row:
@@ -75,6 +75,93 @@ def upsert_customer(db: Session, name: str, phone: str, town: str, locality: str
 
 def company(db: Session) -> CompanySettings:
     return db.query(CompanySettings).first()
+
+
+def normalize_mobile(raw: str) -> str:
+    digits = "".join(ch for ch in (raw or "") if ch.isdigit())
+    if len(digits) > 10 and digits.startswith("91"):
+        digits = digits[-10:]
+    return digits
+
+
+def is_indian_mobile(phone: str) -> bool:
+    return bool(re.fullmatch(r"[6-9][0-9]{9}", phone or ""))
+
+
+CREW_TRADES = [
+    "General Labour",
+    "Concrete Finisher / Cement Setter",
+    "Wall Builder",
+    "Stone Breaker / Stone Setter",
+    "Tiler",
+    "Painter",
+]
+CREW_ROLES = {
+    "General Labour": ["Labour"],
+    "Concrete Finisher / Cement Setter": ["Head Mason", "Helper"],
+    "Wall Builder": ["Head Mason", "Helper"],
+    "Stone Breaker / Stone Setter": ["Head Mason", "Helper"],
+    "Tiler": ["Head Mason", "Helper"],
+    "Painter": ["Painter", "Labour"],
+}
+
+
+def _is_letter_text(text: str) -> bool:
+    if not (2 <= len(text) <= 80) or not text[0].isalpha():
+        return False
+    return all(ch.isalpha() or ch in " .'-" for ch in text)
+
+
+def validate_person_name(value: str, label: str = "Name") -> str:
+    name = (value or "").strip()
+    if not _is_letter_text(name):
+        raise HTTPException(400, f"{label} must be 2–80 letters (spaces, apostrophes and hyphens allowed).")
+    return name
+
+
+def validate_place(value: str, label: str, required: bool = False) -> str:
+    text = (value or "").strip()
+    if not text:
+        if required:
+            raise HTTPException(400, f"{label} is required.")
+        return ""
+    if not _is_letter_text(text):
+        raise HTTPException(400, f"{label} must be 2–80 letters.")
+    return text
+
+
+def validate_crew_fields(body: "CrewIn") -> dict:
+    name = validate_person_name(body.name)
+    phone = normalize_mobile(body.phone)
+    if not is_indian_mobile(phone):
+        raise HTTPException(400, "Mobile number is required and must be a valid 10-digit Indian number.")
+    trade = (body.trade or "").strip()
+    if trade not in CREW_TRADES:
+        raise HTTPException(400, "Select a trade from the list.")
+    role = (body.role or "").strip()
+    allowed = CREW_ROLES[trade]
+    if role not in allowed:
+        raise HTTPException(400, f"Role must be one of: {', '.join(allowed)}.")
+    town = validate_place(body.town, "Town")
+    notes = (body.notes or "").strip()
+    if len(notes) > 500:
+        raise HTTPException(400, "Notes must be 500 characters or fewer.")
+    return {
+        "name": name,
+        "phone": phone,
+        "trade": trade,
+        "role": role,
+        "town": town,
+        "notes": notes,
+        "active": bool(body.active),
+    }
+
+
+def crew_phone_taken(db: Session, phone: str, exclude_id: int | None = None) -> bool:
+    q = db.query(CrewMember).filter(CrewMember.phone == phone)
+    if exclude_id is not None:
+        q = q.filter(CrewMember.id != exclude_id)
+    return q.first() is not None
 
 
 # ── public enquiry ──────────────────────────────────────────────────────────
@@ -94,21 +181,26 @@ class PublicEnquiryIn(BaseModel):
 
 @app.post("/api/public/enquiries")
 def public_enquiry(body: PublicEnquiryIn, db: Session = Depends(get_db)):
-    phone = body.phone.replace("+91", "").replace(" ", "").strip()
-    if not body.customer_name.strip() or len(phone) < 8:
-        raise HTTPException(400, "Name and a valid phone are required.")
+    name = validate_person_name(body.customer_name, "Customer name")
+    phone = normalize_mobile(body.phone)
+    if not is_indian_mobile(phone):
+        raise HTTPException(400, "Enter a valid 10-digit Indian mobile number.")
+    town = validate_place(body.town, "Town")
+    locality = validate_place(body.locality, "Locality")
+    if body.message and len(body.message.strip()) > 2000:
+        raise HTTPException(400, "Message must be 2000 characters or fewer.")
     ref = body.ref_code or ("HYR-" + str(secrets.randbelow(90000) + 10000))
     while db.query(Enquiry).filter(Enquiry.ref_code == ref).first():
         ref = "HYR-" + str(secrets.randbelow(90000) + 10000)
-    cust = upsert_customer(db, body.customer_name.strip(), phone, body.town, body.locality)
+    cust = upsert_customer(db, name, phone, town, locality)
     row = Enquiry(
         ref_code=ref,
         source=body.source if body.source in ("booking", "contact") else "booking",
         customer_id=cust.id,
-        customer_name=body.customer_name.strip(),
+        customer_name=name,
         phone=phone,
-        town=body.town,
-        locality=body.locality,
+        town=town,
+        locality=locality,
         work_dates=body.work_dates,
         crew_summary=body.crew_summary,
         crew_json=json.dumps(body.crew_json),
@@ -325,24 +417,19 @@ def letterpad(eid: int, _: str = Depends(require_admin), db: Session = Depends(g
 
 
 # ── customers / crew downloads ──────────────────────────────────────────────
-def _export_rows(rows: list[dict], fmt: str, filename: str):
+def _export_rows(rows: list[dict], fmt: str, filename: str, db: Session):
     fmt = (fmt or "csv").lower()
-    if fmt == "json":
-        data = json.dumps(rows, indent=2, default=str).encode()
-        return Response(data, media_type="application/json", headers={"Content-Disposition": f'attachment; filename="{filename}.json"'})
-    if fmt == "xlsx":
-        wb = Workbook()
-        ws = wb.active
-        if rows:
-            ws.append(list(rows[0].keys()))
-            for r in rows:
-                ws.append(list(r.values()))
-        buf = BytesIO()
-        wb.save(buf)
+    if fmt not in ("csv", "pdf"):
+        raise HTTPException(400, "Download format must be csv or pdf.")
+    if fmt == "pdf":
+        headers = list(rows[0].keys()) if rows else ["empty"]
+        table = [[str(r.get(h, "") or "") for h in headers] for r in rows]
+        title = filename.replace("hyraku-", "").replace("-", " ").title()
+        pdf = roster_table_pdf(company(db), title, headers, table)
         return Response(
-            buf.getvalue(),
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f'attachment; filename="{filename}.xlsx"'},
+            pdf,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}.pdf"'},
         )
     buf = StringIO()
     writer = csv.DictWriter(buf, fieldnames=list(rows[0].keys()) if rows else ["empty"])
@@ -370,14 +457,14 @@ def customers_export(fmt: str = "csv", _: str = Depends(require_admin), db: Sess
         }
         for c in db.query(Customer).all()
     ]
-    return _export_rows(rows, fmt, "hyraku-customers")
+    return _export_rows(rows, fmt, "hyraku-customers", db)
 
 
 class CrewIn(BaseModel):
     name: str
-    phone: str = ""
-    trade: str = ""
-    role: str = ""
+    phone: str
+    trade: str
+    role: str
     town: str = ""
     notes: str = ""
     active: bool = True
@@ -391,7 +478,10 @@ def list_crew(_: str = Depends(require_admin), db: Session = Depends(get_db)):
 
 @app.post("/api/crew")
 def add_crew(body: CrewIn, _: str = Depends(require_admin), db: Session = Depends(get_db)):
-    row = CrewMember(**body.model_dump())
+    data = validate_crew_fields(body)
+    if crew_phone_taken(db, data["phone"]):
+        raise HTTPException(400, "This mobile number is already on the crew roster.")
+    row = CrewMember(**data)
     db.add(row)
     db.commit()
     db.refresh(row)
@@ -403,7 +493,10 @@ def edit_crew(wid: int, body: CrewIn, _: str = Depends(require_admin), db: Sessi
     row = db.query(CrewMember).filter(CrewMember.id == wid).first()
     if not row:
         raise HTTPException(404, "Crew member not found.")
-    for k, v in body.model_dump().items():
+    data = validate_crew_fields(body)
+    if crew_phone_taken(db, data["phone"], exclude_id=wid):
+        raise HTTPException(400, "This mobile number is already on the crew roster.")
+    for k, v in data.items():
         setattr(row, k, v)
     db.commit()
     return _crew_out(row)
@@ -421,22 +514,28 @@ def crew_import(file: UploadFile = File(...), _: str = Depends(require_admin), d
     reader = csv.DictReader(StringIO(raw))
     added = 0
     errors = []
+    seen = set()
     for i, rec in enumerate(reader, start=2):
-        name = (rec.get("name") or "").strip()
-        if not name:
-            errors.append(f"Row {i}: name required")
-            continue
-        db.add(
-            CrewMember(
-                name=name,
-                phone=(rec.get("phone") or "").strip(),
-                trade=(rec.get("trade") or "").strip(),
-                role=(rec.get("role") or "").strip(),
-                town=(rec.get("town") or "").strip(),
-                notes=(rec.get("notes") or "").strip(),
-                active=str(rec.get("active", "true")).lower() in ("1", "true", "yes", "y"),
+        try:
+            data = validate_crew_fields(
+                CrewIn(
+                    name=(rec.get("name") or "").strip(),
+                    phone=(rec.get("phone") or "").strip(),
+                    trade=(rec.get("trade") or "").strip(),
+                    role=(rec.get("role") or "").strip(),
+                    town=(rec.get("town") or "").strip(),
+                    notes=(rec.get("notes") or "").strip(),
+                    active=str(rec.get("active", "true")).lower() in ("1", "true", "yes", "y"),
+                )
             )
-        )
+        except HTTPException as exc:
+            errors.append(f"Row {i}: {exc.detail}")
+            continue
+        if data["phone"] in seen or crew_phone_taken(db, data["phone"]):
+            errors.append(f"Row {i}: mobile {data['phone']} is already on the roster.")
+            continue
+        seen.add(data["phone"])
+        db.add(CrewMember(**data))
         added += 1
     db.commit()
     return {"added": added, "errors": errors}
@@ -456,7 +555,7 @@ def crew_export(fmt: str = "csv", _: str = Depends(require_admin), db: Session =
         }
         for w in db.query(CrewMember).all()
     ]
-    return _export_rows(rows, fmt, "hyraku-crew")
+    return _export_rows(rows, fmt, "hyraku-crew", db)
 
 
 @app.get("/api/bookings")

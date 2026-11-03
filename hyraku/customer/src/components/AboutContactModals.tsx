@@ -82,26 +82,37 @@ export const AboutModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
 
 export const ContactModal: React.FC<ModalProps> = ({ isOpen, onClose }) => {
   const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
   const [details, setDetails] = useState('');
+  const [formError, setFormError] = useState('');
 
   if (!isOpen) return null;
 
   async function submitEnquiry(e: React.FormEvent) {
     e.preventDefault();
-    const raw = contactName.trim();
-    const digits = raw.replace(/\D/g, '');
-    const phone = digits.length >= 10 ? digits.slice(-10) : digits;
-    const name = raw.replace(/[+0-9\s-]{8,}/, '').trim() || raw;
+    const name = contactName.trim();
+    const phone = contactPhone.replace(/\D/g, '');
+    const nameOk = name.length >= 2 && name.length <= 80 && /^\p{L}/u.test(name) && [...name].every((ch) => /\p{L}/u.test(ch) || " .'-".includes(ch));
+    if (!nameOk) {
+      setFormError('Enter a valid name (2–80 letters).');
+      return;
+    }
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      setFormError('Enter a valid 10-digit Indian mobile number.');
+      return;
+    }
+    setFormError('');
     const message = `*HYRAKU ENQUIRY*
 --------------------------
-*Name / Phone:* ${raw}
+*Name:* ${name}
+*Phone:* +91 ${phone}
 *Message:* ${details.trim()}
 --------------------------
 _Sent via Hyraku website_`;
     await persistHyrakuEnquiry({
       source: 'contact',
       customer_name: name,
-      phone: phone || '0000000000',
+      phone,
       message,
     });
     openHyrakuWhatsApp(message);
@@ -150,17 +161,34 @@ _Sent via Hyraku website_`;
             </div>
           </div>
 
-          <form onSubmit={submitEnquiry} className="space-y-3 pt-2">
+          <form onSubmit={submitEnquiry} className="space-y-3 pt-2" noValidate>
             <div>
               <input
                 type="text"
                 required
+                maxLength={80}
                 value={contactName}
-                onChange={(e) => setContactName(e.target.value)}
-                placeholder="Your Name & Phone Number"
+                onChange={(e) => { setContactName(e.target.value); setFormError(''); }}
+                placeholder="Your name"
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:ring-2 focus:ring-[#0091ea]"
               />
             </div>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-xs font-bold text-slate-400 select-none">
+                +91
+              </span>
+              <input
+                type="tel"
+                inputMode="numeric"
+                required
+                maxLength={10}
+                value={contactPhone}
+                onChange={(e) => { setContactPhone(e.target.value.replace(/\D/g, '').slice(0, 10)); setFormError(''); }}
+                placeholder="10-digit mobile number"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-12 pr-4 py-2.5 text-xs outline-none focus:ring-2 focus:ring-[#0091ea]"
+              />
+            </div>
+            {formError && <p className="text-xs text-rose-600">{formError}</p>}
             <div>
               <textarea
                 required

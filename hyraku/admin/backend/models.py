@@ -47,7 +47,7 @@ class CrewMember(Base):
     __tablename__ = "crew_members"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(160))
-    phone: Mapped[str] = mapped_column(String(20), default="")
+    phone: Mapped[str] = mapped_column(String(20), default="", index=True)
     trade: Mapped[str] = mapped_column(String(80), default="")
     role: Mapped[str] = mapped_column(String(80), default="")
     town: Mapped[str] = mapped_column(String(120), default="")

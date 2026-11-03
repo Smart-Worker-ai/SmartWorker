@@ -10,7 +10,7 @@ export default function CustomersPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-2xl font-black text-ink">Customers</h1>
         <div className="flex gap-2">
-          {['csv', 'xlsx', 'json'].map((fmt) => (
+          {['csv', 'pdf'].map((fmt) => (
             <a key={fmt} className="btn-ghost !py-2 text-xs uppercase" href={`/api/customers/export?fmt=${fmt}`}><Download size={14} /> {fmt}</a>
           ))}
         </div>

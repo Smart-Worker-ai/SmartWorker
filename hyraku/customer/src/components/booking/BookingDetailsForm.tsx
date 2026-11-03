@@ -55,6 +55,7 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
   const [isCustomLocality, setIsCustomLocality] = useState(false);
   const [customLocalityText, setCustomLocalityText] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
+  const [formError, setFormError] = useState('');
 
   // Handle town change - automatically switch correspondent localities
   const handleTownChange = (newTown: string) => {
@@ -149,15 +150,28 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const finalLocality = isCustomLocality ? (customLocalityText.trim() || locality) : locality;
-    if (!customerName.trim() || !mobileNumber.trim() || !finalLocality.trim()) {
+    const name = customerName.trim();
+    const phone = mobileNumber.replace(/\D/g, '');
+    const nameOk = name.length >= 2 && name.length <= 80 && /^\p{L}/u.test(name) && [...name].every((ch) => /\p{L}/u.test(ch) || " .'-".includes(ch));
+    if (!nameOk) {
+      setFormError(language === 'ml' ? 'സാധുവായ പേര് നൽകുക (2–80 അക്ഷരങ്ങൾ).' : 'Enter a valid name (2–80 letters).');
       return;
     }
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      setFormError(language === 'ml' ? 'സാധുവായ 10 അക്ക ഇന്ത്യൻ മൊബൈൽ നമ്പർ നൽകുക.' : 'Enter a valid 10-digit Indian mobile number.');
+      return;
+    }
+    if (!finalLocality.trim()) {
+      setFormError(language === 'ml' ? 'സ്ഥലം നൽകുക.' : 'Enter a locality.');
+      return;
+    }
+    setFormError('');
 
     const bookingPayload: CustomerBookingData = {
-      customerName,
+      customerName: name,
       town,
       locality: finalLocality,
-      mobileNumber,
+      mobileNumber: phone,
       bookingDate: formattedDateDisplay,
       selectedDatesList: selectedDates.length > 0 ? selectedDates : [formattedDateDisplay],
       totalWorkers: totalWorkers || 1,
@@ -255,7 +269,8 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
               type="text"
               required
               value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
+              maxLength={80}
+              onChange={(e) => { setCustomerName(e.target.value); setFormError(''); }}
               placeholder={t('client_name_placeholder')}
               className="w-full bg-slate-50/60 border border-slate-200 rounded-xl px-4 py-3 text-base sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0091ea] focus:border-[#0091ea] focus:bg-white transition-all"
             />
@@ -361,7 +376,7 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
                 required
                 maxLength={10}
                 value={mobileNumber}
-                onChange={(e) => setMobileNumber(e.target.value.replace(/\D/g, ''))}
+                onChange={(e) => { setMobileNumber(e.target.value.replace(/\D/g, '').slice(0, 10)); setFormError(''); }}
                 placeholder={t('phone_placeholder')}
                 className="w-full bg-slate-50/60 border border-slate-200 rounded-xl pl-12 pr-4 py-3 text-base sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0091ea] focus:border-[#0091ea] focus:bg-white transition-all"
               />
@@ -502,6 +517,7 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
 
           {/* Green WhatsApp Submit Button matching user design */}
           <div className="pt-2 space-y-2">
+            {formError && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-600">{formError}</p>}
             <button
               type="submit"
               className="w-full bg-[#10b981] hover:bg-[#059669] active:bg-[#047857] text-white py-4 px-6 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-500/25 active:scale-[0.98] transition-all cursor-pointer"
