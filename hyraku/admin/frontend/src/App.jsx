@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import api from './api.js';
 import Layout from './pages/Layout.jsx';
 import LoginPage from './pages/LoginPage.jsx';
+import LoginDoodles from './pages/LoginDoodles.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import EnquiriesPage from './pages/EnquiriesPage.jsx';
 import CustomersPage from './pages/CustomersPage.jsx';
@@ -17,7 +18,12 @@ function Protected({ children }) {
     api.get('/auth/me').then(() => setState({ loading: false, ok: true })).catch(() => setState({ loading: false, ok: false }));
   }, []);
   if (state.loading) {
-    return <div className="flex min-h-screen items-center justify-center"><div className="h-10 w-10 animate-spin rounded-full border-4 border-[#0091ea] border-t-transparent" /></div>;
+    return (
+      <div className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[radial-gradient(1200px_600px_at_50%_-10%,#bae6fd_0%,#e0f2fe_42%,#f8fbff_100%)]">
+        <LoginDoodles />
+        <div className="relative z-10 h-10 w-10 animate-spin rounded-full border-4 border-[#0091ea] border-t-transparent" />
+      </div>
+    );
   }
   return state.ok ? children : <Navigate to="/login" replace />;
 }

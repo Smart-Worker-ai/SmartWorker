@@ -2,13 +2,154 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  -webkit-text-size-adjust: 100%;
+  overflow-x: clip;
+}
+
 body {
   @apply bg-sky-50 text-slate-800 antialiased;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  min-height: 100dvh;
+  overflow-x: clip;
 }
+
 .font-display { font-family: Outfit, 'Plus Jakarta Sans', sans-serif; }
-.btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl bg-[#0091ea] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#0284c7] disabled:opacity-50; }
-.btn-ghost { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-sky-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-sky-50; }
-.field { @apply w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-[#0091ea] focus:ring-2 focus:ring-sky-100; }
-.card { @apply rounded-2xl border border-sky-100 bg-white p-5 shadow-sm; }
+.btn-primary { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#0091ea] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#0284c7] disabled:opacity-50; }
+.btn-ghost { @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-sky-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-sky-50; }
+.field { @apply w-full min-h-11 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base sm:text-sm outline-none focus:border-[#0091ea] focus:ring-2 focus:ring-sky-100; }
+.card { @apply rounded-2xl border border-sky-100 bg-white p-4 sm:p-5 shadow-sm; }
 .nav-active { @apply bg-sky-50 text-[#0091ea]; }
+.table-wrap { @apply -mx-4 overflow-x-auto sm:mx-0; }
+
+.login-scenes {
+  --px: 0;
+  --py: 0;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.login-ambient {
+  position: absolute;
+  inset: -18%;
+  background:
+    radial-gradient(46% 38% at 16% 24%, rgba(186, 230, 253, 0.55), transparent 68%),
+    radial-gradient(40% 34% at 86% 18%, rgba(14, 165, 233, 0.18), transparent 70%),
+    radial-gradient(48% 42% at 78% 86%, rgba(224, 242, 254, 0.7), transparent 72%);
+  animation: login-ambient 22s ease-in-out infinite alternate;
+}
+
+.login-layer-far,
+.login-layer-mid,
+.login-layer-near {
+  transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.login-layer-far { transform: translate3d(calc(var(--px) * 8px), calc(var(--py) * 6px), 0); }
+.login-layer-mid { transform: translate3d(calc(var(--px) * 16px), calc(var(--py) * 10px), 0); }
+.login-layer-near { transform: translate3d(calc(var(--px) * 24px), calc(var(--py) * 14px), 0); }
+
+.login-facade {
+  position: absolute;
+  top: 3%;
+  left: 4%;
+  width: min(38vw, 28rem);
+  opacity: 0.55;
+}
+.login-facade svg,
+.login-scene svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.login-facade-c {
+  left: 36%;
+  right: auto;
+  width: min(30vw, 22rem);
+  opacity: 0.32;
+}
+.login-facade-r {
+  left: auto;
+  right: 4%;
+  width: min(32vw, 24rem);
+  opacity: 0.4;
+}
+
+.login-scene {
+  position: absolute;
+  overflow: visible;
+}
+
+.login-v-a { top: 10%; left: 0.5%; width: min(28vw, 20rem); }
+.login-v-b { top: 2%; right: 1%; width: min(18vw, 13.5rem); }
+.login-v-c { top: 4%; left: 28%; width: min(13vw, 10rem); opacity: 0.75; }
+.login-v-d { top: 3%; right: 20%; width: min(12vw, 9.5rem); opacity: 0.75; }
+.login-v-e { top: 42%; left: 0%; width: min(20vw, 15rem); }
+.login-v-f { top: 38%; right: 0%; width: min(20vw, 15rem); }
+.login-v-g { bottom: 3%; left: 1%; width: min(18vw, 14rem); }
+.login-v-h { right: 1%; bottom: 4%; width: min(26vw, 19rem); }
+.login-v-i { bottom: 1%; left: 22%; width: min(16vw, 12rem); opacity: 0.8; }
+.login-v-j { bottom: 2%; right: 24%; width: min(15vw, 11.5rem); opacity: 0.8; }
+.login-v-k { top: 58%; left: 16%; width: min(12vw, 9rem); opacity: 0.7; }
+.login-v-l { top: 58%; right: 16%; width: min(14vw, 11rem); opacity: 0.7; }
+
+.login-v-a svg { animation: login-settle 16s ease-in-out infinite; }
+.login-v-b svg { animation: login-settle 20s ease-in-out infinite 0.6s; }
+.login-v-c svg { animation: login-settle 18s ease-in-out infinite 1s; }
+.login-v-d svg { animation: login-settle 19s ease-in-out infinite 1.5s; }
+.login-v-e svg { animation: login-settle 17s ease-in-out infinite 0.4s; }
+.login-v-f svg { animation: login-settle 21s ease-in-out infinite 0.8s; }
+.login-v-g svg { animation: login-settle 17s ease-in-out infinite 2s; }
+.login-v-h svg { animation: login-settle 18s ease-in-out infinite 1.4s; }
+.login-v-i svg { animation: login-settle 22s ease-in-out infinite 1.1s; }
+.login-v-j svg { animation: login-settle 16.5s ease-in-out infinite 0.3s; }
+.login-v-k svg { animation: login-settle 19.5s ease-in-out infinite 1.8s; }
+.login-v-l svg { animation: login-settle 20.5s ease-in-out infinite 0.9s; }
+
+.hy-sheer { transform-origin: 50% 0%; animation: login-sheer 14s ease-in-out infinite; }
+.hy-light { animation: login-light 12s ease-in-out infinite; }
+.hy-drip { animation: login-drip 4.8s ease-in infinite; }
+
+@keyframes login-ambient {
+  from { transform: translate3d(-1.2%, 0, 0); }
+  to { transform: translate3d(1.4%, 1.6%, 0); }
+}
+@keyframes login-settle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes login-sheer {
+  0%, 100% { transform: skewX(0deg); opacity: 0.5; }
+  50% { transform: skewX(3deg); opacity: 0.7; }
+}
+@keyframes login-light {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.7; }
+}
+@keyframes login-drip {
+  0% { transform: translateY(0); opacity: 0; }
+  18% { opacity: 0.8; }
+  100% { transform: translateY(14px); opacity: 0; }
+}
+
+@media (max-width: 1100px) {
+  .login-v-k, .login-v-l, .login-facade-c { display: none; }
+}
+
+@media (max-width: 900px) {
+  .login-v-e, .login-v-f, .login-v-i, .login-v-j, .login-facade { display: none; }
+  .login-v-a, .login-v-h { opacity: 0.8; }
+}
+
+@media (max-width: 640px) {
+  .login-v-b, .login-v-g { display: none; }
+  .login-v-a, .login-v-h { opacity: 0.32; width: min(42vw, 11rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-ambient, .login-scene svg, .hy-sheer, .hy-light, .hy-drip { animation: none; }
+  .login-layer-far, .login-layer-mid, .login-layer-near { transition: none; transform: none; }
+}
