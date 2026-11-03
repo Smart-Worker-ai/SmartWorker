@@ -6,6 +6,8 @@ Git branch: **`prod-deployed`** on [Smart-Worker-ai/SmartWorker](https://github.
 
 This folder is what lives on the VPS at `/opt/hyraku`. Secrets stay in `.env.hyraku` on the server only (not in git).
 
+**Version:** `1.0.0` (first stable, 3 Nov 2026). See `VERSION` and `CHANGELOG.md`. Next drop: bump `VERSION`, add a changelog section, then rsync.
+
 ## Status (2 Nov 2026)
 
 Docker **is running** on AIC Cloud VPS **hyraku** (`vps-vys4`).
@@ -29,7 +31,7 @@ Public HTTP is blocked because this plan is a **Linux container on a shared IPv4
 ```
 ssh -p 20115 -o IdentitiesOnly=yes root@15.235.145.222
 cd /opt/hyraku
-docker compose --env-file .env.hyraku ps
+docker compose ps
 ```
 
 Caddy currently publishes **80**, **3000**, and env `HYRAKU_HTTP_PORT` (set to **3000**). Admin is on **31081**. API **8002** is internal only.
@@ -80,22 +82,18 @@ Add Domain target port: **80**. No `admin` domain: the admin desk is reached ove
 
 ## Update code
 
-Laptop, from this `hyraku/` directory:
+From this `hyraku/` directory:
 
 ```bash
-rsync -az --exclude node_modules --exclude .venv --exclude .env.hyraku \
-  -e "ssh -p 20115 -o IdentitiesOnly=yes" \
-  ./ root@15.235.145.222:/opt/hyraku/
+# once: password as the only line in this file (gitignored, never rsynced)
+printf '%s\n' 'YOUR_VPS_PASSWORD' > .vps-password
+chmod 600 .vps-password
+
+./deploy-vps.sh          # copy customer + admin
+./deploy-vps.sh --build  # copy, then rebuild those containers on the VPS
 ```
 
-On the VPS:
-
-```bash
-cd /opt/hyraku
-docker compose --env-file .env.hyraku up -d --build
-```
-
-Do not rsync `.env.hyraku`. After OS reinstall, SSH host key changes — `ssh-keygen -R '[15.235.145.222]:20115'`.
+Skips `node_modules`, `dist`, `.venv`, `data`, `.env.hyraku`, and `.vps-password`. After OS reinstall, SSH host key changes — `ssh-keygen -R '[15.235.145.222]:20115'`.
 
 ## Layout
 

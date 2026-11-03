@@ -4,5 +4,6 @@
 admin/backend/data/
 **/.env
 .env.hyraku
+.vps-password
 __pycache__/
 *.pyc

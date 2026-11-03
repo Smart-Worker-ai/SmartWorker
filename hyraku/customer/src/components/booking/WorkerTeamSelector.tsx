@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import { 
   Users, 
   ShieldCheck, 
@@ -242,11 +241,8 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
             const atLimit = tradeTotal(cat.id) >= available;
 
             return (
-              <motion.div
+              <div
                 key={cat.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.28 }}
                 className={`rounded-2xl border p-4 sm:p-5 shadow-sm space-y-2.5 h-full ${
                   unavailable ? 'bg-slate-50 border-slate-200' : 'bg-white border-slate-100'
                 }`}
@@ -375,7 +371,7 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
                 </div>
                 </>
                 )}
-              </motion.div>
+              </div>
             );
           })}
         </div>

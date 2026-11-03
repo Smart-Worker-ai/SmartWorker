@@ -105,7 +105,7 @@ export const Hero: React.FC<HeroProps> = () => {
               <img
                 src={CREW_PHOTO}
                 alt={language === 'ml' ? 'ഹൈറാകു ഫീൽഡ് ക്രൂ' : 'Hyraku field crew walking onto a construction site'}
-                className="w-full aspect-[4/3] object-cover object-[center_42%]"
+                className="w-full aspect-[4/3] object-cover object-center"
               />
               <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-md rounded-2xl p-3.5 border border-sky-100 shadow-lg flex items-center justify-between">
                 <div className="flex items-center gap-3">
