@@ -11,6 +11,7 @@ import { WORKER_CATEGORIES } from '../data/workersData';
 import { WorkerCategory, WorkerTypeInfo } from '../types';
 import { ArrowRight, HardHat, ShieldCheck, Clock, Users, PhoneCall } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
+import { HyrakuLogo } from './HyrakuLogo';
 
 const MAX_TILT = 14;
 
@@ -187,9 +188,7 @@ export const WorkerCategories: React.FC<WorkerCategoriesProps> = ({
       <div className="max-w-6xl mx-auto px-3.5 sm:px-6">
         {/* hyraku branding title above worker types matching screenshot 1793420728063_9dd82ffd.png */}
         <div className="mb-3 sm:mb-4">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#7cb7e3] font-sans tracking-tight lowercase">
-            hyraku
-          </h2>
+          <HyrakuLogo variant="blue" imgClassName="h-9 sm:h-11" />
         </div>
 
         {/* Clean Grid of Worker Types matching user screenshot */}

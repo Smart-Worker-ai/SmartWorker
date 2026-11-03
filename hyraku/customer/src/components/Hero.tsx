@@ -2,7 +2,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ShieldCheck, HardHat, CheckCircle2 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
-import CrewScene from './CrewScene.jsx';
+
+const CREW_PHOTO = '/assets/hyraku-field-crew.png';
 
 interface HeroProps {
   onBookClick?: () => void;
@@ -53,7 +54,11 @@ export const Hero: React.FC<HeroProps> = () => {
               variants={fadeUp}
               className="sm:hidden relative rounded-2xl overflow-hidden border-2 border-sky-200 shadow-md shadow-sky-100 bg-white my-3"
             >
-              <CrewScene compact />
+              <img
+                src={CREW_PHOTO}
+                alt={language === 'ml' ? 'ഹൈറാകു ഫീൽഡ് ടീം' : 'Hyraku field crew on site'}
+                className="w-full aspect-[16/10] object-cover object-center"
+              />
               <div className="absolute bottom-2.5 left-2.5 right-2.5 bg-slate-900/85 backdrop-blur-sm rounded-xl px-3 py-2 text-white flex items-center justify-between border border-white/20 shadow-md">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-[#0091ea] shrink-0" />
@@ -97,7 +102,11 @@ export const Hero: React.FC<HeroProps> = () => {
             transition={{ duration: 0.55, ease: 'easeOut', delay: 0.15 }}
           >
             <div className="relative rounded-3xl overflow-hidden border-2 border-sky-200/90 shadow-xl shadow-sky-100 bg-white">
-              <CrewScene />
+              <img
+                src={CREW_PHOTO}
+                alt={language === 'ml' ? 'ഹൈറാകു ഫീൽഡ് ക്രൂ' : 'Hyraku field crew walking onto a construction site'}
+                className="w-full aspect-[4/3] object-cover object-[center_42%]"
+              />
               <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-md rounded-2xl p-3.5 border border-sky-100 shadow-lg flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-sky-100 flex items-center justify-center text-[#0091ea]">

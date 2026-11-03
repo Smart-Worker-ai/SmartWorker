@@ -17,28 +17,16 @@ export const HyrakuLogo: React.FC<HyrakuLogoProps> = ({
   taglineClassName = 'text-[10px] uppercase font-bold tracking-widest text-slate-400',
   onClick,
 }) => {
-  const fill = variant === 'white' ? '#ffffff' : '#0091ea';
+  const src = variant === 'white' ? '/assets/hyraku-logo-white.png' : '/assets/hyraku-logo-blue.png';
 
   const content = (
     <div className={`inline-flex flex-col items-start ${className}`}>
-      <svg
-        viewBox="0 0 168 36"
-        className={`object-contain select-none ${imgClassName}`}
-        role="img"
-        aria-label="Hyraku"
-      >
-        <text
-          x="0"
-          y="28"
-          fill={fill}
-          fontFamily="Outfit, Plus Jakarta Sans, sans-serif"
-          fontWeight="800"
-          fontSize="30"
-          letterSpacing="-0.04em"
-        >
-          hyraku
-        </text>
-      </svg>
+      <img
+        src={src}
+        alt="Hyraku"
+        className={`object-contain object-left select-none ${imgClassName}`}
+        draggable={false}
+      />
       {showTagline && (
         <span className={taglineClassName}>Your Reliable Labour Partner</span>
       )}
