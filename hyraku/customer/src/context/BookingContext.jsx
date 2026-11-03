@@ -59,9 +59,10 @@ export function BookingProvider({ children }) {
     };
   }, []);
 
-  /** Active crew for a trade; Infinity when availability is unknown so booking still works. */
+  /** Active crew for a trade. After load, missing API or missing trade means 0 (show Not available). */
   function availableFor(catId) {
-    if (!availability) return Infinity;
+    if (!availabilityLoaded) return Infinity;
+    if (!availability) return 0;
     return Number(availability[catId]) || 0;
   }
 
