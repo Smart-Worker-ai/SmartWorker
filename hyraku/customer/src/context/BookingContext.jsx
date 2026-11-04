@@ -59,11 +59,10 @@ export function BookingProvider({ children }) {
     };
   }, []);
 
-  /** Active crew for a trade. After load, missing API or missing trade means 0 (show Not available). */
+  /** Bookable count = active crew registered for that trade. No extra cap. */
   function availableFor(catId) {
-    if (!availabilityLoaded) return Infinity;
-    if (!availability) return 0;
-    return Number(availability[catId]) || 0;
+    if (!availabilityLoaded || !availability) return 0;
+    return Math.max(0, Number(availability[catId]) || 0);
   }
 
   function tradeTotal(counts, catId) {

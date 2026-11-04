@@ -189,6 +189,8 @@ def public_enquiry(body: PublicEnquiryIn, db: Session = Depends(get_db)):
     locality = validate_place(body.locality, "Locality")
     if body.message and len(body.message.strip()) > 2000:
         raise HTTPException(400, "Message must be 2000 characters or fewer.")
+    if (body.source or "booking") != "contact":
+        assert_crew_within_roster(db, body.crew_json)
     ref = body.ref_code or ("HYR-" + str(secrets.randbelow(90000) + 10000))
     while db.query(Enquiry).filter(Enquiry.ref_code == ref).first():
         ref = "HYR-" + str(secrets.randbelow(90000) + 10000)
@@ -234,15 +236,48 @@ def trade_id(text: str) -> str | None:
     return _TRADE_LOOKUP.get(_norm(text))
 
 
-@app.get("/api/public/availability")
-def public_availability(db: Session = Depends(get_db)):
-    """Active crew count per fixed trade. Counts only; no crew details leave admin."""
+def roster_counts(db: Session) -> dict:
     counts = {tid: 0 for tid in TRADES}
     for (trade,) in db.query(CrewMember.trade).filter(CrewMember.active.is_(True)).all():
         tid = trade_id(trade)
         if tid:
             counts[tid] += 1
-    return {"trades": counts}
+    return counts
+
+
+def requested_trade_counts(crew_json) -> dict:
+    requested = {tid: 0 for tid in TRADES}
+    if not isinstance(crew_json, dict):
+        return requested
+    for key, raw in crew_json.items():
+        try:
+            n = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if n <= 0:
+            continue
+        key_s = str(key)
+        matched = next((tid for tid in TRADES if key_s == tid or key_s.startswith(tid + "_")), None)
+        if not matched:
+            raise HTTPException(400, "Unknown trade in booking.")
+        requested[matched] += n
+    return requested
+
+
+def assert_crew_within_roster(db: Session, crew_json) -> None:
+    requested = requested_trade_counts(crew_json)
+    if sum(requested.values()) < 1:
+        raise HTTPException(400, "Select at least one worker.")
+    roster = roster_counts(db)
+    for tid, n in requested.items():
+        if n > roster.get(tid, 0):
+            raise HTTPException(400, "Not enough registered crew for that trade.")
+
+
+@app.get("/api/public/availability")
+def public_availability(db: Session = Depends(get_db)):
+    """Active crew count per fixed trade. Counts only; no crew details leave admin."""
+    return {"trades": roster_counts(db)}
 
 
 # ── auth / totp ─────────────────────────────────────────────────────────────
