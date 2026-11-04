@@ -16,7 +16,7 @@ import {
   PhoneCall,
   UserX
 } from 'lucide-react';
-import { WORKER_CATEGORIES } from '../../data/workersData';
+import { MAX_WORKERS_PER_TRADE, WORKER_CATEGORIES } from '../../data/workersData';
 import { WorkerCategory, CrewCounts } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -185,6 +185,11 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
               </span>
             )}
           </div>
+          <p className="text-[11px] text-slate-500 font-medium">
+            {language === 'ml'
+              ? `ഒരു വിഭാഗത്തിൽ ഒരു ബുക്കിംഗിൽ പരമാവധി ${MAX_WORKERS_PER_TRADE} തൊഴിലാളികൾ.`
+              : `Max ${MAX_WORKERS_PER_TRADE} workers per trade per booking.`}
+          </p>
 
           {/* Quick Trade Selector Dropdown (Vertical, No Horizontal Swiping) */}
           <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">

@@ -6,7 +6,7 @@ Git branch: **`prod-deployed`** on [Smart-Worker-ai/SmartWorker](https://github.
 
 This folder is what lives on the VPS at `/opt/hyraku`. Secrets stay in `.env.hyraku` on the server only (not in git).
 
-**Version:** `1.0.0` (first stable, 3 Nov 2026). See `VERSION` and `CHANGELOG.md`. Next drop: bump `VERSION`, add a changelog section, then rsync.
+**Version:** `1.1.0` (4 Nov 2026). First stable was `1.0.0`. See `VERSION` and `CHANGELOG.md`.
 
 ## Status (2 Nov 2026)
 

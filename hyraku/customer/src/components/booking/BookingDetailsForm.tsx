@@ -9,14 +9,25 @@ import {
   RotateCcw,
   AlertCircle,
   ChevronDown,
-  MapPin
+  MapPin,
+  Zap
 } from 'lucide-react';
-import { WORKER_CATEGORIES } from '../../data/workersData';
+import { FLASH_LEAD_DAYS, FLASH_MAX_DAYS, MAX_BOOKING_DAYS, MIN_LEAD_DAYS, WORKER_CATEGORIES } from '../../data/workersData';
 import { KOZHIKODE_TOWNS, getLocalitiesForTown } from '../../data/keralaLocations';
 
 import { CrewCounts, WorkerCategory } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
-import { dateKey, getAdvanceMonths, nextWorkDates } from '../../lib/bookingCalendar';
+import {
+  addDays,
+  dateFromParts,
+  dateKey,
+  earliestBookableDate,
+  getAdvanceMonths,
+  isInInclusiveRange,
+  isOnOrAfter,
+  parseDateKey,
+  windowEndDate,
+} from '../../lib/bookingCalendar';
 
 interface BookingDetailsFormProps {
   crewCounts: CrewCounts;
@@ -35,9 +46,15 @@ export interface CustomerBookingData {
   totalWorkers: number;
   totalDailyWage: number;
   crewSummaryText: string;
+  bookingMode: 'standard' | 'flash';
 }
 
 const FOUR_ADVANCE_MONTHS = getAdvanceMonths(4);
+
+function monthForDate(d: Date) {
+  const idx = FOUR_ADVANCE_MONTHS.findIndex((m) => m.year === d.getFullYear() && m.monthIndex === d.getMonth());
+  return { idx: idx < 0 ? 0 : idx, month: FOUR_ADVANCE_MONTHS[idx < 0 ? 0 : idx] };
+}
 
 export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
   crewCounts,
@@ -56,6 +73,9 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
   const [customLocalityText, setCustomLocalityText] = useState('');
   const [mobileNumber, setMobileNumber] = useState('');
   const [formError, setFormError] = useState('');
+  const [bookingMode, setBookingMode] = useState<'standard' | 'flash'>('standard');
+  const leadDays = bookingMode === 'flash' ? FLASH_LEAD_DAYS : MIN_LEAD_DAYS;
+  const maxDays = bookingMode === 'flash' ? FLASH_MAX_DAYS : MAX_BOOKING_DAYS;
 
   // Handle town change - automatically switch correspondent localities
   const handleTownChange = (newTown: string) => {
@@ -79,13 +99,21 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
   };
 
 
-  // 4 Month Advance Calendar State (Inline direct interactive selector)
-  const [selectedMonthIndex, setSelectedMonthIndex] = useState(0);
-  const [selectedDates, setSelectedDates] = useState<string[]>(() => {
-    const month = FOUR_ADVANCE_MONTHS[0];
-    const presets = nextWorkDates(month);
-    return [dateKey(presets.tomorrow, month)];
-  });
+  const earliest = earliestBookableDate(leadDays);
+  const earliestMeta = monthForDate(earliest);
+  const earliestKey = dateKey(earliest.getDate(), earliestMeta.month);
+
+  const [selectedMonthIndex, setSelectedMonthIndex] = useState(earliestMeta.idx);
+  const [selectedDates, setSelectedDates] = useState<string[]>([earliestKey]);
+
+  const applyBookingMode = (next: 'standard' | 'flash') => {
+    setBookingMode(next);
+    const d = earliestBookableDate(next === 'flash' ? FLASH_LEAD_DAYS : MIN_LEAD_DAYS);
+    const meta = monthForDate(d);
+    setSelectedMonthIndex(meta.idx);
+    setSelectedDates([dateKey(d.getDate(), meta.month)]);
+    setFormError('');
+  };
 
   // Compute selected worker details & summary text
   let totalWorkers = 0;
@@ -113,24 +141,45 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
     ? WORKER_CATEGORIES.find((c) => c.id === selectedCategory)?.shortName || 'Workers'
     : (language === 'ml' ? 'നിർമ്മാണ തൊഴിലാളികൾ' : 'Skilled Labour Crew');
 
-  // Toggle or select a date in the calendar
+  const parsedSelected = selectedDates
+    .map(parseDateKey)
+    .filter((d): d is Date => !!d)
+    .sort((a, b) => a.getTime() - b.getTime());
+  const windowStart = parsedSelected[0] || null;
+  const windowEnd = windowStart ? windowEndDate(windowStart, maxDays) : null;
+
   const handleToggleDate = (day: number) => {
     const activeMonth = FOUR_ADVANCE_MONTHS[selectedMonthIndex];
     const key = dateKey(day, activeMonth);
+    const d = dateFromParts(day, activeMonth);
+    if (!isOnOrAfter(d, earliest)) return;
 
     setSelectedDates((prev) => {
       if (prev.includes(key)) {
         if (prev.length === 1) return prev;
-        return prev.filter((d) => d !== key);
+        return prev.filter((x) => x !== key);
       }
+      if (bookingMode === 'flash') return [key];
+      const existing = prev.map(parseDateKey).filter((x): x is Date => !!x).sort((a, b) => a.getTime() - b.getTime());
+      if (!existing.length) return [key];
+      const start = existing[0];
+      const end = windowEndDate(start, maxDays);
+      if (!isInInclusiveRange(d, start, end)) return prev;
       return [...prev, key];
     });
   };
 
-  const handleSelectQuickPreset = (preset: 'tomorrow' | 'in2days' | 'nextMonday') => {
-    const activeMonth = FOUR_ADVANCE_MONTHS[selectedMonthIndex];
-    const presets = nextWorkDates(activeMonth);
-    setSelectedDates([dateKey(presets[preset], activeMonth)]);
+  const handleSelectEarliest = () => {
+    setSelectedMonthIndex(earliestMeta.idx);
+    setSelectedDates([earliestKey]);
+  };
+
+  const handleSelectNextMonday = () => {
+    const offset = (8 - earliest.getDay()) % 7 || 7;
+    const monday = addDays(earliest, offset);
+    const meta = monthForDate(monday);
+    setSelectedMonthIndex(meta.idx);
+    setSelectedDates([dateKey(monday.getDate(), meta.month)]);
   };
 
   const formattedDateDisplay = selectedDates.length > 0
@@ -165,6 +214,34 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
       setFormError(language === 'ml' ? 'സ്ഥലം നൽകുക.' : 'Enter a locality.');
       return;
     }
+    if (selectedDates.length < 1) {
+      setFormError(language === 'ml' ? 'ജോലി തീയതി തിരഞ്ഞെടുക്കുക.' : 'Select at least one work date.');
+      return;
+    }
+    const chosen = selectedDates.map(parseDateKey).filter((d): d is Date => !!d).sort((a, b) => a.getTime() - b.getTime());
+    if (!chosen.length || chosen.some((d) => !isOnOrAfter(d, earliest))) {
+      setFormError(
+        language === 'ml'
+          ? `${leadDays} ദിവസം മുമ്പ് ബുക്ക് ചെയ്യുക.`
+          : bookingMode === 'flash'
+            ? 'Flash booking needs at least 24 hours’ notice (tomorrow or later).'
+            : `Book at least ${leadDays} days in advance.`
+      );
+      return;
+    }
+    if (bookingMode === 'flash' && chosen.length !== 1) {
+      setFormError(language === 'ml' ? 'ഫ്ലാഷ് ബുക്കിംഗ് ഒരു ദിവസം മാത്രം.' : 'Flash booking is for a single day only.');
+      return;
+    }
+    const spanEnd = windowEndDate(chosen[0], maxDays);
+    if (chosen.some((d) => !isInInclusiveRange(d, chosen[0], spanEnd))) {
+      setFormError(
+        language === 'ml'
+          ? `ആദ്യ ജോലി ദിവസം മുതൽ ${maxDays} ദിവസത്തിനുള്ളിൽ മാത്രം.`
+          : `Work days must fall within ${maxDays} consecutive days from the first work day.`
+      );
+      return;
+    }
     setFormError('');
 
     const bookingPayload: CustomerBookingData = {
@@ -177,6 +254,7 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
       totalWorkers: totalWorkers || 1,
       totalDailyWage,
       crewSummaryText: displaySelectedWorkers,
+      bookingMode,
     };
 
     onSubmitBooking(bookingPayload);
@@ -387,6 +465,35 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
           <div className="space-y-5 lg:border-l lg:border-slate-100 lg:pl-8">
           {/* Date for Work Option (Redesigned Direct Interactive Experience) */}
           <div className="pt-2 border-t border-slate-100 lg:border-t-0 lg:pt-0">
+            <div className="grid grid-cols-2 gap-1.5 p-1 mb-3 bg-slate-100 rounded-xl">
+              <button
+                type="button"
+                onClick={() => applyBookingMode('standard')}
+                className={`py-2 px-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                  bookingMode === 'standard' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                {language === 'ml' ? 'സാധാരണ' : 'Standard'}
+                <span className="block text-[10px] font-semibold text-slate-400">
+                  {language === 'ml' ? `${MIN_LEAD_DAYS} ദിവസം മുമ്പ് · ${MAX_BOOKING_DAYS} ദിവസം` : `${MIN_LEAD_DAYS}-day notice · up to ${MAX_BOOKING_DAYS} days`}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => applyBookingMode('flash')}
+                className={`py-2 px-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                  bookingMode === 'flash' ? 'bg-amber-50 text-amber-900 shadow-sm border border-amber-200' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <span className="inline-flex items-center justify-center gap-1">
+                  <Zap className="w-3 h-3" />
+                  {language === 'ml' ? 'ഫ്ലാഷ്' : 'Flash'}
+                </span>
+                <span className="block text-[10px] font-semibold text-slate-400">
+                  {language === 'ml' ? '24 മണിക്കൂർ · 1 ദിവസം' : '24-hour notice · 1 day only'}
+                </span>
+              </button>
+            </div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-[11px] font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
                 <CalendarIcon className="w-3.5 h-3.5 text-[#0091ea]" />
@@ -400,7 +507,10 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
               {selectedDates.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setSelectedDates([])}
+                  onClick={() => {
+                    setSelectedMonthIndex(earliestMeta.idx);
+                    setSelectedDates([earliestKey]);
+                  }}
                   className="text-[10px] font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1 cursor-pointer"
                 >
                   <RotateCcw className="w-3 h-3" />
@@ -413,26 +523,28 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
             <div className="flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none">
               <button
                 type="button"
-                onClick={() => handleSelectQuickPreset('tomorrow')}
+                onClick={handleSelectEarliest}
                 className="px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200 text-[11px] font-bold text-[#0091ea] whitespace-nowrap active:scale-95 transition-all cursor-pointer"
               >
-                {language === 'ml' ? 'നാളെ' : 'Tomorrow'}
+                {language === 'ml' ? 'ഏറ്റവും വേഗം' : 'Earliest'}
               </button>
               <button
                 type="button"
-                onClick={() => handleSelectQuickPreset('in2days')}
-                className="px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200 text-[11px] font-bold text-[#0091ea] whitespace-nowrap active:scale-95 transition-all cursor-pointer"
-              >
-                {language === 'ml' ? '2 ദിവസത്തിനകം' : 'In 2 Days'}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSelectQuickPreset('nextMonday')}
+                onClick={handleSelectNextMonday}
                 className="px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200 text-[11px] font-bold text-[#0091ea] whitespace-nowrap active:scale-95 transition-all cursor-pointer"
               >
                 {language === 'ml' ? 'അടുത്ത തിങ്കൾ' : 'Next Monday'}
               </button>
             </div>
+            <p className="text-[11px] text-slate-500 font-medium pb-1">
+              {bookingMode === 'flash'
+                ? (language === 'ml'
+                  ? 'ഫ്ലാഷ്: നാളെയോ അതിനു ശേഷമോ ഒരു ദിവസം മാത്രം.'
+                  : 'Flash: one day only, tomorrow or later (24-hour notice). Today is closed.')
+                : (language === 'ml'
+                  ? `ഇന്ന് മുതൽ ${MIN_LEAD_DAYS} ദിവസം കഴിഞ്ഞേ ബുക്ക് ചെയ്യാം. ആദ്യ ദിവസം മുതൽ ${MAX_BOOKING_DAYS} തുടർ ദിവസം.`
+                  : `Book at least ${MIN_LEAD_DAYS} days ahead (e.g. the 3rd on the 1st). Up to ${MAX_BOOKING_DAYS} consecutive days from the first work day.`)}
+            </p>
 
             {/* Direct Inline Calendar Card (No modal barrier!) */}
             <div className="bg-sky-50/40 border border-sky-200/80 rounded-2xl p-3 space-y-3">
@@ -460,7 +572,7 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
                   <span>{language === 'ml' ? currentMonth.nameMl : currentMonth.nameEn}</span>
                 </span>
                 <span className="text-[10px] text-sky-600 font-semibold bg-white border border-sky-100 px-2 py-0.5 rounded-md">
-                  {selectedDates.length} {language === 'ml' ? 'തീയതികൾ തിരഞ്ഞെടുത്തു' : 'days picked'}
+                  {selectedDates.length}/{maxDays} {language === 'ml' ? 'ദിവസം' : 'days'}
                 </span>
               </div>
 
@@ -481,17 +593,24 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
                   }
 
                   const key = dateKey(day, currentMonth);
+                  const cellDate = dateFromParts(day, currentMonth);
                   const isSelected = selectedDates.includes(key);
+                  const tooSoon = !isOnOrAfter(cellDate, earliest);
+                  const outsideWindow = bookingMode !== 'flash' && !!(windowStart && windowEnd && !isSelected && !isInInclusiveRange(cellDate, windowStart, windowEnd));
+                  const blocked = tooSoon || outsideWindow;
 
                   return (
                     <button
                       key={day}
                       type="button"
+                      disabled={blocked}
                       onClick={() => handleToggleDate(day)}
-                      className={`h-8 sm:h-9 rounded-xl text-xs font-bold flex items-center justify-center transition-all cursor-pointer active:scale-90 ${
+                      className={`h-8 sm:h-9 rounded-xl text-xs font-bold flex items-center justify-center transition-all ${
                         isSelected
-                          ? 'bg-[#0091ea] text-white shadow-sm font-black'
-                          : 'bg-white hover:bg-sky-100/70 text-slate-700 border border-slate-100 hover:border-sky-300'
+                          ? 'bg-[#0091ea] text-white shadow-sm font-black cursor-pointer active:scale-90'
+                          : blocked
+                            ? 'bg-slate-50 text-slate-300 border border-slate-100 cursor-not-allowed'
+                            : 'bg-white hover:bg-sky-100/70 text-slate-700 border border-slate-100 hover:border-sky-300 cursor-pointer active:scale-90'
                       }`}
                     >
                       {day}
@@ -509,7 +628,11 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
                   </span>
                 </div>
                 <span className="text-[10px] text-sky-700 font-semibold bg-sky-100/70 px-2 py-0.5 rounded-md self-start sm:self-auto">
-                  {language === 'ml' ? 'ഹൈറാകു ലഭ്യത പരിശോധിക്കും' : 'Subject to Hyraku Availability'}
+                  {bookingMode === 'flash'
+                    ? (language === 'ml' ? 'ഫ്ലാഷ് · 1 ദിവസം · 24 മണിക്കൂർ' : 'Flash · 1 day · 24-hour notice')
+                    : (language === 'ml'
+                      ? `ആദ്യ ദിവസം മുതൽ ${MAX_BOOKING_DAYS} ദിവസം · ${MIN_LEAD_DAYS} ദിവസം മുമ്പ് ബുക്ക് ചെയ്യുക`
+                      : `${MAX_BOOKING_DAYS} consecutive days from start · ${MIN_LEAD_DAYS}-day notice`)}
                 </span>
               </div>
             </div>

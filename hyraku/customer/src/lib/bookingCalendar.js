@@ -52,18 +52,63 @@ export function dateKey(day, month) {
   return `${day} ${monthShort} ${month.year}`;
 }
 
-export function nextWorkDates(month) {
-  const now = new Date();
-  const isCurrent =
-    now.getFullYear() === month.year && now.getMonth() === month.monthIndex;
-  const tomorrow = isCurrent ? now.getDate() + 1 : 1;
-  const inTwo = tomorrow + 1;
-  const weekday = new Date(month.year, month.monthIndex, tomorrow).getDay();
+export function dateFromParts(day, month) {
+  return new Date(month.year, month.monthIndex, day);
+}
+
+export function parseDateKey(key) {
+  const m = String(key || '').trim().match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})$/);
+  if (!m) return null;
+  const monthIndex = EN_MONTHS.findIndex((n) => n.slice(0, 3).toLowerCase() === m[2].toLowerCase());
+  if (monthIndex < 0) return null;
+  return new Date(Number(m[3]), monthIndex, Number(m[1]));
+}
+
+export function startOfToday(from = new Date()) {
+  return new Date(from.getFullYear(), from.getMonth(), from.getDate());
+}
+
+export function addDays(d, n) {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() + n);
+  return x;
+}
+
+export function earliestBookableDate(leadDays, from = new Date()) {
+  return addDays(startOfToday(from), leadDays);
+}
+
+export function windowEndDate(start, maxDays) {
+  return addDays(start, Math.max(1, maxDays) - 1);
+}
+
+function ymd(d) {
+  return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+}
+
+export function isSameDay(a, b) {
+  return a && b && ymd(a) === ymd(b);
+}
+
+export function isOnOrAfter(a, b) {
+  return a && b && ymd(a) >= ymd(b);
+}
+
+export function isInInclusiveRange(d, start, end) {
+  return d && start && end && ymd(d) >= ymd(start) && ymd(d) <= ymd(end);
+}
+
+export function nextWorkDates(month, leadDays = 2) {
+  const earliest = earliestBookableDate(leadDays);
+  const inMonth =
+    earliest.getFullYear() === month.year && earliest.getMonth() === month.monthIndex;
+  const soonestDay = inMonth ? earliest.getDate() : earliest > dateFromParts(1, month) ? null : 1;
+  const weekday = new Date(month.year, month.monthIndex, soonestDay || 1).getDay();
   const daysUntilMonday = (8 - weekday) % 7 || 7;
-  const nextMonday = tomorrow + daysUntilMonday;
+  const nextMonday = (soonestDay || 1) + daysUntilMonday;
   return {
-    tomorrow: Math.min(tomorrow, month.daysInMonth),
-    in2days: Math.min(inTwo, month.daysInMonth),
+    tomorrow: Math.min((soonestDay || 1) + 1, month.daysInMonth),
+    in2days: soonestDay == null ? month.daysInMonth : Math.min(soonestDay, month.daysInMonth),
     nextMonday: Math.min(nextMonday, month.daysInMonth),
   };
 }

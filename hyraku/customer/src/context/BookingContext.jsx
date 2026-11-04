@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { WORKER_CATEGORIES } from '../data/workersData';
+import { MAX_WORKERS_PER_TRADE, WORKER_CATEGORIES } from '../data/workersData';
 
 const BookingContext = createContext(null);
 
@@ -59,11 +59,12 @@ export function BookingProvider({ children }) {
     };
   }, []);
 
-  /** Active crew for a trade. After load, missing API or missing trade means 0 (show Not available). */
+  /** Bookable count for a trade: roster size, capped at MAX_WORKERS_PER_TRADE. */
   function availableFor(catId) {
-    if (!availabilityLoaded) return Infinity;
+    if (!availabilityLoaded) return MAX_WORKERS_PER_TRADE;
     if (!availability) return 0;
-    return Number(availability[catId]) || 0;
+    const roster = Number(availability[catId]) || 0;
+    return Math.min(MAX_WORKERS_PER_TRADE, roster);
   }
 
   function tradeTotal(counts, catId) {
@@ -86,9 +87,12 @@ export function BookingProvider({ children }) {
     if (!category) return;
     setCrewCounts((prev) => {
       const next = { ...prev };
+      let remaining = availableFor(catId) - tradeTotal(next, catId);
       category.subRoles.forEach((role) => {
+        if (remaining <= 0) return;
         const key = `${catId}_${role.id}`;
         next[key] = (next[key] || 0) + 1;
+        remaining -= 1;
       });
       return next;
     });
@@ -161,6 +165,7 @@ Reference ID: ${refCode}
 *Customer Name:* ${bookingData.customerName}
 *Phone:* +91 ${cleanPhone}
 *Location:* ${bookingData.locality} , ${bookingData.town}
+*Request type:* ${bookingData.bookingMode === 'flash' ? 'Flash (24-hour notice, 1 day)' : 'Standard'}
 *Date for Work:*
 ${datesBlock}
 

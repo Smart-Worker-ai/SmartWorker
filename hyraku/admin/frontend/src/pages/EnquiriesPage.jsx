@@ -67,7 +67,7 @@ export default function EnquiriesPage() {
               <option value="upi">UPI</option><option value="cash">Cash</option><option value="bank">Bank transfer</option>
             </select>
             <input className="field" placeholder="UTR / reference" value={form.payment_ref} onChange={(e) => setForm({ ...form, payment_ref: e.target.value })} />
-            <input className="field" type="number" min={1} value={form.days} onChange={(e) => setForm({ ...form, days: e.target.value })} />
+            <input className="field" type="number" min={1} max={5} value={form.days} onChange={(e) => setForm({ ...form, days: Math.min(5, Math.max(1, Number(e.target.value) || 1)) })} />
             <div className="flex gap-2">
               <button className="btn-primary flex-1" type="submit">Mark booked</button>
               <button className="btn-ghost" type="button" onClick={() => setPay(null)}>Cancel</button>

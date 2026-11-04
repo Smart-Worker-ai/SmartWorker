@@ -1,6 +1,16 @@
 import { WorkerTypeInfo } from '../types';
 import { KOZHIKODE_TOWNS } from './keralaLocations';
 
+/** Max workers a customer can request from one trade in a single booking. */
+export const MAX_WORKERS_PER_TRADE = 2;
+/** Consecutive calendar days from the first work day (inclusive). */
+export const MAX_BOOKING_DAYS = 5;
+/** Work date must be at least this many calendar days after today (book on the 1st for the 3rd). */
+export const MIN_LEAD_DAYS = 2;
+/** Flash/Quick: 24-hour notice (tomorrow), one day only. */
+export const FLASH_LEAD_DAYS = 1;
+export const FLASH_MAX_DAYS = 1;
+
 /** Fixed trade catalog. Actual crew is added in admin; availability comes from /hyraku-api/public/availability. */
 export const WORKER_CATEGORIES: WorkerTypeInfo[] = [
   {

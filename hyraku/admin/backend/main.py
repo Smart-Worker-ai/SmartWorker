@@ -5,7 +5,7 @@ import os
 import re
 import secrets
 from collections import Counter, defaultdict
-from datetime import datetime
+from datetime import date, datetime, timedelta, timezone
 from io import BytesIO, StringIO
 
 import pyotp
@@ -29,7 +29,48 @@ from database import Base, SessionLocal, engine, get_db
 from models import AdminUser, Booking, CompanySettings, CrewMember, Customer, Enquiry
 from pdfs import booking_packet_pdf, monthly_report_pdf, roster_table_pdf
 
-app = FastAPI(title="Hyraku Admin", version="1.0.0")
+MAX_WORKERS_PER_TRADE = 2
+MAX_BOOKING_DAYS = 5
+MIN_LEAD_DAYS = 2
+FLASH_LEAD_DAYS = 1
+FLASH_MAX_DAYS = 1
+_MONTH_NUM = {
+    name[:3].lower(): i
+    for i, name in enumerate(
+        ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"),
+        start=1,
+    )
+}
+
+
+def _ist_today() -> date:
+    try:
+        from zoneinfo import ZoneInfo
+
+        tz = ZoneInfo("Asia/Kolkata")
+    except Exception:
+        tz = timezone(timedelta(hours=5, minutes=30))
+    return datetime.now(tz).date()
+
+
+def _parse_work_date(token: str) -> date | None:
+    token = (token or "").strip()
+    m = re.match(r"^(\d{1,2})\s+([A-Za-z]{3,})\s+(\d{4})$", token)
+    if m:
+        month = _MONTH_NUM.get(m.group(2)[:3].lower())
+        if month:
+            try:
+                return date(int(m.group(3)), month, int(m.group(1)))
+            except ValueError:
+                return None
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(token, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+app = FastAPI(title="Hyraku Admin", version="1.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:5176,http://127.0.0.1:5173,http://127.0.0.1:5176").split(","),
@@ -177,6 +218,7 @@ class PublicEnquiryIn(BaseModel):
     crew_json: dict | list = Field(default_factory=dict)
     daily_wage: float = 0
     message: str = ""
+    booking_mode: str = "standard"
 
 
 @app.post("/api/public/enquiries")
@@ -189,6 +231,41 @@ def public_enquiry(body: PublicEnquiryIn, db: Session = Depends(get_db)):
     locality = validate_place(body.locality, "Locality")
     if body.message and len(body.message.strip()) > 2000:
         raise HTTPException(400, "Message must be 2000 characters or fewer.")
+    raw_days = [p.strip() for p in re.split(r"[,;\n]+", body.work_dates or "") if p.strip()]
+    parsed_days: list[date] = []
+    for token in raw_days:
+        parsed = _parse_work_date(token)
+        if not parsed:
+            raise HTTPException(400, f"Unrecognised work date: {token}")
+        parsed_days.append(parsed)
+    if body.source == "booking":
+        if not parsed_days:
+            raise HTTPException(400, "Select at least one work date.")
+        parsed_days = sorted(set(parsed_days))
+        mode = (body.booking_mode or "standard").strip().lower()
+        if mode not in ("standard", "flash"):
+            mode = "standard"
+        lead = FLASH_LEAD_DAYS if mode == "flash" else MIN_LEAD_DAYS
+        span = FLASH_MAX_DAYS if mode == "flash" else MAX_BOOKING_DAYS
+        if mode == "flash" and len(parsed_days) != 1:
+            raise HTTPException(400, "Flash booking is for a single day only.")
+        earliest = _ist_today() + timedelta(days=lead)
+        if parsed_days[0] < earliest:
+            raise HTTPException(400, "Flash booking needs at least 24 hours’ notice." if mode == "flash" else f"Book at least {lead} days in advance.")
+        window_end = parsed_days[0] + timedelta(days=span - 1)
+        if parsed_days[-1] > window_end or any(d < parsed_days[0] or d > window_end for d in parsed_days):
+            raise HTTPException(400, f"Work days must fall within {span} consecutive days from the first work day.")
+    trade_totals: dict[str, int] = {}
+    if isinstance(body.crew_json, dict):
+        for key, n in body.crew_json.items():
+            cat = str(key).rsplit("_", 1)[0]
+            try:
+                qty = int(n or 0)
+            except (TypeError, ValueError):
+                qty = 0
+            trade_totals[cat] = trade_totals.get(cat, 0) + max(0, qty)
+    if any(qty > MAX_WORKERS_PER_TRADE for qty in trade_totals.values()):
+        raise HTTPException(400, f"You can book at most {MAX_WORKERS_PER_TRADE} workers per trade at a time.")
     ref = body.ref_code or ("HYR-" + str(secrets.randbelow(90000) + 10000))
     while db.query(Enquiry).filter(Enquiry.ref_code == ref).first():
         ref = "HYR-" + str(secrets.randbelow(90000) + 10000)
@@ -373,7 +450,7 @@ class PaymentIn(BaseModel):
     payment_amount: float
     payment_mode: str = "upi"
     payment_ref: str = ""
-    days: int = 1
+    days: int = Field(1, ge=1, le=MAX_BOOKING_DAYS)
     notes: str = ""
 
 
@@ -393,7 +470,7 @@ def convert_booking(eid: int, body: PaymentIn, _: str = Depends(require_admin), 
         payment_amount=body.payment_amount,
         payment_mode=body.payment_mode,
         payment_ref=body.payment_ref,
-        days=max(1, body.days),
+        days=min(MAX_BOOKING_DAYS, max(1, body.days)),
         notes=body.notes,
     )
     row.status = "booked"

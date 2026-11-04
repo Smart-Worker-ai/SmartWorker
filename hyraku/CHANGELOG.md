@@ -6,6 +6,13 @@ Hyraku uses **semver**. Bump `VERSION` and add a section here for every VPS drop
 - **MINOR** — new feature, still compatible
 - **PATCH** — fix or asset-only change
 
+## 1.1.0 — 2026-11-04
+
+- Cap **2 workers per trade** on a single booking (plus still cannot exceed live roster)
+- Cap **5 consecutive days from the first work day**
+- Work dates need **2 days’ notice** (book on the 1st for the 3rd; today and tomorrow are closed)
+- **Flash** mode: 24-hour notice (tomorrow ok), **one day only**
+
 ## 1.0.0 — 2026-11-03 (first stable)
 
 Public customer site + private admin desk on `hyraku.com` / `hyraku.in`.

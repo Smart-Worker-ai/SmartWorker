@@ -31,6 +31,7 @@ export default function BookingDetailsPage() {
       work_dates: dates,
       crew_summary: message,
       crew_json: crewCounts,
+      booking_mode: bookingData.bookingMode || 'standard',
       message,
     });
     setConfirmedBookingId(refCode);
