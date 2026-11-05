@@ -72,7 +72,7 @@ EXCLUDES=(
   --exclude .venv
   --exclude .env.hyraku
   --exclude .vps-password
-  --exclude data
+  --exclude backend/data
   --exclude __pycache__
   --exclude '*.pyc'
   --exclude .DS_Store
