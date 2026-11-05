@@ -23,6 +23,7 @@ interface BookingDetailsFormProps {
   selectedCategory: WorkerCategory | 'all';
   onBack: () => void;
   onSubmitBooking: (bookingData: CustomerBookingData) => void;
+  catalogCategories?: typeof WORKER_CATEGORIES;
 }
 
 export interface CustomerBookingData {
@@ -44,6 +45,7 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
   selectedCategory,
   onBack,
   onSubmitBooking,
+  catalogCategories = WORKER_CATEGORIES,
 }) => {
   const { t, language } = useLanguage();
 
@@ -92,7 +94,8 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
   let totalDailyWage = 0;
   const workerSummaryItems: string[] = [];
 
-  WORKER_CATEGORIES.forEach((cat) => {
+  const categories = catalogCategories?.length ? catalogCategories : WORKER_CATEGORIES;
+  categories.forEach((cat) => {
     cat.subRoles.forEach((role) => {
       const key = `${cat.id}_${role.id}`;
       const count = crewCounts[key] || 0;
@@ -110,7 +113,7 @@ export const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({
   const displaySelectedWorkers = workerSummaryItems.length > 0
     ? workerSummaryItems.join(', ')
     : selectedCategory !== 'all'
-    ? WORKER_CATEGORIES.find((c) => c.id === selectedCategory)?.shortName || 'Workers'
+    ? categories.find((c) => c.id === selectedCategory)?.shortName || 'Workers'
     : (language === 'ml' ? 'നിർമ്മാണ തൊഴിലാളികൾ' : 'Skilled Labour Crew');
 
   // Toggle or select a date in the calendar

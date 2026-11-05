@@ -33,14 +33,14 @@ function normalizeMobile(raw) {
   return digits.length > 10 && digits.startsWith('91') ? digits.slice(-10) : digits;
 }
 
-function validateCrew(form, existingPhones, excludePhone = '') {
+function validateCrew(form, existingPhones, roleMap, excludePhone = '') {
   const errors = {};
   if (!isLetterText(form.name)) errors.name = 'Name is required (2–80 letters).';
   const phone = normalizeMobile(form.phone);
   if (!/^[6-9]\d{9}$/.test(phone)) errors.phone = 'Enter a valid 10-digit Indian mobile number.';
   else if (existingPhones.has(phone) && phone !== excludePhone) errors.phone = 'This mobile number is already on the crew roster.';
-  if (!TRADES.includes(form.trade)) errors.trade = 'Select a trade.';
-  const allowed = ROLES[form.trade] || [];
+  if (!form.trade) errors.trade = 'Select a trade.';
+  const allowed = roleMap[form.trade] || [];
   if (!allowed.includes(form.role)) errors.role = 'Select a role for this trade.';
   if (form.town.trim() && !isLetterText(form.town)) errors.town = 'Town must be 2–80 letters.';
   if ((form.notes || '').trim().length > 500) errors.notes = 'Notes must be 500 characters or fewer.';
@@ -54,20 +54,35 @@ export default function CrewPage() {
   const [msg, setMsg] = useState('');
   const [busy, setBusy] = useState(false);
 
+  const [tradeList, setTradeList] = useState(TRADES);
+  const [roleMap, setRoleMap] = useState(ROLES);
+
   function load() { api.get('/crew').then((r) => setRows(r.data.crew || [])); }
   useEffect(load, []);
+  useEffect(() => {
+    api.get('/trades').then((r) => {
+      const list = r.data.trades || [];
+      if (!list.length) return;
+      setTradeList(list.map((t) => t.name));
+      const next = {};
+      list.forEach((t) => {
+        next[t.name] = t.crew_roles || [];
+      });
+      setRoleMap(next);
+    }).catch(() => {});
+  }, []);
 
   const existingPhones = useMemo(
     () => new Set(rows.map((w) => normalizeMobile(w.phone)).filter(Boolean)),
     [rows],
   );
-  const roleOptions = ROLES[form.trade] || [];
+  const roleOptions = roleMap[form.trade] || [];
 
   function setField(key, value) {
     setForm((prev) => {
       const next = { ...prev, [key]: value };
       if (key === 'trade') {
-        const allowed = ROLES[value] || [];
+        const allowed = roleMap[value] || [];
         if (!allowed.includes(next.role)) next.role = allowed[0] || '';
       }
       if (key === 'phone') next.phone = value.replace(/\D/g, '').slice(0, 10);
@@ -78,7 +93,7 @@ export default function CrewPage() {
 
   async function add(e) {
     e.preventDefault();
-    const nextErrors = validateCrew(form, existingPhones);
+    const nextErrors = validateCrew(form, existingPhones, roleMap);
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length) {
       setMsg('');
@@ -142,7 +157,7 @@ export default function CrewPage() {
           Trade *
           <select className="field mt-1" value={form.trade} onChange={(e) => setField('trade', e.target.value)} required>
             <option value="" disabled>Select trade</option>
-            {TRADES.map((t) => <option key={t} value={t}>{t}</option>)}
+            {tradeList.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
           {errors.trade && <span className="mt-1 block text-rose-600">{errors.trade}</span>}
         </label>

@@ -32,6 +32,7 @@ interface WorkerTeamSelectorProps {
   selectedCity: string;
   availabilityLoaded: boolean;
   availableFor: (catId: WorkerCategory) => number;
+  catalogCategories?: typeof WORKER_CATEGORIES;
 }
 
 export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
@@ -44,13 +45,15 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
   onProceedToDates,
   availabilityLoaded,
   availableFor,
+  catalogCategories = WORKER_CATEGORIES,
 }) => {
   const { t, language } = useLanguage();
+  const categories = catalogCategories?.length ? catalogCategories : WORKER_CATEGORIES;
 
   const isUnavailable = (catId: WorkerCategory) => availabilityLoaded && availableFor(catId) === 0;
-  const noneAvailable = availabilityLoaded && WORKER_CATEGORIES.every((c) => isUnavailable(c.id));
+  const noneAvailable = availabilityLoaded && categories.every((c) => isUnavailable(c.id));
   const tradeTotal = (catId: WorkerCategory) =>
-    WORKER_CATEGORIES.find((c) => c.id === catId)!.subRoles.reduce(
+    (categories.find((c) => c.id === catId)?.subRoles || []).reduce(
       (sum, role) => sum + (crewCounts[`${catId}_${role.id}`] || 0),
       0
     );
@@ -59,7 +62,7 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
   let totalWorkers = 0;
   let totalDailyWage = 0;
 
-  WORKER_CATEGORIES.forEach((cat) => {
+  categories.forEach((cat) => {
     cat.subRoles.forEach((role) => {
       const key = `${cat.id}_${role.id}`;
       const count = crewCounts[key] || 0;
@@ -147,8 +150,8 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
 
   const visibleCategories =
     selectedCategory === 'all'
-      ? WORKER_CATEGORIES
-      : WORKER_CATEGORIES.filter((c) => c.id === selectedCategory);
+      ? categories
+      : categories.filter((c) => c.id === selectedCategory);
 
   return (
     <div className="min-h-screen bg-slate-50 pb-36 pt-4 sm:pt-6">
@@ -168,7 +171,7 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
                   ? (language === 'ml' ? 'എല്ലാ നിർമ്മാണ തൊഴിലാളികളും' : 'All Construction Trades')
                   : getCategoryTitle(
                       selectedCategory,
-                      WORKER_CATEGORIES.find((c) => c.id === selectedCategory)?.shortName || ''
+                      categories.find((c) => c.id === selectedCategory)?.shortName || ''
                     )}
               </h2>
             </div>
@@ -179,11 +182,11 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
                 onClick={() => onSelectCategoryFilter('all')}
                 className="px-3 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 text-[#0091ea] border border-sky-200 font-bold text-xs transition-colors shrink-0 cursor-pointer shadow-sm"
               >
-                {language === 'ml' ? 'എല്ലാം കാണുക (6)' : 'View All Trades (6)'}
+                {language === 'ml' ? `എല്ലാം കാണുക (${categories.length})` : `View All Trades (${categories.length})`}
               </button>
             ) : (
               <span className="text-xs font-bold bg-sky-50 text-[#0091ea] border border-sky-200 px-2.5 py-1 rounded-full shrink-0">
-                6 {language === 'ml' ? 'വിഭാഗങ്ങൾ' : 'Trades'}
+                {categories.length} {language === 'ml' ? 'വിഭാഗങ്ങൾ' : 'Trades'}
               </span>
             )}
           </div>
@@ -199,9 +202,9 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
               className="w-full text-xs font-bold bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0091ea] focus:border-[#0091ea] cursor-pointer"
             >
               <option value="all">
-                {language === 'ml' ? 'എല്ലാ വിഭാഗങ്ങളും (All Trades - 6)' : 'All Trade Categories (6)'}
+                {language === 'ml' ? `എല്ലാ വിഭാഗങ്ങളും (${categories.length})` : `All Trade Categories (${categories.length})`}
               </option>
-              {WORKER_CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {getCategoryTitle(cat.id, cat.shortName)}
                 </option>
@@ -266,8 +269,14 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
                       {getTierTitle(cat.id, cat.tier)}
                     </p>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 border bg-sky-50 text-[#0091ea] border-sky-200">
-                    {language === 'ml' ? `പരമാവധി ${MAX_WORKERS_PER_TRADE}` : `Max ${MAX_WORKERS_PER_TRADE}`}
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 border ${
+                    unavailable
+                      ? 'bg-slate-100 text-slate-500 border-slate-200'
+                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  }`}>
+                    {unavailable
+                      ? (language === 'ml' ? 'ലഭ്യമല്ല' : 'Not available')
+                      : (language === 'ml' ? 'ലഭ്യം' : 'Available')}
                   </span>
                 </div>
 
@@ -394,7 +403,7 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
               onClick={() => onSelectCategoryFilter('all')}
               className="w-full sm:w-auto px-4 py-2 rounded-xl bg-[#0091ea] hover:bg-[#0284c7] text-white font-bold text-xs transition-all shadow-sm cursor-pointer shrink-0"
             >
-              {language === 'ml' ? 'എല്ലാ വിഭാഗങ്ങളും കാണുക (6)' : 'View All Trades (6)'}
+              {language === 'ml' ? `എല്ലാ വിഭാഗങ്ങളും കാണുക (${categories.length})` : `View All Trades (${categories.length})`}
             </button>
           </div>
         )}

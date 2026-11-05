@@ -29,13 +29,36 @@ export async function persistHyrakuEnquiry(payload) {
   }
 }
 
-/** Map of trade id -> active crew count, or null when the API could not be reached. */
+function mergeCatalog(apiCatalog) {
+  if (!Array.isArray(apiCatalog) || !apiCatalog.length) return WORKER_CATEGORIES;
+  return apiCatalog.map((item) => {
+    const base = WORKER_CATEGORIES.find((c) => c.id === item.id) || {};
+    return {
+      ...base,
+      id: item.id,
+      name: item.name || base.name || item.id,
+      shortName: item.shortName || item.name || base.shortName || item.id,
+      tier: item.tier || base.tier || 'Labour',
+      description: base.description || '',
+      image: base.image || '/assets/workers/general_labour.png',
+      allowedRoles: base.allowedRoles || ['Labour'],
+      baseRatePerDay: item.baseRatePerDay || base.baseRatePerDay || 1000,
+      subRoles: item.subRoles?.length
+        ? item.subRoles
+        : (base.subRoles || [{ id: 'labour', name: 'Labourers', ratePerDay: 1000 }]),
+    };
+  });
+}
+
 async function fetchAvailability() {
   try {
     const res = await fetch('/hyraku-api/public/availability');
     if (!res.ok) return null;
     const data = await res.json();
-    return data?.trades && typeof data.trades === 'object' ? data.trades : null;
+    return {
+      map: data?.trades && typeof data.trades === 'object' ? data.trades : null,
+      catalog: mergeCatalog(data?.catalog),
+    };
   } catch {
     return null;
   }
@@ -46,12 +69,14 @@ export function BookingProvider({ children }) {
   const [crewCounts, setCrewCounts] = useState({});
   const [availability, setAvailability] = useState(null);
   const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
+  const [catalogCategories, setCatalogCategories] = useState(WORKER_CATEGORIES);
 
   useEffect(() => {
     let alive = true;
-    fetchAvailability().then((trades) => {
+    fetchAvailability().then((payload) => {
       if (!alive) return;
-      setAvailability(trades);
+      setAvailability(payload?.map ?? null);
+      if (payload?.catalog?.length) setCatalogCategories(payload.catalog);
       setAvailabilityLoaded(true);
     });
     return () => {
@@ -59,8 +84,16 @@ export function BookingProvider({ children }) {
     };
   }, []);
 
-  function availableFor() {
-    return MAX_WORKERS_PER_TRADE;
+  function isTradeOpen(catId) {
+    if (!availabilityLoaded || !availability) return true;
+    const v = availability[catId];
+    if (typeof v === 'boolean') return v;
+    if (v && typeof v === 'object' && 'available' in v) return !!v.available;
+    return true;
+  }
+
+  function availableFor(catId) {
+    return isTradeOpen(catId) ? MAX_WORKERS_PER_TRADE : 0;
   }
 
   function tradeTotal(counts, catId) {
@@ -90,7 +123,7 @@ export function BookingProvider({ children }) {
   }
 
   function setTeamPreset(catId) {
-    const category = WORKER_CATEGORIES.find((c) => c.id === catId);
+    const category = catalogCategories.find((c) => c.id === catId);
     if (!category) return;
     setCrewCounts((prev) => {
       const next = { ...prev };
@@ -118,6 +151,8 @@ export function BookingProvider({ children }) {
     availability,
     availabilityLoaded,
     availableFor,
+    isTradeOpen,
+    catalogCategories,
   };
 
   return <BookingContext.Provider value={value}>{children}</BookingContext.Provider>;
@@ -129,7 +164,7 @@ export function useBooking() {
   return ctx;
 }
 
-export function buildWhatsAppMessage(bookingData, crewCounts) {
+export function buildWhatsAppMessage(bookingData, crewCounts, catalog = WORKER_CATEGORIES) {
   const refCode = 'HYR-' + Math.floor(10000 + Math.random() * 90000);
   const datesBlock =
     bookingData.selectedDatesList && bookingData.selectedDatesList.length > 0
@@ -138,7 +173,8 @@ export function buildWhatsAppMessage(bookingData, crewCounts) {
   const cleanPhone = bookingData.mobileNumber.replace(/^\+?91\s*/, '').trim();
 
   const workersLines = [];
-  WORKER_CATEGORIES.forEach((cat) => {
+  const cats = catalog?.length ? catalog : WORKER_CATEGORIES;
+  cats.forEach((cat) => {
     const activeRoles = cat.subRoles
       .map((role) => ({ ...role, count: crewCounts[`${cat.id}_${role.id}`] || 0 }))
       .filter((r) => r.count > 0);

@@ -43,6 +43,19 @@ class Customer(Base):
     enquiries = relationship("Enquiry", back_populates="customer")
 
 
+class BookableTrade(Base):
+    __tablename__ = "bookable_trades"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    slug: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    name: Mapped[str] = mapped_column(String(120))
+    short_name: Mapped[str] = mapped_column(String(80), default="")
+    role_set: Mapped[str] = mapped_column(String(32), default="labour")
+    rate_per_day: Mapped[float] = mapped_column(Float, default=1000)
+    available: Mapped[bool] = mapped_column(Boolean, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
 class CrewMember(Base):
     __tablename__ = "crew_members"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

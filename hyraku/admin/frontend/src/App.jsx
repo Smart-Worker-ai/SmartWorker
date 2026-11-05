@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage.jsx';
 import EnquiriesPage from './pages/EnquiriesPage.jsx';
 import CustomersPage from './pages/CustomersPage.jsx';
 import CrewPage from './pages/CrewPage.jsx';
+import TradesPage from './pages/TradesPage.jsx';
 import BookingsPage from './pages/BookingsPage.jsx';
 import ReportsPage from './pages/ReportsPage.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="enquiries" element={<EnquiriesPage />} />
         <Route path="customers" element={<CustomersPage />} />
         <Route path="crew" element={<CrewPage />} />
+        <Route path="trades" element={<TradesPage />} />
         <Route path="bookings" element={<BookingsPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="settings" element={<SettingsPage />} />

@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, MessageSquare, Users, HardHat, Receipt, FileBarChart, Settings, LogOut,
+  LayoutDashboard, MessageSquare, Users, HardHat, Briefcase, Receipt, FileBarChart, Settings, LogOut,
 } from 'lucide-react';
 import api from '../api.js';
 import HyrakuWordmark from '../HyrakuWordmark.jsx';
@@ -10,6 +10,7 @@ const NAV = [
   { to: '/enquiries', icon: MessageSquare, label: 'Enquiries' },
   { to: '/customers', icon: Users, label: 'Customers' },
   { to: '/crew', icon: HardHat, label: 'Crew' },
+  { to: '/trades', icon: Briefcase, label: 'Current Trades' },
   { to: '/bookings', icon: Receipt, label: 'Bookings' },
   { to: '/reports', icon: FileBarChart, label: 'Reports' },
   { to: '/settings', icon: Settings, label: 'Letterpad' },

@@ -1,10 +1,4 @@
-export type WorkerCategory = 
-  | 'general-workers'
-  | 'concrete-finisher'
-  | 'bricklayer'
-  | 'stone-setter'
-  | 'tiler'
-  | 'painter';
+export type WorkerCategory = string;
 
 export type RoleType = 'Mason' | 'Helper' | 'Labour' | 'Painter' | 'Lead Mason';
 

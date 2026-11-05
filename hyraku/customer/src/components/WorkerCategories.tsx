@@ -1,6 +1,7 @@
 import React from 'react';
 import { WORKER_CATEGORIES } from '../data/workersData';
 import { WorkerCategory } from '../types';
+import { useBooking } from '../context/BookingContext.jsx';
 import { ArrowRight, HardHat, ShieldCheck, Clock, Users, PhoneCall } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 import { HyrakuLogo } from './HyrakuLogo';
@@ -15,6 +16,8 @@ export const WorkerCategories: React.FC<WorkerCategoriesProps> = ({
   onBookWorkers,
 }) => {
   const { t, language } = useLanguage();
+  const { catalogCategories, isTradeOpen } = useBooking();
+  const categories = catalogCategories?.length ? catalogCategories : WORKER_CATEGORIES;
 
   const getCategoryName = (id: string, defaultShortName: string) => {
     if (language === 'ml') {
@@ -73,8 +76,9 @@ export const WorkerCategories: React.FC<WorkerCategoriesProps> = ({
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-5 pt-2 pb-4">
-          {WORKER_CATEGORIES.map((cat) => {
+          {categories.map((cat) => {
             const isLabour = cat.id === 'general-workers' || cat.id === 'painter';
+            const open = isTradeOpen ? isTradeOpen(cat.id) : true;
             return (
               <div
                 key={cat.id}
@@ -115,9 +119,10 @@ export const WorkerCategories: React.FC<WorkerCategoriesProps> = ({
                   <h3 className="text-xs sm:text-sm font-extrabold text-slate-800 group-hover:text-[#0091ea] transition-colors font-display line-clamp-2 min-h-[2.4rem] flex items-center justify-center leading-snug">
                     {getCategoryName(cat.id, cat.shortName)}
                   </h3>
-                  <span className="text-xs sm:text-sm text-[#0091ea] font-bold mt-1 flex items-center justify-center gap-1 group-hover:underline">
-                    <span>{language === 'ml' ? 'തിരഞ്ഞെടുക്കുക' : 'Select'}</span>
-                    <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+                  <span className={`text-[10px] font-bold mt-1 ${open ? 'text-emerald-700' : 'text-slate-400'}`}>
+                    {open
+                      ? (language === 'ml' ? 'ലഭ്യം' : 'Available')
+                      : (language === 'ml' ? 'ലഭ്യമല്ല' : 'Not available')}
                   </span>
                 </div>
               </div>

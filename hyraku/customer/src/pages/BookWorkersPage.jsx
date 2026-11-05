@@ -13,6 +13,7 @@ export default function BookWorkersPage() {
     setTeamPreset,
     availabilityLoaded,
     availableFor,
+    catalogCategories,
   } = useBooking();
 
   return (
@@ -25,6 +26,7 @@ export default function BookWorkersPage() {
       onSetTeamPreset={setTeamPreset}
       availabilityLoaded={availabilityLoaded}
       availableFor={availableFor}
+      catalogCategories={catalogCategories}
       onBack={() => {
         navigate('/');
         window.scrollTo({ top: 0, behavior: 'smooth' });

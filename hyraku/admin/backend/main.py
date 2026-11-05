@@ -26,7 +26,7 @@ from auth_utils import (
     verify_password,
 )
 from database import Base, SessionLocal, engine, get_db
-from models import AdminUser, Booking, CompanySettings, CrewMember, Customer, Enquiry
+from models import AdminUser, BookableTrade, Booking, CompanySettings, CrewMember, Customer, Enquiry
 from pdfs import booking_packet_pdf, monthly_report_pdf, roster_table_pdf
 
 app = FastAPI(title="Hyraku Admin", version="1.0.0")
@@ -49,12 +49,10 @@ def bootstrap():
             db.add(AdminUser(username=user, password_hash=hash_password(pw)))
         if not db.query(CompanySettings).first():
             db.add(CompanySettings())
+        seed_bookable_trades(db)
         db.commit()
     finally:
         db.close()
-
-
-bootstrap()
 
 
 def upsert_customer(db: Session, name: str, phone: str, town: str, locality: str) -> Customer:
@@ -105,6 +103,81 @@ CREW_ROLES = {
     "Painter": ["Painter", "Labour"],
 }
 
+SEED_TRADES = [
+    ("general-workers", "General Labour", "General Labour", "labour", 1000, 10),
+    ("concrete-finisher", "Concrete Finisher / Cement Setter", "Concrete Finisher / Cement Setter", "mason_helper", 1200, 20),
+    ("bricklayer", "Wall Builder", "Wall Builder", "mason_helper", 1200, 30),
+    ("stone-setter", "Stone Breaker / Stone Setter", "Stone Breaker / Stone Setter", "mason_helper", 1300, 40),
+    ("tiler", "Tiler", "Tiler", "mason_helper", 1200, 50),
+    ("painter", "Painter", "Painter", "painter", 1200, 60),
+]
+ROLE_SET_CREW = {
+    "labour": ["Labour"],
+    "mason_helper": ["Head Mason", "Helper"],
+    "painter": ["Painter", "Labour"],
+}
+
+
+def seed_bookable_trades(db: Session) -> None:
+    existing = {row.slug for row in db.query(BookableTrade).all()}
+    for slug, name, short_name, role_set, rate, order in SEED_TRADES:
+        if slug in existing:
+            continue
+        db.add(BookableTrade(
+            slug=slug,
+            name=name,
+            short_name=short_name,
+            role_set=role_set,
+            rate_per_day=rate,
+            available=True,
+            sort_order=order,
+        ))
+
+
+def crew_roles_for(role_set: str) -> list[str]:
+    return list(ROLE_SET_CREW.get(role_set) or ROLE_SET_CREW["labour"])
+
+
+def subroles_for(role_set: str, rate: float) -> list[dict]:
+    helper = max(1000, int(rate) - 200)
+    if role_set == "mason_helper":
+        return [
+            {"id": "mason", "name": "Head Masons", "ratePerDay": int(rate)},
+            {"id": "helper", "name": "Helpers", "ratePerDay": helper},
+        ]
+    if role_set == "painter":
+        return [{"id": "painter", "name": "Painters / Labour", "ratePerDay": int(rate)}]
+    return [{"id": "labour", "name": "Labourers", "ratePerDay": int(rate)}]
+
+
+def slugify_trade(name: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", (name or "").lower()).strip("-")
+    return (slug or "trade")[:60]
+
+
+def listed_trades(db: Session) -> list[BookableTrade]:
+    seed_bookable_trades(db)
+    db.commit()
+    return db.query(BookableTrade).order_by(BookableTrade.sort_order, BookableTrade.id).all()
+
+
+def _trade_out(row: BookableTrade) -> dict:
+    return {
+        "id": row.id,
+        "slug": row.slug,
+        "name": row.name,
+        "short_name": row.short_name or row.name,
+        "role_set": row.role_set,
+        "rate_per_day": row.rate_per_day,
+        "available": bool(row.available),
+        "sort_order": row.sort_order,
+        "crew_roles": crew_roles_for(row.role_set),
+        "subRoles": subroles_for(row.role_set, row.rate_per_day),
+    }
+
+
+bootstrap()
+
 
 def _is_letter_text(text: str) -> bool:
     if not (2 <= len(text) <= 80) or not text[0].isalpha():
@@ -130,16 +203,24 @@ def validate_place(value: str, label: str, required: bool = False) -> str:
     return text
 
 
-def validate_crew_fields(body: "CrewIn") -> dict:
+def allowed_crew_roles(db: Session, trade: str) -> list[str]:
+    row = db.query(BookableTrade).filter(BookableTrade.name == trade).first()
+    if row:
+        return crew_roles_for(row.role_set)
+    return CREW_ROLES.get(trade) or []
+
+
+def validate_crew_fields(body: "CrewIn", db: Session) -> dict:
     name = validate_person_name(body.name)
     phone = normalize_mobile(body.phone)
     if not is_indian_mobile(phone):
         raise HTTPException(400, "Mobile number is required and must be a valid 10-digit Indian number.")
     trade = (body.trade or "").strip()
-    if trade not in CREW_TRADES:
+    known = {t.name for t in listed_trades(db)} | set(CREW_TRADES)
+    if trade not in known:
         raise HTTPException(400, "Select a trade from the list.")
     role = (body.role or "").strip()
-    allowed = CREW_ROLES[trade]
+    allowed = allowed_crew_roles(db, trade)
     if role not in allowed:
         raise HTTPException(400, f"Role must be one of: {', '.join(allowed)}.")
     town = validate_place(body.town, "Town")
@@ -190,7 +271,7 @@ def public_enquiry(body: PublicEnquiryIn, db: Session = Depends(get_db)):
     if body.message and len(body.message.strip()) > 2000:
         raise HTTPException(400, "Message must be 2000 characters or fewer.")
     if (body.source or "booking") != "contact":
-        assert_booking_trade_limits(body.crew_json)
+        assert_booking_trade_limits(db, body.crew_json)
     ref = body.ref_code or ("HYR-" + str(secrets.randbelow(90000) + 10000))
     while db.query(Enquiry).filter(Enquiry.ref_code == ref).first():
         ref = "HYR-" + str(secrets.randbelow(90000) + 10000)
@@ -232,14 +313,37 @@ def _norm(text: str) -> str:
 _TRADE_LOOKUP = {_norm(alias): tid for tid, aliases in TRADES.items() for alias in [tid, *aliases]}
 
 
-def trade_id(text: str) -> str | None:
-    return _TRADE_LOOKUP.get(_norm(text))
+def trade_id(text: str, extra: dict | None = None) -> str | None:
+    hit = _TRADE_LOOKUP.get(_norm(text))
+    if hit:
+        return hit
+    if extra:
+        return extra.get(_norm(text))
+    return None
+
+
+def trade_alias_map(db: Session) -> dict:
+    extra = {}
+    for row in db.query(BookableTrade).all():
+        extra[_norm(row.slug)] = row.slug
+        extra[_norm(row.name)] = row.slug
+        extra[_norm(row.short_name)] = row.slug
+    return extra
+
+
+def trade_slugs(db: Session) -> list[str]:
+    slugs = list(TRADES.keys())
+    for row in db.query(BookableTrade).all():
+        if row.slug not in slugs:
+            slugs.append(row.slug)
+    return slugs
 
 
 def roster_counts(db: Session) -> dict:
-    counts = {tid: 0 for tid in TRADES}
+    extra = trade_alias_map(db)
+    counts = {tid: 0 for tid in trade_slugs(db)}
     for (trade,) in db.query(CrewMember.trade).filter(CrewMember.active.is_(True)).all():
-        tid = trade_id(trade)
+        tid = trade_id(trade, extra)
         if tid:
             counts[tid] += 1
     return counts
@@ -255,8 +359,10 @@ def parse_crew_json(raw) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def requested_trade_counts(crew_json, *, unknown: str = "reject") -> dict:
-    requested = {tid: 0 for tid in TRADES}
+def requested_trade_counts(crew_json, *, unknown: str = "reject", slugs: list[str] | None = None) -> dict:
+    ids = list(slugs or TRADES.keys())
+    ids.sort(key=len, reverse=True)
+    requested = {tid: 0 for tid in ids}
     if not isinstance(crew_json, dict):
         return requested
     for key, raw in crew_json.items():
@@ -267,7 +373,7 @@ def requested_trade_counts(crew_json, *, unknown: str = "reject") -> dict:
         if n <= 0:
             continue
         key_s = str(key)
-        matched = next((tid for tid in TRADES if key_s == tid or key_s.startswith(tid + "_")), None)
+        matched = next((tid for tid in ids if key_s == tid or key_s.startswith(tid + "_")), None)
         if not matched:
             if unknown == "skip":
                 continue
@@ -282,7 +388,7 @@ OPEN_ENQUIRY_STATUSES = {"requested", "checking", "confirmed"}
 
 def crew_shortages(e: Enquiry, roster: dict) -> list:
     """Admin-only: requested headcount vs current active roster. Never sent to the customer app."""
-    requested = requested_trade_counts(parse_crew_json(e.crew_json), unknown="skip")
+    requested = requested_trade_counts(parse_crew_json(e.crew_json), unknown="skip", slugs=list(roster.keys()) or list(TRADES))
     names = {tid: aliases[0] for tid, aliases in TRADES.items()}
     out = []
     for tid, n in requested.items():
@@ -298,19 +404,37 @@ def crew_shortages(e: Enquiry, roster: dict) -> list:
     return out
 
 
-def assert_booking_trade_limits(crew_json) -> None:
-    requested = requested_trade_counts(crew_json)
+def assert_booking_trade_limits(db: Session, crew_json) -> None:
+    slugs = trade_slugs(db)
+    requested = requested_trade_counts(crew_json, slugs=slugs)
     if sum(requested.values()) < 1:
         raise HTTPException(400, "Select at least one worker.")
-    for n in requested.values():
+    open_map = {row.slug: bool(row.available) for row in listed_trades(db)}
+    for tid, n in requested.items():
         if n > MAX_WORKERS_PER_TRADE:
             raise HTTPException(400, f"Maximum {MAX_WORKERS_PER_TRADE} workers per trade on a single booking.")
+        if n > 0 and not open_map.get(tid, True):
+            raise HTTPException(400, "That trade is not available for booking.")
 
 
 @app.get("/api/public/availability")
 def public_availability(db: Session = Depends(get_db)):
-    """Active crew count per fixed trade. Counts only; no crew details leave admin."""
-    return {"trades": roster_counts(db)}
+    """Customer sees available / not available only — never roster counts."""
+    rows = listed_trades(db)
+    status = {row.slug: bool(row.available) for row in rows}
+    catalog = []
+    for row in rows:
+        out = _trade_out(row)
+        catalog.append({
+            "id": row.slug,
+            "name": row.name,
+            "shortName": row.short_name or row.name,
+            "available": bool(row.available),
+            "tier": "Mason & Helper" if row.role_set == "mason_helper" else "Labour",
+            "subRoles": out["subRoles"],
+            "baseRatePerDay": int(row.rate_per_day or 1000),
+        })
+    return {"trades": status, "catalog": catalog}
 
 
 # ── auth / totp ─────────────────────────────────────────────────────────────
@@ -546,6 +670,61 @@ def customers_export(fmt: str = "csv", _: str = Depends(require_admin), db: Sess
     return _export_rows(rows, fmt, "hyraku-customers", db)
 
 
+class TradeIn(BaseModel):
+    name: str
+    role_set: str = "labour"
+    rate_per_day: float = 1000
+    available: bool = True
+
+
+class TradeStatusIn(BaseModel):
+    available: bool
+
+
+@app.get("/api/trades")
+def list_trades(_: str = Depends(require_admin), db: Session = Depends(get_db)):
+    return {"trades": [_trade_out(row) for row in listed_trades(db)]}
+
+
+@app.post("/api/trades")
+def add_trade(body: TradeIn, _: str = Depends(require_admin), db: Session = Depends(get_db)):
+    name = validate_place(body.name, "Trade name", required=True)
+    role_set = (body.role_set or "labour").strip()
+    if role_set not in ROLE_SET_CREW:
+        raise HTTPException(400, "Role set must be labour, mason_helper, or painter.")
+    slug = slugify_trade(name)
+    taken = {row.slug for row in db.query(BookableTrade).all()}
+    base = slug
+    n = 2
+    while slug in taken:
+        slug = f"{base}-{n}"
+        n += 1
+    last = db.query(BookableTrade).order_by(BookableTrade.sort_order.desc()).first()
+    row = BookableTrade(
+        slug=slug,
+        name=name,
+        short_name=name,
+        role_set=role_set,
+        rate_per_day=max(0, float(body.rate_per_day or 1000)),
+        available=bool(body.available),
+        sort_order=(last.sort_order + 10) if last else 100,
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _trade_out(row)
+
+
+@app.patch("/api/trades/{tid}/status")
+def set_trade_status(tid: int, body: TradeStatusIn, _: str = Depends(require_admin), db: Session = Depends(get_db)):
+    row = db.query(BookableTrade).filter(BookableTrade.id == tid).first()
+    if not row:
+        raise HTTPException(404, "Trade not found.")
+    row.available = bool(body.available)
+    db.commit()
+    return _trade_out(row)
+
+
 class CrewIn(BaseModel):
     name: str
     phone: str
@@ -564,7 +743,7 @@ def list_crew(_: str = Depends(require_admin), db: Session = Depends(get_db)):
 
 @app.post("/api/crew")
 def add_crew(body: CrewIn, _: str = Depends(require_admin), db: Session = Depends(get_db)):
-    data = validate_crew_fields(body)
+    data = validate_crew_fields(body, db)
     if crew_phone_taken(db, data["phone"]):
         raise HTTPException(400, "This mobile number is already on the crew roster.")
     row = CrewMember(**data)
@@ -579,7 +758,7 @@ def edit_crew(wid: int, body: CrewIn, _: str = Depends(require_admin), db: Sessi
     row = db.query(CrewMember).filter(CrewMember.id == wid).first()
     if not row:
         raise HTTPException(404, "Crew member not found.")
-    data = validate_crew_fields(body)
+    data = validate_crew_fields(body, db)
     if crew_phone_taken(db, data["phone"], exclude_id=wid):
         raise HTTPException(400, "This mobile number is already on the crew roster.")
     for k, v in data.items():
@@ -612,7 +791,8 @@ def crew_import(file: UploadFile = File(...), _: str = Depends(require_admin), d
                     town=(rec.get("town") or "").strip(),
                     notes=(rec.get("notes") or "").strip(),
                     active=str(rec.get("active", "true")).lower() in ("1", "true", "yes", "y"),
-                )
+                ),
+                db,
             )
         except HTTPException as exc:
             errors.append(f"Row {i}: {exc.detail}")

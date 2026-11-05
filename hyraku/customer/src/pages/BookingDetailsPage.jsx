@@ -6,7 +6,7 @@ import { buildWhatsAppMessage, openHyrakuWhatsApp, persistHyrakuEnquiry, useBook
 
 export default function BookingDetailsPage() {
   const navigate = useNavigate();
-  const { crewCounts, selectedCategoryFilter, totalWorkers } = useBooking();
+  const { crewCounts, selectedCategoryFilter, totalWorkers, catalogCategories } = useBooking();
   const [isSuccessOpen, setIsSuccessOpen] = useState(false);
   const [confirmedBookingId, setConfirmedBookingId] = useState('');
   const [confirmedBookingData, setConfirmedBookingData] = useState(null);
@@ -17,7 +17,7 @@ export default function BookingDetailsPage() {
   }
 
   async function handleBookingSubmit(bookingData) {
-    const { refCode, message, whatsappUrl } = buildWhatsAppMessage(bookingData, crewCounts);
+    const { refCode, message, whatsappUrl } = buildWhatsAppMessage(bookingData, crewCounts, catalogCategories);
     const dates = bookingData.selectedDatesList?.length
       ? bookingData.selectedDatesList.join(', ')
       : (bookingData.bookingDate || '');
@@ -45,6 +45,7 @@ export default function BookingDetailsPage() {
       <BookingDetailsForm
         crewCounts={crewCounts}
         selectedCategory={selectedCategoryFilter}
+        catalogCategories={catalogCategories}
         onBack={() => {
           navigate('/book');
           window.scrollTo({ top: 0, behavior: 'smooth' });
