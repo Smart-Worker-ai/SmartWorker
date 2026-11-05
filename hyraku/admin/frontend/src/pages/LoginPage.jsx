@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import api from '../api.js';
+import { encryptCredentials } from '../loginCrypto.js';
 import HyrakuWordmark from '../HyrakuWordmark.jsx';
 
 export function LoginBackdrop({ children, className = '' }) {
@@ -26,12 +28,16 @@ export default function LoginPage() {
   const [qr, setQr] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function login(e) {
     e.preventDefault();
     setBusy(true); setError('');
     try {
-      const { data } = await api.post('/auth/login', { username, password });
+      const sealed = await encryptCredentials(username, password);
+      const { data } = await api.post('/auth/login', sealed);
+      setPassword('');
+      setShowPassword(false);
       setToken(data.token);
       if (data.need_setup) {
         const qrRes = await api.post('/auth/totp/qr', { token: data.token });
@@ -75,7 +81,25 @@ export default function LoginPage() {
           {step === 'password' && (
             <>
               <input className="field" placeholder="Username" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
-              <input className="field" type="password" placeholder="Password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <div className="relative">
+                <input
+                  className="field pr-12"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
               <button className="btn-primary w-full" disabled={busy}>{busy ? 'Checking…' : 'Continue'}</button>
             </>
           )}

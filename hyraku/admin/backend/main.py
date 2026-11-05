@@ -18,7 +18,9 @@ from sqlalchemy.orm import Session
 
 from auth_utils import (
     clear_session,
+    decrypt_login_blob,
     hash_password,
+    login_public_spki,
     make_token,
     read_token,
     require_admin,
@@ -439,8 +441,9 @@ def public_availability(db: Session = Depends(get_db)):
 
 # ── auth / totp ─────────────────────────────────────────────────────────────
 class LoginIn(BaseModel):
-    username: str
-    password: str
+    key: str
+    iv: str
+    data: str
 
 
 class TotpIn(BaseModel):
@@ -448,10 +451,16 @@ class TotpIn(BaseModel):
     code: str = ""
 
 
+@app.get("/api/auth/login-key")
+def login_key():
+    return login_public_spki()
+
+
 @app.post("/api/auth/login")
 def login(body: LoginIn, db: Session = Depends(get_db)):
-    user = db.query(AdminUser).filter(AdminUser.username == body.username).first()
-    if not user or not verify_password(body.password, user.password_hash):
+    creds = decrypt_login_blob({"key": body.key, "iv": body.iv, "data": body.data})
+    user = db.query(AdminUser).filter(AdminUser.username == creds["username"]).first()
+    if not user or not verify_password(creds["password"], user.password_hash):
         raise HTTPException(401, "Invalid credentials.")
     if not user.totp_enabled or not user.totp_secret:
         setup = make_token({"sub": user.username, "step": "setup"}, minutes=10)
