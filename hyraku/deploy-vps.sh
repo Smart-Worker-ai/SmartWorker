@@ -81,7 +81,7 @@ EXCLUDES=(
 copy_tree() {
   local src="$1" dest="$2"
   if command -v rsync >/dev/null 2>&1; then
-    rsync -az --progress "${EXCLUDES[@]}" -e "$RSH" "$src/" "${HOST}:${dest}/"
+    rsync -az --checksum --progress "${EXCLUDES[@]}" -e "$RSH" "$src/" "${HOST}:${dest}/"
     return
   fi
   echo "==> rsync not found; staging with tar and scp"
