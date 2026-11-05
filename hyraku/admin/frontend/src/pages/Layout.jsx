@@ -3,6 +3,7 @@ import {
   LayoutDashboard, MessageSquare, Users, HardHat, Receipt, FileBarChart, Settings, LogOut,
 } from 'lucide-react';
 import api from '../api.js';
+import HyrakuWordmark from '../HyrakuWordmark.jsx';
 
 const NAV = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', end: true },
@@ -24,7 +25,8 @@ export default function Layout() {
     <div className="min-h-screen bg-sky-50">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 border-r border-sky-100 bg-white md:flex md:flex-col">
         <div className="px-5 py-5">
-          <div className="font-display text-2xl font-black tracking-tight text-[#0091ea]">Admin hyraku</div>
+          <HyrakuWordmark className="h-8 w-auto" />
+          <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Admin</div>
         </div>
         <nav className="flex-1 space-y-1 px-3">
           {NAV.map(({ to, icon: Icon, label, end }) => (
@@ -39,7 +41,10 @@ export default function Layout() {
       </aside>
       <div className="md:pl-60">
         <header className="sticky top-0 z-20 flex items-center justify-between border-b border-sky-100 bg-white/90 px-4 py-3 backdrop-blur md:hidden">
-          <span className="font-display text-lg font-black text-[#0091ea]">Admin hyraku</span>
+          <span className="inline-flex items-center gap-2">
+            <HyrakuWordmark className="h-6 w-auto" />
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Admin</span>
+          </span>
           <button type="button" onClick={logout} className="text-xs font-bold text-rose-600">Sign out</button>
         </header>
         <nav className="flex gap-1 overflow-x-auto border-b border-sky-100 bg-white px-2 py-2 md:hidden">

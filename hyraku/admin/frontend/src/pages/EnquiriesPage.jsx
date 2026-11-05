@@ -41,7 +41,20 @@ export default function EnquiriesPage() {
                 <td className="px-4 py-3 font-mono text-xs">{r.ref_code}</td>
                 <td className="px-4 py-3"><div className="font-semibold">{r.customer_name}</div><div className="text-xs text-slate-500">+91 {r.phone}</div></td>
                 <td className="px-4 py-3 text-xs">{r.locality}, {r.town}</td>
-                <td className="px-4 py-3 text-xs max-w-[200px] truncate">{r.crew_summary}</td>
+                <td className="px-4 py-3 text-xs max-w-[260px]">
+                  <div className="truncate">{r.crew_summary}</div>
+                  {r.crew_short && (
+                    <div className="mt-1 space-y-0.5 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-950">
+                      <div className="font-bold uppercase tracking-wide text-amber-800">Above roster</div>
+                      {(r.crew_shortages || []).map((g) => (
+                        <div key={g.trade}>
+                          {g.trade_name}: asked {g.requested} / roster {g.on_roster}
+                          <span className="font-bold text-rose-700"> (−{g.short_by})</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <select className="field !py-1.5 text-xs" value={r.status} onChange={(e) => status(r.id, e.target.value)}>
                     {STATUSES.map((s) => <option key={s} value={s}>{s.replaceAll('_', ' ')}</option>)}

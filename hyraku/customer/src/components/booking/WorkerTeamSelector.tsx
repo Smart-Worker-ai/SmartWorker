@@ -16,7 +16,7 @@ import {
   PhoneCall,
   UserX
 } from 'lucide-react';
-import { WORKER_CATEGORIES } from '../../data/workersData';
+import { MAX_WORKERS_PER_TRADE, WORKER_CATEGORIES } from '../../data/workersData';
 import { WorkerCategory, CrewCounts } from '../../types';
 import { useLanguage } from '../../context/LanguageContext';
 
@@ -25,6 +25,7 @@ interface WorkerTeamSelectorProps {
   onSelectCategoryFilter: (category: WorkerCategory | 'all') => void;
   crewCounts: CrewCounts;
   onUpdateCrewCount: (categoryKey: string, delta: number) => void;
+  onSetCrewCount: (categoryKey: string, value: number | string) => void;
   onSetTeamPreset: (catId: WorkerCategory) => void;
   onBack: () => void;
   onProceedToDates: () => void;
@@ -38,6 +39,7 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
   onSelectCategoryFilter,
   crewCounts,
   onUpdateCrewCount,
+  onSetCrewCount,
   onBack,
   onProceedToDates,
   availabilityLoaded,
@@ -264,19 +266,9 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
                       {getTierTitle(cat.id, cat.tier)}
                     </p>
                   </div>
-                  {availabilityLoaded && Number.isFinite(available) && (
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 border ${
-                        unavailable
-                          ? 'bg-slate-100 text-slate-500 border-slate-200'
-                          : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                      }`}
-                    >
-                      {unavailable
-                        ? (language === 'ml' ? 'ലഭ്യമല്ല' : 'Not available')
-                        : `${available} ${language === 'ml' ? 'ലഭ്യം' : 'available'}`}
-                    </span>
-                  )}
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 border bg-sky-50 text-[#0091ea] border-sky-200">
+                    {language === 'ml' ? `പരമാവധി ${MAX_WORKERS_PER_TRADE}` : `Max ${MAX_WORKERS_PER_TRADE}`}
+                  </span>
                 </div>
 
                 {unavailable ? (
@@ -347,9 +339,17 @@ export const WorkerTeamSelector: React.FC<WorkerTeamSelectorProps> = ({
                             <Minus className="w-4 h-4 sm:w-3.5 sm:h-3.5 stroke-[2.2]" />
                           </button>
 
-                          <span className="w-7 text-center text-base sm:text-sm font-black text-slate-900 font-display">
-                            {count}
-                          </span>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            max={MAX_WORKERS_PER_TRADE}
+                            value={count}
+                            onChange={(e) => onSetCrewCount(key, e.target.value)}
+                            onFocus={(e) => e.currentTarget.select()}
+                            className="w-12 h-10 text-center text-base sm:text-sm font-black text-slate-900 font-display rounded-xl border border-sky-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-[#0091ea] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            aria-label={`Number of ${role.name}`}
+                          />
 
                           <button
                             type="button"

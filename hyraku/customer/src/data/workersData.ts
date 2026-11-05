@@ -1,6 +1,9 @@
 import { WorkerTypeInfo } from '../types';
 import { KOZHIKODE_TOWNS } from './keralaLocations';
 
+/** Max workers of one trade on a single booking (all sub-roles combined). */
+export const MAX_WORKERS_PER_TRADE = 50;
+
 /** Fixed trade catalog. Actual crew is added in admin; availability comes from /hyraku-api/public/availability. */
 export const WORKER_CATEGORIES: WorkerTypeInfo[] = [
   {

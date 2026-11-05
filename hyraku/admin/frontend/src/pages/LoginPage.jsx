@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api.js';
+import HyrakuWordmark from '../HyrakuWordmark.jsx';
 
 export function LoginBackdrop({ children, className = '' }) {
   return (
@@ -66,7 +67,10 @@ export default function LoginPage() {
           onSubmit={step === 'password' ? login : verify}
           className="card relative space-y-4 p-5 shadow-lg sm:p-8"
         >
-          <div className="font-display text-2xl font-black tracking-tight text-[#0091ea] sm:text-3xl">Admin hyraku</div>
+          <div>
+            <HyrakuWordmark className="h-8 sm:h-9 w-auto" />
+            <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Admin</div>
+          </div>
           {error && <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-600">{error}</p>}
           {step === 'password' && (
             <>

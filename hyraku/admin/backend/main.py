@@ -190,7 +190,7 @@ def public_enquiry(body: PublicEnquiryIn, db: Session = Depends(get_db)):
     if body.message and len(body.message.strip()) > 2000:
         raise HTTPException(400, "Message must be 2000 characters or fewer.")
     if (body.source or "booking") != "contact":
-        assert_crew_within_roster(db, body.crew_json)
+        assert_booking_trade_limits(body.crew_json)
     ref = body.ref_code or ("HYR-" + str(secrets.randbelow(90000) + 10000))
     while db.query(Enquiry).filter(Enquiry.ref_code == ref).first():
         ref = "HYR-" + str(secrets.randbelow(90000) + 10000)
@@ -245,7 +245,17 @@ def roster_counts(db: Session) -> dict:
     return counts
 
 
-def requested_trade_counts(crew_json) -> dict:
+def parse_crew_json(raw) -> dict:
+    if isinstance(raw, dict):
+        return raw
+    try:
+        data = json.loads(raw or "{}")
+    except (TypeError, json.JSONDecodeError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def requested_trade_counts(crew_json, *, unknown: str = "reject") -> dict:
     requested = {tid: 0 for tid in TRADES}
     if not isinstance(crew_json, dict):
         return requested
@@ -259,19 +269,42 @@ def requested_trade_counts(crew_json) -> dict:
         key_s = str(key)
         matched = next((tid for tid in TRADES if key_s == tid or key_s.startswith(tid + "_")), None)
         if not matched:
+            if unknown == "skip":
+                continue
             raise HTTPException(400, "Unknown trade in booking.")
         requested[matched] += n
     return requested
 
 
-def assert_crew_within_roster(db: Session, crew_json) -> None:
+MAX_WORKERS_PER_TRADE = 50
+OPEN_ENQUIRY_STATUSES = {"requested", "checking", "confirmed"}
+
+
+def crew_shortages(e: Enquiry, roster: dict) -> list:
+    """Admin-only: requested headcount vs current active roster. Never sent to the customer app."""
+    requested = requested_trade_counts(parse_crew_json(e.crew_json), unknown="skip")
+    names = {tid: aliases[0] for tid, aliases in TRADES.items()}
+    out = []
+    for tid, n in requested.items():
+        have = int(roster.get(tid) or 0)
+        if n > have:
+            out.append({
+                "trade": tid,
+                "trade_name": names.get(tid, tid),
+                "requested": n,
+                "on_roster": have,
+                "short_by": n - have,
+            })
+    return out
+
+
+def assert_booking_trade_limits(crew_json) -> None:
     requested = requested_trade_counts(crew_json)
     if sum(requested.values()) < 1:
         raise HTTPException(400, "Select at least one worker.")
-    roster = roster_counts(db)
-    for tid, n in requested.items():
-        if n > roster.get(tid, 0):
-            raise HTTPException(400, "Not enough registered crew for that trade.")
+    for n in requested.values():
+        if n > MAX_WORKERS_PER_TRADE:
+            raise HTTPException(400, f"Maximum {MAX_WORKERS_PER_TRADE} workers per trade on a single booking.")
 
 
 @app.get("/api/public/availability")
@@ -352,6 +385,20 @@ def me(user: str = Depends(require_admin)):
 @app.get("/api/dashboard/stats")
 def stats(_: str = Depends(require_admin), db: Session = Depends(get_db)):
     enqs = db.query(Enquiry).all()
+    roster = roster_counts(db)
+    short_open = []
+    for e in enqs:
+        if e.status not in OPEN_ENQUIRY_STATUSES:
+            continue
+        short = crew_shortages(e, roster)
+        if short:
+            short_open.append({
+                "id": e.id,
+                "ref_code": e.ref_code,
+                "customer_name": e.customer_name,
+                "status": e.status,
+                "shortages": short,
+            })
     by_status = Counter(e.status for e in enqs)
     by_town = Counter((e.town or "Unknown").strip() or "Unknown" for e in enqs)
     by_locality = Counter(
@@ -370,6 +417,8 @@ def stats(_: str = Depends(require_admin), db: Session = Depends(get_db)):
         "outOfService": by_status.get("out_of_service", 0),
         "customers": db.query(Customer).count(),
         "crew": db.query(CrewMember).filter(CrewMember.active.is_(True)).count(),
+        "crewShortageCount": len(short_open),
+        "crewShortages": short_open[:40],
         "byTown": [{"label": k, "count": v} for k, v in by_town.most_common(20)],
         "byLocality": [{"label": k, "count": v} for k, v in by_locality.most_common(20)],
         "trend": [{"date": k, "count": trend[k]} for k in sorted(trend)],
@@ -384,7 +433,8 @@ def list_enquiries(status: str | None = None, _: str = Depends(require_admin), d
     if status:
         q = q.filter(Enquiry.status == status)
     rows = q.limit(500).all()
-    return {"enquiries": [_enquiry_out(e) for e in rows]}
+    roster = roster_counts(db)
+    return {"enquiries": [_enquiry_out(e, roster) for e in rows]}
 
 
 class StatusIn(BaseModel):
@@ -401,7 +451,7 @@ def set_status(eid: int, body: StatusIn, _: str = Depends(require_admin), db: Se
         raise HTTPException(404, "Enquiry not found.")
     row.status = body.status
     db.commit()
-    return _enquiry_out(row)
+    return _enquiry_out(row, roster_counts(db))
 
 
 class PaymentIn(BaseModel):
@@ -435,7 +485,8 @@ def convert_booking(eid: int, body: PaymentIn, _: str = Depends(require_admin), 
     db.add(booking)
     db.commit()
     db.refresh(booking)
-    return {"booking": _booking_out(booking), "enquiry": _enquiry_out(row)}
+    roster = roster_counts(db)
+    return {"booking": _booking_out(booking, roster), "enquiry": _enquiry_out(row, roster)}
 
 
 @app.get("/api/enquiries/{eid}/letterpad.pdf")
@@ -715,7 +766,8 @@ def _crew_out(w: CrewMember):
     }
 
 
-def _enquiry_out(e: Enquiry):
+def _enquiry_out(e: Enquiry, roster: dict | None = None):
+    short = crew_shortages(e, roster) if roster is not None else []
     return {
         "id": e.id,
         "ref_code": e.ref_code,
@@ -732,10 +784,12 @@ def _enquiry_out(e: Enquiry):
         "created_at": e.created_at.isoformat() if e.created_at else None,
         "has_booking": bool(e.booking),
         "invoice_no": e.booking.invoice_no if e.booking else None,
+        "crew_short": bool(short),
+        "crew_shortages": short,
     }
 
 
-def _booking_out(b: Booking):
+def _booking_out(b: Booking, roster: dict | None = None):
     return {
         "id": b.id,
         "invoice_no": b.invoice_no,
@@ -744,5 +798,5 @@ def _booking_out(b: Booking):
         "payment_ref": b.payment_ref,
         "days": b.days,
         "created_at": b.created_at.isoformat() if b.created_at else None,
-        "enquiry": _enquiry_out(b.enquiry) if b.enquiry else None,
+        "enquiry": _enquiry_out(b.enquiry, roster) if b.enquiry else None,
     }

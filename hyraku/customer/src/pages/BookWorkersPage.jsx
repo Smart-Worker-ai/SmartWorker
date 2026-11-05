@@ -9,6 +9,7 @@ export default function BookWorkersPage() {
     setSelectedCategoryFilter,
     crewCounts,
     updateCrewCount,
+    setCrewCount,
     setTeamPreset,
     availabilityLoaded,
     availableFor,
@@ -20,6 +21,7 @@ export default function BookWorkersPage() {
       onSelectCategoryFilter={setSelectedCategoryFilter}
       crewCounts={crewCounts}
       onUpdateCrewCount={updateCrewCount}
+      onSetCrewCount={setCrewCount}
       onSetTeamPreset={setTeamPreset}
       availabilityLoaded={availabilityLoaded}
       availableFor={availableFor}

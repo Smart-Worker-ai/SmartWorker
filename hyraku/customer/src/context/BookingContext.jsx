@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { WORKER_CATEGORIES } from '../data/workersData';
+import { MAX_WORKERS_PER_TRADE, WORKER_CATEGORIES } from '../data/workersData';
 
 const BookingContext = createContext(null);
 
@@ -59,10 +59,8 @@ export function BookingProvider({ children }) {
     };
   }, []);
 
-  /** Bookable count = active crew registered for that trade. No extra cap. */
-  function availableFor(catId) {
-    if (!availabilityLoaded || !availability) return 0;
-    return Math.max(0, Number(availability[catId]) || 0);
+  function availableFor() {
+    return MAX_WORKERS_PER_TRADE;
   }
 
   function tradeTotal(counts, catId) {
@@ -71,13 +69,24 @@ export function BookingProvider({ children }) {
       .reduce((sum, [, n]) => sum + (n || 0), 0);
   }
 
-  function updateCrewCount(key, delta) {
+  function clampRoleCount(prev, key, wanted) {
     const catId = key.slice(0, key.lastIndexOf('_'));
+    const others = tradeTotal(prev, catId) - (prev[key] || 0);
+    const room = Math.max(0, MAX_WORKERS_PER_TRADE - others);
+    const n = Math.floor(Number(wanted));
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    return Math.min(n, room);
+  }
+
+  function updateCrewCount(key, delta) {
     setCrewCounts((prev) => {
-      if (delta > 0 && tradeTotal(prev, catId) + delta > availableFor(catId)) return prev;
-      const updated = Math.max(0, (prev[key] || 0) + delta);
+      const updated = clampRoleCount(prev, key, (prev[key] || 0) + delta);
       return { ...prev, [key]: updated };
     });
+  }
+
+  function setCrewCount(key, value) {
+    setCrewCounts((prev) => ({ ...prev, [key]: clampRoleCount(prev, key, value) }));
   }
 
   function setTeamPreset(catId) {
@@ -87,7 +96,7 @@ export function BookingProvider({ children }) {
       const next = { ...prev };
       category.subRoles.forEach((role) => {
         const key = `${catId}_${role.id}`;
-        next[key] = (next[key] || 0) + 1;
+        next[key] = clampRoleCount(next, key, (next[key] || 0) + 1);
       });
       return next;
     });
@@ -103,6 +112,7 @@ export function BookingProvider({ children }) {
     crewCounts,
     setCrewCounts,
     updateCrewCount,
+    setCrewCount,
     setTeamPreset,
     totalWorkers,
     availability,
