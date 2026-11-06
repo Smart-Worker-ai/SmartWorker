@@ -67,16 +67,26 @@ def _connect() -> paramiko.SSHClient:
     return client
 
 
+def _emit(stream, text: str) -> None:
+    if not text:
+        return
+    line = text if text.endswith("\n") else f"{text}\n"
+    try:
+        stream.write(line)
+    except UnicodeEncodeError:
+        encoding = getattr(stream, "encoding", None) or "utf-8"
+        stream.buffer.write(line.encode(encoding, "replace"))
+    stream.flush()
+
+
 def _run(client: paramiko.SSHClient, command: str) -> None:
     print(f"==> remote: {command}", flush=True)
     _stdin, stdout, stderr = client.exec_command(command)
     out = stdout.read().decode("utf-8", "replace")
     err = stderr.read().decode("utf-8", "replace")
     code = stdout.channel.recv_exit_status()
-    if out:
-        print(out, end="" if out.endswith("\n") else "\n", flush=True)
-    if err:
-        print(err, end="" if err.endswith("\n") else "\n", file=sys.stderr, flush=True)
+    _emit(sys.stdout, out)
+    _emit(sys.stderr, err)
     if code != 0:
         raise SystemExit(f"remote command failed ({code}): {command}")
 
@@ -114,6 +124,9 @@ def _put_file(client: paramiko.SSHClient, local: Path, dest: str) -> None:
 
 def main() -> None:
     build = "--build" in sys.argv or "-b" in sys.argv
+    services = [a for a in sys.argv[1:] if a not in ("--build", "-b")]
+    if not services:
+        services = ["customer_frontend", "hyraku_admin_web", "hyraku_admin_api"]
     client = _connect()
     try:
         _put_tree(client, ROOT / "customer", f"{REMOTE}/customer")
@@ -124,11 +137,10 @@ def main() -> None:
                 _put_file(client, path, f"{REMOTE}/{name}")
         print("==> files copied", flush=True)
         if build:
-            print("==> rebuilding customer_frontend, hyraku_admin_web, hyraku_admin_api", flush=True)
+            print(f"==> rebuilding {' '.join(services)}", flush=True)
             _run(
                 client,
-                f"cd {REMOTE} && docker compose --env-file .env.hyraku up -d --build "
-                "customer_frontend hyraku_admin_web hyraku_admin_api",
+                f"cd {REMOTE} && docker compose --env-file .env.hyraku up -d --build {' '.join(services)}",
             )
             print("==> rebuild finished", flush=True)
         else:
